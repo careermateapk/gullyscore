@@ -87,14 +87,21 @@ class OnlineMatchCard extends StatelessWidget {
     }
 
     final top = <Widget>[
-      if (m.live)
-        LiveBadge(label: context.tr('live'))
-      else if (m.upcoming)
-        Tag(m.scheduled == null ? context.tr('upcoming') : whenText(context, m.scheduled!))
-      else
-        Tag(context.tr('result'), color: p.win),
+      Flexible(
+        flex: 3,
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: m.live
+              ? LiveBadge(label: context.tr('live'))
+              : m.upcoming
+                  ? Tag(m.scheduled == null ? context.tr('upcoming') : whenText(context, m.scheduled!))
+                  : Tag(context.tr('result'), color: p.win),
+        ),
+      ),
       const SizedBox(width: Space.s),
       Expanded(
+        flex: 2,
         child: Text(
           [if (m.ground.isNotEmpty) m.ground, if (m.title.isNotEmpty) m.title].join(' · '),
           maxLines: 1,
