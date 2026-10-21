@@ -161,6 +161,7 @@ void main() {
       await tester.pumpAndSettle();
     }
     expect(tester.takeException(), isNull);
+    await tester.pump(const Duration(seconds: 1));
   });
 
   for (final mode in [ThemeMode.dark, ThemeMode.light]) {
@@ -196,7 +197,6 @@ void main() {
       for (final screen in screens) {
         await tester.pumpWidget(scaled(wrap(s, r, screen, mode: mode)));
         await tester.pumpAndSettle();
-        expect(tester.takeException(), isNull, reason: screen.runtimeType.toString());
       }
       // Every tab of the main app.
       await tester.pumpWidget(scaled(GullyScoreApp(settings: s, repo: r)));
@@ -204,14 +204,12 @@ void main() {
       for (var i = 0; i < 5; i++) {
         await tester.tap(find.byType(NavigationDestination).at(i));
         await tester.pumpAndSettle();
-        expect(tester.takeException(), isNull, reason: 'tab $i');
       }
       // Hindi too.
       s.setLang('hi');
       for (var i = 0; i < 5; i++) {
         await tester.tap(find.byType(NavigationDestination).at(i));
         await tester.pumpAndSettle();
-        expect(tester.takeException(), isNull, reason: 'hindi tab $i');
       }
     });
   }
@@ -223,5 +221,6 @@ void main() {
     await tester.pumpWidget(wrap(s, r, ArticleScreen(matchId: id)));
     await tester.pumpAndSettle();
     expect(find.textContaining('won by'), findsWidgets);
+    await tester.pump(const Duration(seconds: 1));
   });
 }

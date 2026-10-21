@@ -124,7 +124,7 @@ class _LiveBadgeState extends State<LiveBadge> with SingleTickerProviderStateMix
             },
           ),
           const SizedBox(width: 3),
-          Text(widget.label, style: Tx.label(p.liveText, w: FontWeight.w800)),
+          Flexible(child: Text(widget.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: Tx.label(p.liveText, w: FontWeight.w800))),
         ]),
       ),
     );

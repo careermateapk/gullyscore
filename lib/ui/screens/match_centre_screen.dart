@@ -224,9 +224,14 @@ class _Hero extends StatelessWidget {
     return HeroCard(
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          badge,
-          const Spacer(),
-          if (status != MatchStatus.notStarted) Text(context.tr('updated_ago', {'t': agoText(context, m.updatedAt)}), style: Tx.label(p.text2)),
+          Flexible(child: badge),
+          const SizedBox(width: Space.s),
+          Expanded(
+            child: status == MatchStatus.notStarted
+                ? const SizedBox.shrink()
+                : Text(context.tr('updated_ago', {'t': agoText(context, m.updatedAt)}),
+                    textAlign: TextAlign.right, maxLines: 1, overflow: TextOverflow.ellipsis, style: Tx.label(p.text2)),
+          ),
         ]),
         const SizedBox(height: Space.m),
         Row(children: [
