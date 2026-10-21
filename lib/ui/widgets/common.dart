@@ -257,15 +257,21 @@ class AppCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = Palette.of(context);
-    final box = Container(
-      padding: padding,
+    // A Material (not a coloured box) so list rows inside show their ripple.
+    final box = DecoratedBox(
       decoration: BoxDecoration(
-        color: color ?? p.surface,
         borderRadius: BorderRadius.circular(Corners.card),
-        border: Border.all(color: borderColor ?? p.line),
         boxShadow: p.dark ? null : const [BoxShadow(color: Color(0x0D0F1E3C), blurRadius: 2, offset: Offset(0, 1))],
       ),
-      child: child,
+      child: Material(
+        color: color ?? p.surface,
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(Corners.card),
+          side: BorderSide(color: borderColor ?? p.line),
+        ),
+        child: Padding(padding: padding, child: child),
+      ),
     );
     if (onTap == null) return box;
     return Pressable(onTap: onTap, child: box);

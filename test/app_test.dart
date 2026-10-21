@@ -61,6 +61,12 @@ String seedFinished(Repository r) {
   return m.id;
 }
 
+/// Fails with the full error (including which widget) if anything went wrong.
+void check(WidgetTester tester, String where) {
+  final e = tester.takeException();
+  if (e != null) fail('$where\n${e is FlutterError ? e.toStringDeep() : e}');
+}
+
 void main() {
   testWidgets('first launch shows onboarding, then the empty home', (tester) async {
     final (s, r) = await setUpApp(onboarded: false);
@@ -197,6 +203,7 @@ void main() {
       for (final screen in screens) {
         await tester.pumpWidget(scaled(wrap(s, r, screen, mode: mode)));
         await tester.pumpAndSettle();
+        check(tester, screen.runtimeType.toString());
       }
       // Every tab of the main app.
       await tester.pumpWidget(scaled(GullyScoreApp(settings: s, repo: r)));
@@ -204,13 +211,16 @@ void main() {
       for (var i = 0; i < 5; i++) {
         await tester.tap(find.byType(NavigationDestination).at(i));
         await tester.pumpAndSettle();
+        check(tester, 'tab $i');
       }
       // Hindi too.
       s.setLang('hi');
       for (var i = 0; i < 5; i++) {
         await tester.tap(find.byType(NavigationDestination).at(i));
         await tester.pumpAndSettle();
+        check(tester, 'hindi tab $i');
       }
+      await tester.pump(const Duration(seconds: 1));
     });
   }
 
