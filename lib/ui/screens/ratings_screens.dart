@@ -441,7 +441,7 @@ class _TeamRatingsScreenState extends State<TeamRatingsScreen> {
                                 const SizedBox(width: Space.m),
                                 Expanded(
                                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                    Stars(value: d.overall!, size: 16),
+                                    FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Stars(value: d.overall!, size: 16)),
                                     const SizedBox(height: 4),
                                     Text(context.tr('ratings_n', {'n': d.count}), style: Tx.label(p.text2)),
                                   ]),
