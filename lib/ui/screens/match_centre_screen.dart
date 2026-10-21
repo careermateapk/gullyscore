@@ -319,7 +319,7 @@ class _SummaryTab extends StatelessWidget {
         EmptyState(icon: Icons.sports_cricket_rounded, title: context.tr('not_started'), body: context.tr('match_not_started_body')),
       ]);
     }
-    final chance = winChance(st);
+    final chance = st.finished ? null : winChance(st);
     final lastWicket = inn.balls.lastWhere((b) => b.isWicket, orElse: () => BallLog('', false, 0));
     final over = inn.legalBalls ~/ 6;
     final thisOver = inn.balls.where((b) => b.over == over).toList();
@@ -387,6 +387,7 @@ class _SummaryTab extends StatelessWidget {
         )
       else
         AppCard(child: Text(context.tr('innings_complete', {'team': teamName, 'score': '${inn.runs}/${inn.wickets}', 'o': inn.overs}), style: Tx.body(p.text, w: FontWeight.w700))),
+      if (!st.finished) ...[
       const SizedBox(height: Space.s),
       AppCard(
         padding: const EdgeInsets.all(12),
@@ -413,6 +414,7 @@ class _SummaryTab extends StatelessWidget {
           ]),
         ]),
       ),
+      ],
       if (lastWicket.outPlayer != null) ...[
         const SizedBox(height: Space.s),
         AppCard(

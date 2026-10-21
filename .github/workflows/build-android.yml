@@ -48,6 +48,9 @@ jobs:
           sed -i 's#<application#<application android:allowBackup="true"#' android/app/src/main/AndroidManifest.xml
           grep -q 'allowBackup="true"' android/app/src/main/AndroidManifest.xml
           python3 ci/patch_signing.py
+          # GullyScore's own app icon (instead of Flutter's default)
+          cp -r ci/icon/res/. android/app/src/main/res/
+          ls android/app/src/main/res/mipmap-anydpi-v26
 
       - name: Find the online service address
         env:
