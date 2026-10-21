@@ -12,6 +12,9 @@ if [ "$code" -ne 0 ]; then
   [ -n "$java" ] && echo "::error title=Java/Kotlin errors::${java}"
   gradle=$(grep -E -A10 "What went wrong" /tmp/step_output.txt | head -40 | sed 's/%/%25/g; s/\r//g' | awk 'BEGIN{ORS="%0A"} {print}')
   [ -n "$gradle" ] && echo "::error title=Gradle::${gradle}"
+  exc=$(grep -E -A12 "EXCEPTION CAUGHT BY|overflowed by|Test failed. See exception logs above|Bad state|No element|Too many elements|Expected: |══╡" /tmp/step_output.txt \
+    | grep -vE "^\s*$" | head -120 | sed 's/%/%25/g; s/\r//g' | awk 'BEGIN{ORS="%0A"} {print}')
+  [ -n "$exc" ] && echo "::error title=Exceptions::${exc}"
   [ -z "$msg" ] && msg=$(tail -40 /tmp/step_output.txt | sed 's/%/%25/g; s/\r//g' | awk 'BEGIN{ORS="%0A"} {print}')
   echo "::error title=Step failed::${msg}"
 fi
