@@ -372,7 +372,7 @@ class _TeamRatingsScreenState extends State<TeamRatingsScreen> {
               Text([if (c.authorTeam.isNotEmpty) c.authorTeam, agoText(context, c.created)].join(' · '), style: Tx.label(p.text2, w: FontWeight.w600)),
             ]),
           ),
-          if (!reply && c.stars > 0) Stars(value: c.stars, size: 14),
+          if (!reply && c.stars > 0) Flexible(child: FittedBox(fit: BoxFit.scaleDown, child: Stars(value: c.stars, size: 14))),
           IconButton(
             tooltip: context.tr('more'),
             visualDensity: VisualDensity.compact,
