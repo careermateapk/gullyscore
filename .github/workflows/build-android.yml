@@ -122,6 +122,11 @@ jobs:
       - name: Run tests
         run: ci/run_and_report.sh flutter test
 
+      - name: Accept Android SDK licenses (maps and Firebase download extra SDK parts)
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+          yes | flutter doctor --android-licenses > /dev/null || true
+
       - name: Build APK
         run: |
           ci/run_and_report.sh flutter build apk --release --dart-define=CLOUD_URL=${{ env.CLOUD_URL }} --dart-define=GOOGLE_CLIENT_ID=${{ env.GOOGLE_CLIENT_ID }} --dart-define=MAPS_ON=${{ env.MAPS_ON }} --dart-define=FB_PROJECT=${{ env.FB_PROJECT }} --dart-define=FB_API_KEY=${{ env.FB_API_KEY }} --dart-define=FB_APP_ID=${{ env.FB_APP_ID }} --dart-define=FB_SENDER=${{ env.FB_SENDER }}
