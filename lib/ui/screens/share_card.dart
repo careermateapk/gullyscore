@@ -114,9 +114,18 @@ class ScoreCardImage extends StatelessWidget {
             Crest(color: Palette.team(t?.colorIndex ?? 0), text: t?.short ?? '', size: 30),
             const SizedBox(width: Space.s),
             Expanded(child: Text(t?.name ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: Tx.body(p.text, w: FontWeight.w800))),
-            Text('${inn.runs}/${inn.wickets}', style: Tx.score(30, p.text)),
-            const SizedBox(width: 6),
-            Text('(${inn.overs})', style: Tx.score(16, p.text2, w: FontWeight.w700)),
+            const SizedBox(width: Space.s),
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerRight,
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Text('${inn.runs}/${inn.wickets}', style: Tx.score(30, p.text)),
+                  const SizedBox(width: 6),
+                  Text('(${inn.overs})', style: Tx.score(16, p.text2, w: FontWeight.w700)),
+                ]),
+              ),
+            ),
           ]),
           if (top.isNotEmpty && top.first.runs > 0)
             Padding(

@@ -304,13 +304,19 @@ class FeaturedMatchCard extends StatelessWidget {
         Expanded(
           child: Text(team?.name ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: Tx.body(batting ? p.text : p.text2, w: batting ? FontWeight.w800 : FontWeight.w700)),
         ),
-        if (i != null)
-          Text.rich(TextSpan(children: [
-            TextSpan(text: '${i.runs}/${i.wickets}', style: Tx.score(batting ? 32 : 22, batting ? p.text : p.text2)),
-            TextSpan(text: ' (${i.overs})', style: Tx.score(batting ? 16 : 14, p.text2, w: FontWeight.w700)),
-          ]))
-        else
-          Text(context.tr('yet_to_bat'), style: Tx.label(p.text2)),
+        const SizedBox(width: Space.s),
+        Flexible(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerRight,
+            child: i != null
+                ? Text.rich(TextSpan(children: [
+                    TextSpan(text: '${i.runs}/${i.wickets}', style: Tx.score(batting ? 32 : 22, batting ? p.text : p.text2)),
+                    TextSpan(text: ' (${i.overs})', style: Tx.score(batting ? 16 : 14, p.text2, w: FontWeight.w700)),
+                  ]))
+                : Text(context.tr('yet_to_bat'), style: Tx.label(p.text2)),
+          ),
+        ),
       ]);
     }
 
@@ -400,8 +406,17 @@ class ResultCard extends StatelessWidget {
           Crest(color: Palette.team(team?.colorIndex ?? 0), size: 20),
           const SizedBox(width: Space.s),
           Expanded(child: Text(team?.name ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: Tx.body(won ? p.text : p.text2, w: won ? FontWeight.w800 : FontWeight.w600))),
-          Text(i == null ? '-' : '${i.runs}/${i.wickets}', style: Tx.score(20, won ? p.text : p.text2, w: FontWeight.w800)),
-          if (i != null) Text(' (${i.overs})', style: Tx.label(p.text2)),
+          const SizedBox(width: Space.s),
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerRight,
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Text(i == null ? '-' : '${i.runs}/${i.wickets}', style: Tx.score(20, won ? p.text : p.text2, w: FontWeight.w800)),
+                if (i != null) Text(' (${i.overs})', style: Tx.label(p.text2)),
+              ]),
+            ),
+          ),
         ]),
       );
     }

@@ -131,32 +131,32 @@ class SettingsScreen extends StatelessWidget {
         ),
         group(context.tr('appearance'), [
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-            child: Row(children: [
-              icon(Icons.dark_mode_outlined, p.goldText),
-              const SizedBox(width: Space.m),
-              Expanded(child: Text(context.tr('theme'), style: Tx.body(p.text, w: FontWeight.w600))),
-              SizedBox(
-                width: 196,
-                child: Segmented<ThemeMode>(
-                  values: const [ThemeMode.light, ThemeMode.dark, ThemeMode.system],
-                  labels: [context.tr('light'), context.tr('dark'), context.tr('auto')],
-                  selected: s.themeMode,
-                  onChanged: s.setTheme,
-                ),
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              Row(children: [
+                icon(Icons.dark_mode_outlined, p.goldText),
+                const SizedBox(width: Space.m),
+                Expanded(child: Text(context.tr('theme'), style: Tx.body(p.text, w: FontWeight.w600))),
+              ]),
+              const SizedBox(height: Space.s),
+              Segmented<ThemeMode>(
+                values: const [ThemeMode.light, ThemeMode.dark, ThemeMode.system],
+                labels: [context.tr('light'), context.tr('dark'), context.tr('auto')],
+                selected: s.themeMode,
+                onChanged: s.setTheme,
               ),
             ]),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-            child: Row(children: [
-              icon(Icons.translate_rounded, const Color(0xFF5B9BFF)),
-              const SizedBox(width: Space.m),
-              Expanded(child: Text(context.tr('language'), style: Tx.body(p.text, w: FontWeight.w600))),
-              SizedBox(
-                width: 160,
-                child: Segmented<String>(values: const ['en', 'hi'], labels: const ['English', 'हिंदी'], selected: s.lang, onChanged: s.setLang),
-              ),
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              Row(children: [
+                icon(Icons.translate_rounded, const Color(0xFF5B9BFF)),
+                const SizedBox(width: Space.m),
+                Expanded(child: Text(context.tr('language'), style: Tx.body(p.text, w: FontWeight.w600))),
+              ]),
+              const SizedBox(height: Space.s),
+              Segmented<String>(values: const ['en', 'hi'], labels: const ['English', 'हिंदी'], selected: s.lang, onChanged: s.setLang),
             ]),
           ),
           toggle(Icons.motion_photos_off_outlined, p.win, context.tr('reduce_motion'), context.tr('reduce_motion_sub'), s.reduceMotion, s.setReduceMotion),

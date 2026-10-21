@@ -502,11 +502,18 @@ class _ScoreHero extends StatelessWidget {
               Text(st.finished ? context.tr('result') : context.tr('batting'), style: Tx.label(p.text2)),
             ]),
           ),
-          Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-            AnimatedScore(text: '$runs/$wkts', style: Tx.score(52, p.text)),
-            const SizedBox(height: 2),
-            Text(context.tr('overs_of', {'o': inn?.overs ?? '0.0', 'n': m.overs}), style: Tx.score(17, p.text2, w: FontWeight.w700)),
-          ]),
+          const SizedBox(width: Space.s),
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerRight,
+              child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                AnimatedScore(text: '$runs/$wkts', style: Tx.score(52, p.text)),
+                const SizedBox(height: 2),
+                Text(context.tr('overs_of', {'o': inn?.overs ?? '0.0', 'n': m.overs}), style: Tx.score(17, p.text2, w: FontWeight.w700)),
+              ]),
+            ),
+          ),
         ]),
         const SizedBox(height: Space.m),
         Container(
@@ -537,11 +544,13 @@ class _PlayersRow extends StatelessWidget {
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(strike ? context.tr('on_strike') : context.tr('non_striker'), style: Tx.label(p.text2)),
             const SizedBox(height: 2),
-            Row(children: [
-              Flexible(child: Text(id == null ? '—' : name(id), maxLines: 1, overflow: TextOverflow.ellipsis, style: Tx.body(p.text, w: FontWeight.w800).copyWith(fontSize: 14))),
-              const SizedBox(width: 6),
-              if (c != null) Text('${c.runs} (${c.balls})', style: Tx.score(17, p.text, w: FontWeight.w800)),
-            ]),
+            Text(id == null ? '—' : name(id), maxLines: 1, overflow: TextOverflow.ellipsis, style: Tx.body(p.text, w: FontWeight.w800).copyWith(fontSize: 14)),
+            if (c != null)
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text('${c.runs} (${c.balls})', style: Tx.score(20, p.text, w: FontWeight.w800)),
+              ),
           ]),
         ),
       );
@@ -555,9 +564,24 @@ class _PlayersRow extends StatelessWidget {
         if (bw != null) ...[
           const SizedBox(height: Space.s),
           Row(children: [
-            Text('${context.tr('bowling')} ', style: Tx.label(p.text2)),
-            Expanded(child: Text(name(bw.id), maxLines: 1, overflow: TextOverflow.ellipsis, style: Tx.small(p.text, w: FontWeight.w800))),
-            Text('${bw.overs}-${bw.maidens}-${bw.runs}-${bw.wickets}', style: Tx.score(17, p.text, w: FontWeight.w800)),
+            Expanded(
+              child: Text.rich(
+                TextSpan(children: [
+                  TextSpan(text: '${context.tr('bowling')} ', style: Tx.label(p.text2)),
+                  TextSpan(text: name(bw.id), style: Tx.small(p.text, w: FontWeight.w800)),
+                ]),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: Space.s),
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerRight,
+                child: Text('${bw.overs}-${bw.maidens}-${bw.runs}-${bw.wickets}', style: Tx.score(17, p.text, w: FontWeight.w800)),
+              ),
+            ),
           ]),
         ],
       ]),

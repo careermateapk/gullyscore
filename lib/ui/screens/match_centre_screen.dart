@@ -238,20 +238,35 @@ class _Hero extends StatelessWidget {
               if (inn != null && !inn.ended && !st.finished) Text(context.tr('batting'), style: Tx.label(p.text2)),
             ]),
           ),
-          if (mainInn != null)
-            Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-              AnimatedScore(text: '${mainInn.runs}/${mainInn.wickets}', style: Tx.score(52, p.text)),
-              const SizedBox(height: 2),
-              Text(context.tr('overs_of', {'o': mainInn.overs, 'n': m.overs}), style: Tx.score(17, p.text2, w: FontWeight.w700)),
-            ]),
+          if (mainInn != null) ...[
+            const SizedBox(width: Space.s),
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerRight,
+                child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                  AnimatedScore(text: '${mainInn.runs}/${mainInn.wickets}', style: Tx.score(52, p.text)),
+                  const SizedBox(height: 2),
+                  Text(context.tr('overs_of', {'o': mainInn.overs, 'n': m.overs}), style: Tx.score(17, p.text2, w: FontWeight.w700)),
+                ]),
+              ),
+            ),
+          ],
         ]),
         Container(height: 1, color: p.line, margin: const EdgeInsets.symmetric(vertical: Space.m)),
         Row(children: [
           Crest(color: Palette.team(team(other)?.colorIndex ?? 0), text: team(other)?.short ?? '', size: 28),
           const SizedBox(width: Space.m),
           Expanded(child: Text(team(other)?.name ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: Tx.body(p.text2, w: FontWeight.w700).copyWith(fontSize: 14))),
-          Text(otherInn == null ? context.tr('yet_to_bat') : '${otherInn.runs}/${otherInn.wickets} (${otherInn.overs})',
-              style: otherInn == null ? Tx.small(p.text2) : Tx.score(20, p.text2, w: FontWeight.w800)),
+          const SizedBox(width: Space.s),
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerRight,
+              child: Text(otherInn == null ? context.tr('yet_to_bat') : '${otherInn.runs}/${otherInn.wickets} (${otherInn.overs})',
+                  style: otherInn == null ? Tx.small(p.text2) : Tx.score(20, p.text2, w: FontWeight.w800)),
+            ),
+          ),
         ]),
         const SizedBox(height: Space.m),
         Container(
@@ -317,12 +332,27 @@ class _SummaryTab extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 9),
                 decoration: BoxDecoration(border: Border(top: BorderSide(color: p.line))),
                 child: Row(children: [
-                  Text('${context.tr('bowling')} ', style: Tx.label(p.text2)),
-                  Expanded(child: Text(name(inn.bowler!), maxLines: 1, overflow: TextOverflow.ellipsis, style: Tx.small(p.text, w: FontWeight.w800))),
-                  Builder(builder: (_) {
-                    final b = inn.bowlers[inn.bowler]!;
-                    return Text('${b.overs}-${b.maidens}-${b.runs}-${b.wickets}', style: Tx.score(17, p.text, w: FontWeight.w800));
-                  }),
+                  Expanded(
+                    child: Text.rich(
+                      TextSpan(children: [
+                        TextSpan(text: '${context.tr('bowling')} ', style: Tx.label(p.text2)),
+                        TextSpan(text: name(inn.bowler!), style: Tx.small(p.text, w: FontWeight.w800)),
+                      ]),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: Space.s),
+                  Flexible(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerRight,
+                      child: Builder(builder: (_) {
+                        final b = inn.bowlers[inn.bowler]!;
+                        return Text('${b.overs}-${b.maidens}-${b.runs}-${b.wickets}', style: Tx.score(17, p.text, w: FontWeight.w800));
+                      }),
+                    ),
+                  ),
                 ]),
               ),
           ]),
@@ -350,7 +380,7 @@ class _SummaryTab extends StatelessWidget {
             ),
             if (prevOver.isNotEmpty) ...[
               Container(width: 1, height: 22, color: p.line, margin: const EdgeInsets.symmetric(horizontal: 8)),
-              Text('$over: ${prevOver.map((b) => b.label == '•' ? '0' : b.label).join(' ')}', style: Tx.label(p.text2)),
+              Flexible(child: Text('$over: ${prevOver.map((b) => b.label == '•' ? '0' : b.label).join(' ')}', maxLines: 1, overflow: TextOverflow.ellipsis, style: Tx.label(p.text2))),
             ],
           ]),
         ]),
@@ -558,9 +588,18 @@ class _ScorecardTabState extends State<_ScorecardTab> {
             decoration: BoxDecoration(border: Border(top: BorderSide(color: p.line))),
             child: Row(children: [
               Expanded(child: Text(context.tr('total'), style: Tx.body(p.text, w: FontWeight.w800))),
-              Text('${inn.runs}/${inn.wickets}', style: Tx.score(22, p.text)),
-              const SizedBox(width: 6),
-              Text('(${inn.overs} ${context.tr('ov')}, RR ${inn.runRate.toStringAsFixed(2)})', style: Tx.small(p.text2)),
+              Flexible(
+                flex: 3,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    Text('${inn.runs}/${inn.wickets}', style: Tx.score(22, p.text)),
+                    const SizedBox(width: 6),
+                    Text('(${inn.overs} ${context.tr('ov')}, RR ${inn.runRate.toStringAsFixed(2)})', style: Tx.small(p.text2)),
+                  ]),
+                ),
+              ),
             ]),
           ),
         ]),
@@ -663,6 +702,7 @@ class _PartnershipRow extends StatelessWidget {
       child: Row(children: [
         SizedBox(width: 22, child: Text('$index', style: Tx.label(p.text2))),
         Expanded(child: Text('$a & $b', maxLines: 1, overflow: TextOverflow.ellipsis, style: Tx.small(current ? p.text : p.text2, w: FontWeight.w700))),
+        const SizedBox(width: Space.s),
         Text('$runs ($balls)', style: Tx.score(17, current ? p.goldText : p.text, w: FontWeight.w800)),
       ]),
     );

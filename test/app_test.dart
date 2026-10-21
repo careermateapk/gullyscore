@@ -6,7 +6,14 @@ import 'package:gullyscore/app/theme.dart';
 import 'package:gullyscore/data/repository.dart';
 import 'package:gullyscore/main.dart';
 import 'package:gullyscore/scoring/engine.dart';
+import 'package:gullyscore/ui/screens/help.dart';
 import 'package:gullyscore/ui/screens/match_centre_screen.dart';
+import 'package:gullyscore/ui/screens/new_match_screen.dart';
+import 'package:gullyscore/ui/screens/news_screen.dart';
+import 'package:gullyscore/ui/screens/onboarding_screen.dart';
+import 'package:gullyscore/ui/screens/player_screen.dart';
+import 'package:gullyscore/ui/screens/search_screen.dart';
+import 'package:gullyscore/ui/screens/team_screen.dart';
 import 'package:gullyscore/ui/screens/scoring_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -38,6 +45,20 @@ String seedMatch(Repository r, {int overs = 2}) {
   final a = r.addTeam('Rajnagar XI', playerNames: ['Ravi', 'Raju', 'Rohit']);
   final b = r.addTeam('Madhubani Strikers', playerNames: ['Sanjay', 'Vikas', 'Amit']);
   return r.createMatch(a: a, b: b, playersA: a.playerIds, playersB: b.playerIds, overs: overs, firstBatting: 0, title: 'MPL 2026').id;
+}
+
+String seedFinished(Repository r) {
+  final a = r.addTeam('Sakri Kings', playerNames: ['Kishan', 'Karan', 'Kamal']);
+  final b = r.addTeam('Darbhanga Tigers', playerNames: ['Deepak', 'Dinesh', 'Dev']);
+  final m = r.createMatch(a: a, b: b, playersA: a.playerIds, playersB: b.playerIds, overs: 1, firstBatting: 0, title: 'MPL 2026');
+  r.addEvent(m, {'t': Ev.start, 'striker': a.playerIds[0], 'nonStriker': a.playerIds[1], 'bowler': b.playerIds[0]});
+  for (var i = 0; i < 6; i++) {
+    r.addEvent(m, {'t': Ev.ball, 'kind': BallKind.normal, 'runs': 1});
+  }
+  r.addEvent(m, {'t': Ev.start, 'striker': b.playerIds[0], 'nonStriker': b.playerIds[1], 'bowler': a.playerIds[0]});
+  r.addEvent(m, {'t': Ev.ball, 'kind': BallKind.normal, 'runs': 6, 'zone': 'long_on', 'ang': 330.0, 'dist': 1.0});
+  r.addEvent(m, {'t': Ev.ball, 'kind': BallKind.normal, 'runs': 6});
+  return m.id;
 }
 
 void main() {
@@ -148,18 +169,59 @@ void main() {
       tester.view.devicePixelRatio = 3;
       addTearDown(tester.view.reset);
       final (s, r) = await setUpApp();
+      s.setTheme(mode);
       final id = seedMatch(r);
       final m = r.matches[id]!;
       r.addEvent(m, {'t': Ev.start, 'striker': m.playersA[0], 'nonStriker': m.playersA[1], 'bowler': m.playersB[0]});
       r.addEvent(m, {'t': Ev.ball, 'kind': BallKind.normal, 'runs': 4});
-      for (final screen in <Widget>[ScoringScreen(matchId: id), MatchCentreScreen(matchId: id), GullyScoreApp(settings: s, repo: r)]) {
-        await tester.pumpWidget(MediaQuery(
-          data: const MediaQueryData(size: Size(320, 640), textScaler: TextScaler.linear(1.3)),
-          child: screen is GullyScoreApp ? screen : wrap(s, r, screen, mode: mode),
-        ));
+      final done = seedFinished(r);
+      Widget scaled(Widget child) => MediaQuery(
+            data: const MediaQueryData(size: Size(320, 640), textScaler: TextScaler.linear(1.3)),
+            child: child,
+          );
+      final screens = <Widget>[
+        ScoringScreen(matchId: id),
+        ScoringScreen(matchId: done),
+        MatchCentreScreen(matchId: id),
+        MatchCentreScreen(matchId: done),
+        const NewMatchScreen(),
+        PlayerScreen(playerId: m.playersA[0]),
+        TeamScreen(teamId: m.teamA),
+        const TeamScreen(),
+        const SearchScreen(),
+        const FaqScreen(),
+        ArticleScreen(matchId: done),
+        OnboardingScreen(onDone: () {}),
+      ];
+      for (final screen in screens) {
+        await tester.pumpWidget(scaled(wrap(s, r, screen, mode: mode)));
         await tester.pumpAndSettle();
-        expect(tester.takeException(), isNull);
+        expect(tester.takeException(), isNull, reason: screen.runtimeType.toString());
+      }
+      // Every tab of the main app.
+      await tester.pumpWidget(scaled(GullyScoreApp(settings: s, repo: r)));
+      await tester.pumpAndSettle();
+      for (var i = 0; i < 5; i++) {
+        await tester.tap(find.byType(NavigationDestination).at(i));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull, reason: 'tab $i');
+      }
+      // Hindi too.
+      s.setLang('hi');
+      for (var i = 0; i < 5; i++) {
+        await tester.tap(find.byType(NavigationDestination).at(i));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull, reason: 'hindi tab $i');
       }
     });
   }
+
+  testWidgets('a finished match gets a report and a result card', (tester) async {
+    final (s, r) = await setUpApp();
+    final id = seedFinished(r);
+    expect(r.matches[id]!.state.finished, true);
+    await tester.pumpWidget(wrap(s, r, ArticleScreen(matchId: id)));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('won by'), findsWidgets);
+  });
 }
