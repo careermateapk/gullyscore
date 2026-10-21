@@ -35,7 +35,7 @@ class SyncService extends ChangeNotifier {
   MeInfo? me;
   String myPhone = '';
 
-  // Scorer side: mobile numbers sent, and "is this your player?" questions.
+  // Scorer side: mobile numbers sent, and accounts linked to this phone's players.
   String _phonesSig = '';
   List<Claim> claims = const [];
   DateTime? _claimsAt;
@@ -261,7 +261,7 @@ class SyncService extends ChangeNotifier {
     final auth = await _ensureIdentity();
     await cloud.putPlayerPhones(auth, list);
     _phonesSig = sig;
-    _claimsAt = null; // ask for new questions right away
+    _claimsAt = null; // refresh linked accounts right away
     await _prefs?.setString('cloud.phonesSig', sig);
   }
 
@@ -277,7 +277,7 @@ class SyncService extends ChangeNotifier {
     claims = await cloud.claims(auth);
   }
 
-  /// Asks the server for new questions now (Home calls this when it opens).
+  /// Asks the server for linked accounts now (player profile calls this).
   Future<void> checkClaims() async {
     if (!enabled) return;
     try {
@@ -286,7 +286,7 @@ class SyncService extends ChangeNotifier {
     } catch (_) {}
   }
 
-  /// The scorer says yes (it is my player) or no to a login request.
+  /// The scorer keeps (yes) or removes (no) an account linked to their player.
   Future<void> answerClaim(Claim c, bool yes) async {
     final auth = await _ensureIdentity();
     await cloud.answerClaim(auth, c, yes);
@@ -323,9 +323,9 @@ class SyncService extends ChangeNotifier {
     if (t == null) throw CloudError(401, 'not logged in');
     final clean = cleanPhone(phone);
     if (clean.isEmpty) throw CloudError(400, 'bad phone');
-    // If this phone also scores, the player's own profiles need no question.
+    // If this phone also scores, send its numbers first so its own players link too.
     if (_phoneList().isNotEmpty) await _sendPhones();
-    final info = await cloud.setMyPhone(t, clean, scorerAuth: _auth);
+    final info = await cloud.setMyPhone(t, clean);
     myPhone = clean;
     await _prefs?.setString('cloud.myPhone', clean);
     await _saveMe(info);

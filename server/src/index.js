@@ -2,8 +2,9 @@
 //
 // Phones that score upload their matches here. Anyone with a match link can
 // watch it live, in the app or in a browser. Players log in with Google,
-// type their mobile number, and (after the scorer says yes once) see all
-// their matches. Mobile numbers are kept only as keyed hashes.
+// type their mobile number, and at once see every match where a scorer used
+// that number. The scorer can remove an account later. Mobile numbers are
+// kept only as keyed hashes.
 // Photos never come here: they stay on the phones.
 
 const MAX_BODY = 600 * 1024; // a long match is ~50 KB; this leaves room
@@ -85,14 +86,6 @@ async function userAuth(request, env) {
     .first();
   if (!row) throw new HttpError(401, 'not logged in');
   return row;
-}
-
-/** Scorer id from a "<id>.<token>" string, or null when it does not check out. */
-async function scorerFrom(text, env) {
-  const m = /^([A-Za-z0-9_\-]+)\.([A-Za-z0-9_\-]+)$/.exec(typeof text === 'string' ? text : '');
-  if (!m) return null;
-  const row = await env.DB.prepare('SELECT token_hash FROM scorers WHERE id = ?').bind(m[1]).first();
-  return row && row.token_hash === (await sha256(m[2])) ? m[1] : null;
 }
 
 /** The random key used to hash mobile numbers (made once, kept in the database). */
@@ -280,10 +273,10 @@ async function route(request, env) {
            SELECT 1 FROM player_phones pp JOIN users u ON u.id = claims.user_id
            WHERE pp.scorer_id = claims.scorer_id AND pp.player_id = claims.player_id AND pp.phone_hash = u.phone_hash)`,
       ).bind(scorer),
-      // People already logged in with one of these numbers ask to be linked.
+      // People already logged in with one of these numbers are linked at once.
       env.DB.prepare(
         `INSERT OR IGNORE INTO claims (user_id, scorer_id, player_id, status, created)
-         SELECT u.id, pp.scorer_id, pp.player_id, 'pending', ? FROM player_phones pp JOIN users u ON u.phone_hash = pp.phone_hash
+         SELECT u.id, pp.scorer_id, pp.player_id, 'ok', ? FROM player_phones pp JOIN users u ON u.phone_hash = pp.phone_hash
          WHERE pp.scorer_id = ?`,
       ).bind(now, scorer),
     ]);
@@ -318,8 +311,8 @@ async function route(request, env) {
     return json({ ok: true });
   }
 
-  // A player types their own mobile number. Every scorer who used that
-  // number for a player gets a "is this them?" question.
+  // A player types their own mobile number: every profile a scorer made
+  // with that number is linked to them at once.
   if (p === '/v1/me/phone' && method === 'PUT') {
     const user = await userAuth(request, env);
     const body = await readJson(request);
@@ -333,22 +326,19 @@ async function route(request, env) {
     stmts.push(
       env.DB.prepare(
         `INSERT OR IGNORE INTO claims (user_id, scorer_id, player_id, status, created)
-         SELECT ?, scorer_id, player_id, 'pending', ? FROM player_phones WHERE phone_hash = ?`,
+         SELECT ?, scorer_id, player_id, 'ok', ? FROM player_phones WHERE phone_hash = ?`,
       ).bind(user.id, now, h),
     );
-    // Logging in on the scorer's own phone: their own players need no question.
-    const own = await scorerFrom(body.scorer, env);
-    if (own) stmts.push(env.DB.prepare("UPDATE claims SET status = 'ok' WHERE user_id = ? AND scorer_id = ?").bind(user.id, own));
     await env.DB.batch(stmts);
     return json(await meInfo({ ...user, phone_hash: h }, env));
   }
 
-  // Questions waiting for this scorer: "X says this player is them".
+  // Accounts linked to this scorer's players (so the scorer can remove one).
   if (p === '/v1/claims' && method === 'GET') {
     const scorer = await auth(request, env);
     const rows = await env.DB.prepare(
       `SELECT c.user_id, c.player_id, u.email, u.name FROM claims c JOIN users u ON u.id = c.user_id
-       WHERE c.scorer_id = ? AND c.status = 'pending' ORDER BY c.created LIMIT 50`,
+       WHERE c.scorer_id = ? AND c.status = 'ok' ORDER BY c.created LIMIT 500`,
     ).bind(scorer).all();
     return json({ claims: (rows.results || []).map((r) => ({ userId: r.user_id, playerId: r.player_id, email: r.email, name: r.name })) });
   }

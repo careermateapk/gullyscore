@@ -78,7 +78,7 @@ class FakeCloud implements CloudApi {
     for (final u in userPhone.entries) {
       for (final e in phones.entries) {
         for (final pl in e.value) {
-          if (pl['phone'] == u.value) status.putIfAbsent('${u.key}|${e.key}|${pl['id']}', () => 'pending');
+          if (pl['phone'] == u.value) status.putIfAbsent('${u.key}|${e.key}|${pl['id']}', () => 'ok');
         }
       }
     }
@@ -97,7 +97,7 @@ class FakeCloud implements CloudApi {
     _check();
     return [
       for (final e in status.entries)
-        if (e.value == 'pending' && e.key.split('|')[1] == auth)
+        if (e.value == 'ok' && e.key.split('|')[1] == auth)
           Claim(userId: e.key.split('|')[0], playerId: e.key.split('|')[2], email: 'ravi@gmail.com', name: 'Ravi K'),
     ];
   }
@@ -247,7 +247,7 @@ void main() {
     await r.saveNow();
   });
 
-  test('player logs in with Google + mobile and sees matches after the scorer says yes', () async {
+  test('player logs in with Google + mobile and sees their matches at once', () async {
     final cloud = FakeCloud();
     final r = await repoWithMatch();
     final scorer = SyncService(r, cloud, google: FakeGoogle());
@@ -277,18 +277,16 @@ void main() {
     expect(mine.me!.hasPhone, false);
     await expectLater(mine.setMyPhone('12345'), throwsA(isA<CloudError>()));
     await mine.setMyPhone('09876543210');
-    expect(mine.me!.profiles.single.waiting, true);
-    expect(mine.me!.matches, isEmpty);
+    expect(mine.me!.profiles.single.approved, true);
+    expect(mine.me!.matches.length, 1, 'no approval needed');
 
-    // The scorer is asked once.
+    // The scorer sees the linked account on the player's profile and can remove it.
     await scorer.checkClaims();
     expect(scorer.claims.length, 1);
-    await scorer.answerClaim(scorer.claims.single, true);
+    await scorer.answerClaim(scorer.claims.single, false);
     expect(scorer.claims, isEmpty);
-
     final info = await mine.refreshMe();
-    expect(info!.matches.length, 1);
-    expect(info.profiles.single.approved, true);
+    expect(info!.matches, isEmpty);
 
     await mine.logout();
     expect(mine.loggedIn, false);

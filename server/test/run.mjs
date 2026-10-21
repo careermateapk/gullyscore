@@ -105,53 +105,46 @@ assert.equal((await call('PUT', '/v1/me/phone', { phone: '123' }, ut)).status, 4
 let me = await call('PUT', '/v1/me/phone', { phone: '9876543210' }, ut);
 assert.equal(me.status, 200);
 assert.equal(me.body.hasPhone, true);
-assert.deepEqual(me.body.profiles.map((x) => [x.name, x.status]), [['Ravi', 'pending']]);
-assert.equal(me.body.matches.length, 0, 'nothing shown before the scorer says yes');
-
-// Scorer 2 adds the same number later: a question appears for them too.
-await call('POST', '/v1/players/phones', { players: [{ id: 'q7', name: 'Ravi K', phone: '09876543210' }] }, tok2);
-assert.equal((await call('GET', '/v1/claims', undefined, tok2)).body.claims.length, 1);
-
-const claims = await call('GET', '/v1/claims', undefined, tok);
-assert.equal(claims.body.claims.length, 1);
-assert.equal(claims.body.claims[0].email, 'ravi@gmail.com');
-assert.equal(claims.body.claims[0].playerId, 'p1');
-// Another scorer cannot answer for this one.
-await call('POST', '/v1/claims', { userId: claims.body.claims[0].userId, playerId: 'p1', ok: true }, tok2);
-assert.equal((await call('GET', '/v1/me', undefined, ut)).body.matches.length, 0);
-await call('POST', '/v1/claims', { userId: claims.body.claims[0].userId, playerId: 'p1', ok: true }, tok);
-me = await call('GET', '/v1/me', undefined, ut);
-assert.equal(me.body.matches.length, 1);
+assert.deepEqual(me.body.profiles.map((x) => [x.name, x.status]), [['Ravi', 'ok']]);
+assert.equal(me.body.matches.length, 1, 'matches show at once, no approval needed');
 assert.equal(me.body.matches[0].id, 'm_123');
-assert.equal((await call('GET', '/v1/claims', undefined, tok)).body.claims.length, 0);
 
-// Re-sending the same list keeps the "yes".
-await call('POST', '/v1/players/phones', { players: [{ id: 'p1', name: 'Ravi', phone: '9876543210' }] }, tok);
+// Scorer 2 adds the same number later: linked at once too.
+await call('POST', '/v1/players/phones', { players: [{ id: 'q7', name: 'Ravi K', phone: '09876543210' }] }, tok2);
+assert.equal((await call('GET', '/v1/me', undefined, ut)).body.profiles.length, 2);
+
+// The scorer sees who is linked and can remove someone.
+const linked = await call('GET', '/v1/claims', undefined, tok);
+assert.equal(linked.body.claims.length, 1);
+assert.equal(linked.body.claims[0].email, 'ravi@gmail.com');
+assert.equal(linked.body.claims[0].playerId, 'p1');
+// Another scorer cannot remove it.
+await call('POST', '/v1/claims', { userId: linked.body.claims[0].userId, playerId: 'p1', ok: false }, tok2);
 assert.equal((await call('GET', '/v1/me', undefined, ut)).body.matches.length, 1);
-// Same number typed again by the player keeps it too.
+
+// Re-sending the same list / re-typing the same number keeps the link.
+await call('POST', '/v1/players/phones', { players: [{ id: 'p1', name: 'Ravi', phone: '9876543210' }] }, tok);
 await call('PUT', '/v1/me/phone', { phone: '98765 43210' }, ut);
 assert.equal((await call('GET', '/v1/me', undefined, ut)).body.matches.length, 1);
 
-// Someone else logs in with Ravi's number: they only get a question, which the scorer can refuse.
+// A second account with the same number is linked too; the scorer removes it.
 const sneaky = (await call('POST', '/v1/login', { idToken: 'good:222:other@gmail.com' })).body.token;
 await call('PUT', '/v1/me/phone', { phone: '9876543210' }, sneaky);
-const q = (await call('GET', '/v1/claims', undefined, tok)).body.claims;
-assert.equal(q.length, 1);
-assert.equal(q[0].email, 'other@gmail.com');
-await call('POST', '/v1/claims', { userId: q[0].userId, playerId: 'p1', ok: false }, tok);
+assert.equal((await call('GET', '/v1/me', undefined, sneaky)).body.matches.length, 1);
+const two = (await call('GET', '/v1/claims', undefined, tok)).body.claims;
+const other2 = two.find((c) => c.email === 'other@gmail.com');
+await call('POST', '/v1/claims', { userId: other2.userId, playerId: 'p1', ok: false }, tok);
 assert.equal((await call('GET', '/v1/me', undefined, sneaky)).body.matches.length, 0);
+await call('PUT', '/v1/me/phone', { phone: '9876543210' }, sneaky);
+assert.equal((await call('GET', '/v1/me', undefined, sneaky)).body.matches.length, 0, 'removed stays removed');
+assert.equal((await call('GET', '/v1/claims', undefined, tok)).body.claims.length, 1);
 
 // Scorer changes the player's number: the old link goes away.
 await call('POST', '/v1/players/phones', { players: [{ id: 'p1', name: 'Ravi', phone: '9000000000' }] }, tok);
 assert.equal((await call('GET', '/v1/me', undefined, ut)).body.matches.length, 0);
-assert.equal((await call('GET', '/v1/me', undefined, ut)).body.profiles.length, 1, 'scorer 2 question is still there');
+assert.equal((await call('GET', '/v1/me', undefined, ut)).body.profiles.length, 1, 'scorer 2 link is still there');
 
-// On the scorer's own phone, their own players need no question.
-await call('POST', '/v1/players/phones', { players: [{ id: 'p1', name: 'Ravi', phone: '9876543210' }] }, tok);
 const own = (await call('POST', '/v1/login', { idToken: 'good:333:scorer@gmail.com' })).body.token;
-me = await call('PUT', '/v1/me/phone', { phone: '9876543210', scorer: tok }, own);
-assert.equal(me.body.matches.length, 1, 'own player auto-approved');
-await call('PUT', '/v1/me/phone', { phone: '9876543210', scorer: reg.body.scorerId + '.wrong' }, sneaky);
 
 // Logging out ends that phone's session only.
 assert.equal((await call('DELETE', '/v1/me', undefined, own)).status, 200);

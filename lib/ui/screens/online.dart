@@ -296,17 +296,17 @@ class _MyMatchesSectionState extends State<MyMatchesSection> {
   }
 }
 
-/// Scorer's questions: "Ravi (ravi@gmail.com) says he is your player Ravi. Yes / No".
-class ClaimsCard extends StatefulWidget {
-  const ClaimsCard({super.key});
+/// On a player's profile: Google accounts that logged in with this
+/// player's mobile number. The scorer can remove one.
+class LinkedAccounts extends StatefulWidget {
+  const LinkedAccounts({super.key, required this.playerId});
+  final String playerId;
 
   @override
-  State<ClaimsCard> createState() => _ClaimsCardState();
+  State<LinkedAccounts> createState() => _LinkedAccountsState();
 }
 
-class _ClaimsCardState extends State<ClaimsCard> {
-  final Set<String> _busy = {};
-
+class _LinkedAccountsState extends State<LinkedAccounts> {
   @override
   void initState() {
     super.initState();
@@ -315,17 +315,25 @@ class _ClaimsCardState extends State<ClaimsCard> {
     });
   }
 
-  Future<void> _answer(Claim c, bool yes) async {
-    final key = '${c.userId}/${c.playerId}';
+  Future<void> _remove(Claim c) async {
     final messenger = ScaffoldMessenger.of(context);
-    final msg = context.tr('online_failed');
-    setState(() => _busy.add(key));
+    final failed = context.tr('online_failed');
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(ctx.tr('remove_access_q')),
+        content: Text(ctx.tr('remove_access_body', {'email': c.email})),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(ctx.tr('cancel'))),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text(ctx.tr('unlink'))),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
     try {
-      await context.sync.answerClaim(c, yes);
+      await context.sync.answerClaim(c, false);
     } catch (_) {
-      _snack(messenger, msg);
-    } finally {
-      if (mounted) setState(() => _busy.remove(key));
+      _snack(messenger, failed);
     }
   }
 
@@ -336,47 +344,23 @@ class _ClaimsCardState extends State<ClaimsCard> {
     return ListenableBuilder(
       listenable: sync,
       builder: (context, _) {
-        if (!sync.enabled || sync.claims.isEmpty) return const SizedBox.shrink();
-        final repo = context.repo;
-        return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          SectionHeader(context.tr('login_requests')),
-          for (final c in sync.claims)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(Space.edge, 0, Space.edge, Space.s),
-              child: AppCard(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  Row(children: [
-                    PlayerAvatar(playerId: c.playerId, size: 36, color: p.gold),
-                    const SizedBox(width: Space.m),
-                    Expanded(
-                      child: Text(
-                        context.tr('claim_question', {'who': c.name.isEmpty ? c.email : '${c.name} (${c.email})', 'player': repo.playerName(c.playerId)}),
-                        style: Tx.small(p.text, w: FontWeight.w600),
-                      ),
-                    ),
-                  ]),
-                  const SizedBox(height: Space.m),
-                  Row(children: [
-                    Expanded(
-                      child: OutlineBtn(
-                        label: context.tr('claim_no'),
-                        height: 44,
-                        onPressed: _busy.contains('${c.userId}/${c.playerId}') ? null : () => _answer(c, false),
-                      ),
-                    ),
-                    const SizedBox(width: Space.s),
-                    Expanded(
-                      child: GoldButton(
-                        label: context.tr('claim_yes'),
-                        height: 44,
-                        onPressed: _busy.contains('${c.userId}/${c.playerId}') ? null : () => _answer(c, true),
-                      ),
-                    ),
-                  ]),
+        final list = sync.claims.where((c) => c.playerId == widget.playerId).toList();
+        if (!sync.enabled || list.isEmpty) return const SizedBox.shrink();
+        return Padding(
+          padding: const EdgeInsets.only(top: Space.s),
+          child: AppCard(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              Text(context.tr('linked_accounts'), style: Tx.small(p.text2, w: FontWeight.w700)),
+              for (final c in list)
+                Row(children: [
+                  Icon(Icons.verified_user_outlined, size: 18, color: p.win),
+                  const SizedBox(width: Space.s),
+                  Expanded(child: Text(c.email, maxLines: 1, overflow: TextOverflow.ellipsis, style: Tx.small(p.text, w: FontWeight.w700))),
+                  TextButton(onPressed: () => _remove(c), child: Text(context.tr('unlink'))),
                 ]),
-              ),
-            ),
-        ]);
+            ]),
+          ),
+        );
       },
     );
   }

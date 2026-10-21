@@ -141,6 +141,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                     Icon(pl.phone.isEmpty ? Icons.add_rounded : Icons.edit_outlined, color: p.text2),
                   ]),
                 ),
+                if (pl.phone.isNotEmpty) LinkedAccounts(playerId: pl.id),
               ],
               const SizedBox(height: Space.m),
               Row(children: [
