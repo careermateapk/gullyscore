@@ -59,7 +59,8 @@ class SyncService extends ChangeNotifier {
     notifyListeners();
     if (!enabled) return;
     repo.addListener(_kick);
-    if (timers) _timer = Timer.periodic(const Duration(seconds: 5), (_) => tick());
+    if (!timers) return; // tests drive tick() themselves
+    _timer = Timer.periodic(const Duration(seconds: 5), (_) => tick());
     unawaited(tick());
   }
 
@@ -72,7 +73,7 @@ class SyncService extends ChangeNotifier {
 
   void _kick() {
     // Upload soon after a change, without blocking the scorer.
-    Timer(const Duration(milliseconds: 800), () => tick());
+    if (_timer != null) Timer(const Duration(milliseconds: 800), () => tick());
   }
 
   void _savePrefs() {
