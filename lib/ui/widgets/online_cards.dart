@@ -67,13 +67,22 @@ class OnlineMatchCard extends StatelessWidget {
         Crest(color: teamColorFor(name), text: initials(name), size: 24),
         const SizedBox(width: 10),
         Expanded(
+          flex: 3,
           child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: Tx.body(bold ? p.text : p.text2, w: bold ? FontWeight.w800 : FontWeight.w700)),
         ),
-        if (s != null) ...[
-          Text(s.$1, style: Tx.score(bold ? 22 : 19, bold ? p.text : p.text2, w: FontWeight.w800)),
-          const SizedBox(width: 4),
-          Text(s.$2, style: Tx.score(14, p.text2, w: FontWeight.w700)),
-        ],
+        if (s != null)
+          Flexible(
+            flex: 2,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerRight,
+              child: Row(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.baseline, textBaseline: TextBaseline.alphabetic, children: [
+                Text(s.$1, style: Tx.score(bold ? 22 : 19, bold ? p.text : p.text2, w: FontWeight.w800)),
+                const SizedBox(width: 4),
+                Text(s.$2, style: Tx.score(14, p.text2, w: FontWeight.w700)),
+              ]),
+            ),
+          ),
       ]);
     }
 

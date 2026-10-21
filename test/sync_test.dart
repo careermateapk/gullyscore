@@ -69,7 +69,7 @@ class FakeCloud implements CloudApi {
     _check();
     return [
       for (final e in matches.entries)
-        if ((e.value['players'] as List).contains(playerId))
+        if ((e.value['players'] as List).map((x) => x is Map ? x['id'] : x).contains(playerId))
           MatchListItem(id: e.key, updated: e.value['updated'] as int, finished: e.value['finished'] as bool, title: '', summary: Map<String, dynamic>.from(e.value['summary'] as Map)),
     ];
   }
@@ -118,7 +118,7 @@ class FakeCloud implements CloudApi {
       profiles: [for (final e in mine) MyProfile(name: 'Ravi', team: '', status: e.value)],
       matches: [
         for (final e in matches.entries)
-          if ((e.value['players'] as List).any(okPlayers.contains))
+          if ((e.value['players'] as List).map((x) => x is Map ? x['id'] : x).any(okPlayers.contains))
             MatchListItem(id: e.key, updated: e.value['updated'] as int, finished: e.value['finished'] as bool, title: '', summary: Map<String, dynamic>.from(e.value['summary'] as Map)),
       ],
       token: token,
