@@ -65,7 +65,7 @@ String seedFinished(Repository r) {
 }
 
 final _errors = <FlutterErrorDetails>[];
-FlutterExceptionHandler? _savedOnError;
+void Function(FlutterErrorDetails)? _savedOnError;
 
 /// Fails with the full error (including which widget) if anything went wrong.
 void check(WidgetTester tester, String where) {
