@@ -338,7 +338,7 @@ class FeaturedMatchCard extends StatelessWidget {
       child: HeroCard(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
-            if (status == MatchStatus.live) LiveBadge(label: context.tr('live')) else Tag(status == MatchStatus.paused ? context.tr('paused') : context.tr('not_started')),
+            Flexible(child: status == MatchStatus.live ? LiveBadge(label: context.tr('live')) : Tag(status == MatchStatus.paused ? context.tr('paused') : context.tr('not_started'))),
             const SizedBox(width: Space.s),
             Expanded(
               child: Text([if (m.title.isNotEmpty) m.title, context.tr('overs_match', {'n': m.overs})].join(' · '),
