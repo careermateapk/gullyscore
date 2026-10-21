@@ -64,10 +64,15 @@ String seedFinished(Repository r) {
   return m.id;
 }
 
+final _errors = <FlutterErrorDetails>[];
+
 /// Fails with the full error (including which widget) if anything went wrong.
 void check(WidgetTester tester, String where) {
-  final e = tester.takeException();
-  if (e != null) fail('$where\n${e is FlutterError ? e.toStringDeep() : e}');
+  if (_errors.isNotEmpty) {
+    final msg = _errors.map((d) => d.toString()).join('\n');
+    _errors.clear();
+    fail('$where\n$msg');
+  }
 }
 
 void main() {
@@ -178,6 +183,8 @@ void main() {
       tester.view.physicalSize = const Size(320 * 3, 640 * 3);
       tester.view.devicePixelRatio = 3;
       addTearDown(tester.view.reset);
+      final oldOnError = FlutterError.onError;
+      FlutterError.onError = _errors.add;
       final (s, r) = await setUpApp();
       s.setTheme(mode);
       final id = seedMatch(r);
@@ -232,6 +239,7 @@ void main() {
         check(tester, 'hindi tab $i');
       }
       await tester.pump(const Duration(seconds: 1));
+      FlutterError.onError = oldOnError;
     });
   }
 
