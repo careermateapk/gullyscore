@@ -33,7 +33,7 @@ jobs:
           node-version: "22"
 
       - name: Test the server
-        run: node --experimental-sqlite test/run.mjs
+        run: node --experimental-sqlite test/run.mjs && node test/push.mjs
 
       - name: Check Cloudflare secrets
         id: secrets

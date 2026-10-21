@@ -12,11 +12,12 @@ import { myCricket, socialRoutes, deleteUserEverywhere } from './social.js';
 import { contentRoutes } from './pages.js';
 import { teamRoutes } from './team.js';
 import { groundRoutes } from './grounds.js';
+import { notifyMatch } from './push.js';
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     try {
-      return await route(request, env);
+      return await route(request, env, ctx);
     } catch (e) {
       if (e instanceof HttpError) return json({ error: e.message }, e.status);
       return json({ error: 'server error' }, 500);
@@ -85,6 +86,7 @@ async function meInfo(user, env) {
      WHERE c.user_id = ? ORDER BY c.created`,
   ).bind(user.id).all();
   return {
+    id: user.id,
     email: user.email,
     name: user.name,
     hasPhone: !!user.phone_hash,
@@ -93,7 +95,7 @@ async function meInfo(user, env) {
   };
 }
 
-async function route(request, env) {
+async function route(request, env, ctx) {
   const url = new URL(request.url);
   const p = url.pathname.replace(/\/+$/, '') || '/';
   const method = request.method;
@@ -138,7 +140,7 @@ async function route(request, env) {
     if (typeof body !== 'object' || !body || typeof body.data !== 'object' || typeof body.summary !== 'object') {
       throw new HttpError(400, 'missing data');
     }
-    const existing = await env.DB.prepare('SELECT scorer_id FROM matches WHERE id = ?').bind(matchId).first();
+    const existing = await env.DB.prepare('SELECT scorer_id, status, summary FROM matches WHERE id = ?').bind(matchId).first();
     if (existing && existing.scorer_id !== scorer) throw new HttpError(403, 'not your match');
     // Players: ids (old apps) or {id, team, name, runs, wickets, line} (new apps).
     const players = [];
@@ -180,6 +182,16 @@ async function route(request, env) {
       ),
     ];
     await env.DB.batch(stmts);
+    // Tell people who follow this match or play for these teams (in the background).
+    let oldSummary = null;
+    try {
+      oldSummary = existing ? JSON.parse(existing.summary) : null;
+    } catch {}
+    const sending = notifyMatch(env, scorer, matchId, existing ? { status: existing.status, summary: oldSummary } : null, {
+      status, summary: body.summary, ground: str(body.ground, 120), teamA: str(ta.id), teamB: str(tb.id),
+    });
+    if (ctx && ctx.waitUntil) ctx.waitUntil(sending);
+    else await sending;
     return json({ ok: true, updated: now });
   }
 

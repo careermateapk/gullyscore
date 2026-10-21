@@ -1,6 +1,7 @@
 // v0.6: team tools for logged-in players of a team: "Who is coming?" and
 // the team khata. A person belongs to a team when a scorer typed their
 // mobile number for a player of that team.
+import { push, topic } from './push.js';
 import { HttpError, ID_RE, TOKEN_ALPHABET, json, randomString, readJson, userAuth } from './util.js';
 
 const str = (v, n) => (typeof v === 'string' ? v.trim().slice(0, n) : '');
@@ -98,6 +99,7 @@ export async function teamRoutes(p, method, url, request, env) {
         .bind(id, scorerId, teamId, title, str(b?.when, 60), str(b?.place, 80), need, user.id, Date.now())
         .run();
       const a = await env.DB.prepare('SELECT * FROM asks WHERE id = ?').bind(id).first();
+      await push(env, [topic('t', scorerId, teamId, 'a')], `🙋 ${title}: are you coming?`, [str(b?.when, 60), str(b?.place, 80)].filter(Boolean).join(' · ') || 'Answer in GullyScore', { ask: id });
       return json(await askView(env, a, ctx));
     }
   }

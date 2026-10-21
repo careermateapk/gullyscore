@@ -1,6 +1,7 @@
 // v0.5: all-matches feed, My Cricket, leaderboard, community posts,
 // ratings with comments, reactions and replies, reports, account deletion.
 import { deleteUserTeamData } from './team.js';
+import { push, topic } from './push.js';
 import { HttpError, ID_RE, TOKEN_ALPHABET, auth, json, randomString, readJson, userAuth } from './util.js';
 
 const HOUR = 3600 * 1000;
@@ -331,9 +332,12 @@ export async function socialRoutes(p, method, url, request, env) {
     if (b?.join === false) {
       await env.DB.prepare('DELETE FROM post_joins WHERE post_id = ? AND user_id = ?').bind(m[1], user.id).run();
     } else {
-      await env.DB.prepare('INSERT OR IGNORE INTO post_joins (post_id, user_id, note, created) VALUES (?, ?, ?, ?)')
+      const r = await env.DB.prepare('INSERT OR IGNORE INTO post_joins (post_id, user_id, note, created) VALUES (?, ?, ?, ?)')
         .bind(m[1], user.id, str(b?.note, 80), Date.now())
         .run();
+      if (r.meta?.changes && row.user_id !== user.id) {
+        await push(env, [topic('u', row.user_id)], `🙌 ${user.name || 'Someone'} joined your post`, str(b?.note, 80) || row.body.slice(0, 80), { post: row.id });
+      }
     }
     return json(await postView(env, row, user));
   }
@@ -468,6 +472,9 @@ export async function socialRoutes(p, method, url, request, env) {
       'INSERT INTO comments (id, scorer_id, team_id, match_id, parent_id, user_id, author_team, is_team, body, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
     ).bind(id, root.scorer_id, root.team_id, root.match_id, root.id, user.id, team?.team || '', team ? 1 : 0, text, Date.now()).run();
     const row = await env.DB.prepare('SELECT * FROM comments WHERE id = ?').bind(id).first();
+    if (parent.user_id !== user.id) {
+      await push(env, [topic('u', parent.user_id)], `💬 ${user.name || 'Someone'} replied to you`, text.slice(0, 120), { team: root.team_id, scorer: root.scorer_id });
+    }
     return json(await commentView(env, row, user));
   }
 
@@ -498,6 +505,9 @@ export async function socialRoutes(p, method, url, request, env) {
       await env.DB.prepare('INSERT INTO reactions (comment_id, user_id, emoji) VALUES (?, ?, ?) ON CONFLICT(comment_id, user_id) DO UPDATE SET emoji = excluded.emoji')
         .bind(m[1], user.id, emoji)
         .run();
+      if (!old && row.user_id !== user.id) {
+        await push(env, [topic('u', row.user_id)], `${emoji} ${user.name || 'Someone'} reacted to your comment`, row.body.slice(0, 120), { team: row.team_id, scorer: row.scorer_id });
+      }
     }
     return json(await commentView(env, row, user));
   }

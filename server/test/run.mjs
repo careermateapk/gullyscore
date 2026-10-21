@@ -442,4 +442,51 @@ assert.equal(big.status, 413);
   delete env.FAKE_PLACES;
 }
 
+// ================= v0.7: notifications =================
+{
+  const sent = [];
+  env.FAKE_PUSH = (m) => sent.push(m);
+  const s1 = await call('POST', '/v1/register');
+  const sc = s1.body.scorerId + '.' + s1.body.token;
+  const S = s1.body.scorerId;
+  const inn = (score, overs, batting) => ({ team: 'DD', score, overs, extras: '0', batting, bowling: [], fow: [] });
+  const put = (status, innings, extra = {}) =>
+    call('PUT', '/v1/matches/nm1', { data: {}, summary: { title: 'DD vs GB', status: 'DD won by 5 runs', innings, thisOver: [] }, status, teamA: { id: 'tDD', name: 'DD' }, teamB: { id: 'tGB', name: 'GB' }, ...extra }, sc);
+  await put('upcoming', [], { scheduled: Date.now() + 3600e3 });
+  assert.equal(sent.length, 0, 'scheduling is quiet');
+  await put('live', [inn('0/0', '0.0', [])]);
+  assert.equal(sent.length, 1);
+  assert.equal(sent[0].notification.title, '🏏 Match started');
+  assert.ok(sent[0].condition.includes("'m.nm1.s' in topics"));
+  assert.ok(sent[0].condition.includes(`'t.${S}.tDD.s' in topics`));
+  sent.length = 0;
+  await put('live', [inn('46/0', '4.0', [{ name: 'Suraj', r: 46, b: 20, '4s': 5, '6s': 2 }])]);
+  await put('live', [inn('52/1', '4.3', [{ name: 'Suraj', r: 52, b: 22, '4s': 5, '6s': 3 }])]);
+  const titles = sent.map((x) => x.notification.title);
+  assert.ok(titles.includes('🔴 WICKET!'));
+  assert.ok(titles.includes('⭐ Suraj reaches 50!'));
+  assert.ok(titles.includes('💥 SIX! Suraj'));
+  assert.ok(sent.find((x) => x.notification.title === '💥 SIX! Suraj').condition.includes("'m.nm1.b'"));
+  sent.length = 0;
+  await put('result', [inn('52/1', '5.0', [{ name: 'Suraj', r: 52, b: 22, '4s': 5, '6s': 3 }])], { finished: true });
+  assert.deepEqual(sent.map((x) => x.notification.title), ['🏆 Result']);
+  sent.length = 0;
+  await put('result', [inn('52/1', '5.0', [])], { finished: true });
+  assert.equal(sent.length, 0, 'result only once');
+
+  // Community join, reply, reaction go to the person's own topic.
+  const a = (await call('POST', '/v1/login', { idToken: 'good:pa:pa@x.com' })).body;
+  const b = (await call('POST', '/v1/login', { idToken: 'good:pb:pb@x.com' })).body;
+  assert.equal(a.id, 'gpa');
+  const post = (await call('POST', '/v1/posts', { kind: 'players', body: 'Need 1' }, a.token)).body;
+  sent.length = 0;
+  await call('POST', '/v1/posts/' + post.id + '/join', {}, b.token);
+  assert.equal(sent[0].topic, 'u.gpa');
+  await call('POST', '/v1/posts/' + post.id + '/join', {}, b.token);
+  assert.equal(sent.length, 1, 'joining twice notifies once');
+  await call('POST', '/v1/posts/' + post.id + '/join', {}, a.token);
+  assert.equal(sent.length, 1, 'own post is quiet');
+  delete env.FAKE_PUSH;
+}
+
 console.log('server tests passed');
