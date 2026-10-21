@@ -97,6 +97,23 @@ jobs:
             npx --yes wrangler@4 deploy
           fi
 
+      - name: Server keys (Google Places, Firebase)
+        if: steps.secrets.outputs.ready == 'yes'
+        env:
+          PLACES_API_KEY: ${{ secrets.PLACES_API_KEY }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -n "$PLACES_API_KEY" ]; then
+            printf '%s' "$PLACES_API_KEY" | npx --yes wrangler@4 secret put PLACES_API_KEY
+          else
+            echo "::warning::Google ground search is off (add the PLACES_API_KEY secret)."
+          fi
+          if [ -n "$FIREBASE_SERVICE_ACCOUNT" ]; then
+            printf '%s' "$FIREBASE_SERVICE_ACCOUNT" | npx --yes wrangler@4 secret put FIREBASE_SERVICE_ACCOUNT
+          else
+            echo "::warning::Notifications are off (add the FIREBASE_SERVICE_ACCOUNT secret)."
+          fi
+
       - name: Check it is online
         if: steps.secrets.outputs.ready == 'yes'
         run: |

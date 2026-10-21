@@ -403,4 +403,43 @@ assert.equal(big.status, 413);
   assert.equal((await call('GET', base + '/khata?month=2020-01', undefined, kapil)).body.spent, 0);
 }
 
+// ================= v0.7: grounds =================
+{
+  let googleCalls = 0;
+  env.FAKE_PLACES = async (q) => {
+    googleCalls++;
+    return [
+      { placeId: 'gp1', name: 'Rajnagar Stadium', address: 'Rajnagar, Bihar', lat: 26.40, lng: 86.10 },
+      { placeId: 'gp2', name: 'Far Ground', address: 'Patna', lat: 25.6, lng: 85.1 },
+    ];
+  };
+  const u = (await call('POST', '/v1/login', { idToken: 'good:groundman:g@x.com' })).body.token;
+  assert.equal((await call('POST', '/v1/grounds', { name: 'X', lat: 1, lng: 2 })).status, 401);
+  assert.equal((await call('POST', '/v1/grounds', { name: '', lat: 1, lng: 2 }, u)).status, 400);
+  const g1 = (await call('POST', '/v1/grounds', { name: 'Sakri High School ground', address: 'Sakri', lat: 26.30, lng: 86.05, pitch: 'matting', fee: 'Free', phone: '98765 43210', toilet: true }, u)).body;
+  assert.equal(g1.name, 'Sakri High School ground');
+  assert.equal(g1.toilet, true);
+  let near = (await call('GET', '/v1/grounds?lat=26.35&lng=86.07')).body;
+  assert.equal(near.grounds.length, 1);
+  assert.ok(near.grounds[0].km > 0 && near.grounds[0].km < 10);
+  assert.equal((await call('GET', '/v1/grounds?lat=10&lng=10')).body.grounds.length, 0, 'far away');
+  let s = (await call('GET', '/v1/grounds/search?q=sakri&lat=26.35&lng=86.07')).body;
+  assert.equal(s.ours.length, 1);
+  assert.equal(s.google.length, 2);
+  // Save a Google result: next search shows it as ours, not twice.
+  const saved = (await call('POST', '/v1/grounds', { name: 'Rajnagar Stadium', lat: 26.40, lng: 86.10, placeId: 'gp1', fee: '₹1,500 / match' }, u)).body;
+  assert.equal((await call('POST', '/v1/grounds', { name: 'dup', lat: 26.40, lng: 86.10, placeId: 'gp1' }, u)).body.id, saved.id, 'same place once');
+  s = (await call('GET', '/v1/grounds/search?q=rajnagar')).body;
+  assert.ok(s.ours.some((g) => g.placeId === 'gp1'));
+  assert.ok(!s.google.some((g) => g.placeId === 'gp1'));
+  assert.equal((await call('GET', '/v1/grounds/search?q=a')).status, 400);
+  // Daily cap: Google is not asked once the cap is reached.
+  db.prepare("UPDATE config SET v = '99999' WHERE k LIKE 'places:%'").run();
+  const before = googleCalls;
+  s = (await call('GET', '/v1/grounds/search?q=stadium')).body;
+  assert.equal(googleCalls, before, 'capped');
+  assert.equal(s.google.length, 0);
+  delete env.FAKE_PLACES;
+}
+
 console.log('server tests passed');

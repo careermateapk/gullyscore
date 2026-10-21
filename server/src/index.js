@@ -11,6 +11,7 @@ import { HttpError, ID_RE, TOKEN_ALPHABET, auth, esc, html, json, randomString, 
 import { myCricket, socialRoutes, deleteUserEverywhere } from './social.js';
 import { contentRoutes } from './pages.js';
 import { teamRoutes } from './team.js';
+import { groundRoutes } from './grounds.js';
 
 export default {
   async fetch(request, env) {
@@ -113,6 +114,8 @@ async function route(request, env) {
   if (social) return social;
   const team = await teamRoutes(p, method, url, request, env);
   if (team) return team;
+  const grounds = await groundRoutes(p, method, url, request, env);
+  if (grounds) return grounds;
   const page = contentRoutes(p, method, url);
   if (page) return page;
 

@@ -485,7 +485,14 @@ class ChoiceChipX extends StatelessWidget {
             ),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               if (icon != null) ...[Icon(icon, size: 15, color: selected ? const Color(0xFF0B1220) : p.text), const SizedBox(width: 6)],
-              Text(label, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: selected ? const Color(0xFF0B1220) : p.text)),
+              ConstrainedBox(
+                // Never wider than the screen: long labels end with "…".
+                constraints: BoxConstraints(maxWidth: (MediaQuery.sizeOf(context).width - 104).clamp(80, 600)),
+                child: Text(label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: selected ? const Color(0xFF0B1220) : p.text)),
+              ),
             ]),
           ),
         ),
