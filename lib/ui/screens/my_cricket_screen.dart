@@ -29,7 +29,9 @@ class _MyCricketScreenState extends State<MyCricketScreen> {
 
   Future<void> _refresh() async {
     final f = context.sync.refreshMe();
-    setState(() => _future = f);
+    setState(() {
+      _future = f;
+    });
     try {
       await f;
     } catch (_) {}

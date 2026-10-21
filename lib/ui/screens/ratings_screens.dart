@@ -93,7 +93,12 @@ class _RateTeamButtonState extends State<RateTeamButton> {
             height: 48,
             onPressed: () async {
               final ok = await showRateSheet(context, matchId: widget.matchId, team: t.team!.name);
-              if (ok == true && mounted) setState(() => _f = sync.social.ratingTarget(widget.matchId));
+              if (ok == true && mounted) {
+                final f = sync.social.ratingTarget(widget.matchId);
+                setState(() {
+                  _f = f;
+                });
+              }
             },
           ),
         );

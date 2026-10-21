@@ -162,7 +162,12 @@ class _MyMatchesSectionState extends State<MyMatchesSection> {
   Future<MeInfo?>? _future;
   bool _busy = false;
 
-  void _reload() => setState(() => _future = context.sync.refreshMe());
+  void _reload() {
+    final f = context.sync.refreshMe();
+    setState(() {
+      _future = f;
+    });
+  }
 
   Future<void> _run(Future<void> Function() f) async {
     if (_busy) return;

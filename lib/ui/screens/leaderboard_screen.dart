@@ -20,7 +20,12 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   int _days = 0;
   Future<List<Leader>>? _f;
 
-  void _load() => setState(() => _f = context.sync.social.leaderboard(kind: _kind, days: _days));
+  void _load() {
+    final f = context.sync.social.leaderboard(kind: _kind, days: _days);
+    setState(() {
+      _f = f;
+    });
+  }
 
   @override
   void initState() {
