@@ -12,6 +12,7 @@ import '../../scoring/tournament.dart';
 import '../widgets/common.dart';
 import '../widgets/ground_map.dart';
 import '../widgets/online_cards.dart';
+import '../widgets/sponsors.dart';
 import 'ratings_screens.dart';
 import 'certificates.dart';
 import 'help.dart';
@@ -334,6 +335,8 @@ class _SummaryTab extends StatelessWidget {
 
     final mom = playerOfMatch(st);
     return ListView(padding: const EdgeInsets.fromLTRB(Space.edge, Space.m, Space.edge, 96), children: [
+      SponsorBanner(sponsors: context.repo.sponsorsOf(m)),
+      if (st.finished) RateTeamButton(matchId: m.id, bottomGap: true),
       if (mom != null) ...[
         HeroCard(
           padding: const EdgeInsets.all(14),
@@ -352,7 +355,6 @@ class _SummaryTab extends StatelessWidget {
         ),
         const SizedBox(height: Space.s),
       ],
-      if (st.finished) ...[RateTeamButton(matchId: m.id), const SizedBox(height: Space.s)],
       if (!inn.ended)
         AppCard(
           padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),

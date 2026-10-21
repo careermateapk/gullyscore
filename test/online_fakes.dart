@@ -52,7 +52,7 @@ final meJson = {
     {'status': 'ok', 'name': 'Suraj Kumar Thakur', 'team': 'Madhubani Super Strikers XI'},
   ],
   'matches': [
-    match('l1', 'live', me: {'r': 158, 'b': 131, '4s': 16, '6s': 9, 'notOut': true, 'w': 2, 'o': '4.0', 'rc': 38}),
+    match('l1', 'live', me: {'r': 158, 'b': 131, '4s': 16, '6s': 9, 'notOut': true, 'w': 5, 'o': '4.0', 'rc': 38, 'hat': true, 'ct': 3}),
     match('u1', 'upcoming'),
     match('r1', 'result', me: {'r': 75, 'b': 38, 'notOut': true}),
   ],
@@ -126,6 +126,45 @@ Future<Map<String, dynamic>> fakeSend(String method, String path, {Object? body,
       'ontime': 4.0,
       'tags': {'sportsmen': 21, 'tough': 3, 'late': 2, 'again': 17},
       'comments': [_comment('c1', replies: [_comment('c2')]), _comment('c3')],
+    };
+  }
+  if (path.endsWith('/asks')) {
+    return {
+      'asks': [
+        {
+          'id': 'a1',
+          'title': 'vs Jhanjharpur Warriors Cricket Club',
+          'when': 'Sunday 25 Oct, 7:00 AM',
+          'place': 'Sakri high school ground',
+          'need': 11,
+          'mine': true,
+          'myAnswer': 'yes',
+          'yes': 8,
+          'no': 2,
+          'maybe': 1,
+          'waiting': 3,
+          'players': [
+            for (final a in ['yes', 'no', 'maybe', '']) {'playerId': 'p$a', 'name': 'Suraj Kumar Thakur Junior', 'answer': a},
+          ],
+        },
+      ],
+    };
+  }
+  if (path.contains('/khata')) {
+    return {
+      'month': '2026-10',
+      'spent': 128400,
+      'share': 9172,
+      'players': 14,
+      'pending': 74000,
+      'people': [
+        {'playerId': 'k1', 'name': 'Amit Kumar Mishra Senior', 'paid': 0, 'due': 9172},
+        {'playerId': 'k2', 'name': 'Mohan', 'paid': 9172, 'due': 0},
+      ],
+      'items': [
+        {'id': 'i1', 'kind': 'expense', 'amount': 120000, 'note': '2 leather balls and stumps for the whole season', 'name': 'Suraj Kumar Thakur', 'created': _now},
+        {'id': 'i2', 'kind': 'payment', 'amount': 9172, 'note': '', 'name': 'Mohan', 'created': _now},
+      ],
     };
   }
   if (path.endsWith('/rating')) return {'canRate': true, 'scorerId': 's1', 'team': {'id': 'tB', 'name': 'Jhanjharpur Warriors'}};

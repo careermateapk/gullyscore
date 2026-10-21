@@ -258,10 +258,39 @@ class Repository extends ChangeNotifier {
     _changed();
   }
 
+  /// Sponsors shown on this match (its tournament's, or the copy that came online).
+  List<Sponsor> sponsorsOf(MatchRecord m) {
+    if (m.remote) return [for (final x in m.sponsors) Sponsor.fromJson(x)];
+    final t = m.tournamentId == null ? null : tournaments[m.tournamentId];
+    return t?.sponsors ?? const [];
+  }
+
+  void addSponsor(Tournament t, Sponsor s) {
+    t.sponsors.add(s);
+    _touchTournamentMatches(t);
+  }
+
+  void removeSponsor(Tournament t, int i) {
+    if (i < 0 || i >= t.sponsors.length) return;
+    t.sponsors.removeAt(i);
+    _touchTournamentMatches(t);
+  }
+
+  // Matches of the tournament upload again so the sponsor shows online.
+  void _touchTournamentMatches(Tournament t) {
+    final now = DateTime.now();
+    for (final m in matches.values) {
+      if (m.tournamentId == t.id && !m.remote) m.updatedAt = now;
+    }
+    _changed();
+  }
+
   /// What a match looks like online (no photos, no logos).
   Map<String, dynamic> cloudData(MatchRecord m) {
     final ids = {...m.playersA, ...m.playersB};
     final json = m.toJson()..remove('celebrated');
+    final sp = sponsorsOf(m);
+    if (sp.isNotEmpty) json['sponsors'] = [for (final x in sp) x.toJson()];
     return {
       'match': json,
       'teams': [for (final t in [teams[m.teamA], teams[m.teamB]]) if (t != null) t.toCloud()],

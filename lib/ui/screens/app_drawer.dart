@@ -107,7 +107,7 @@ class AppDrawer extends StatelessWidget {
           ),
           Padding(
             padding: const EdgeInsets.only(top: Space.l),
-            child: Text('GullyScore 0.5 · Made in India 🇮🇳', textAlign: TextAlign.center, style: Tx.label(p.text2, w: FontWeight.w600)),
+            child: Text('GullyScore 0.6 · Made in India 🇮🇳', textAlign: TextAlign.center, style: Tx.label(p.text2, w: FontWeight.w600)),
           ),
         ]),
       ),

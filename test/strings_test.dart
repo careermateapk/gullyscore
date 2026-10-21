@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gullyscore/app/strings.dart';
+import 'package:gullyscore/scoring/badges.dart';
 import 'package:gullyscore/ui/screens/help.dart';
 
 void main() {
@@ -25,6 +26,11 @@ void main() {
       used.addAll(['fmt_$f', 'fmt_${f}_body']);
     }
     used.add('bracket');
+    used.addAll(['khata_expense_sub', 'khata_payment_sub', 'who_spent', 'who_paid', 'all_paid', 'coming', 'not_coming', 'no_reply', 'maybe']);
+    used.addAll(['title', 'six', 'potm', 'other'].map((k) => 'sponsor_$k'));
+    for (final b in badgeDefs) {
+      used.addAll(['badge_${b.id}', 'badge_${b.id}_how']);
+    }
     used.addAll(['players', 'opponent', 'poll', 'tournament', 'general'].map((k) => 'kind_$k'));
     used.addAll(['players', 'opponent', 'poll', 'tournament'].map((k) => 'hint_$k'));
     used.addAll(['sportsmen', 'tough', 'late', 'again'].map((k) => 'tag_$k'));

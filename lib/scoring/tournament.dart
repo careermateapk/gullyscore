@@ -73,6 +73,20 @@ class Fixture {
       );
 }
 
+/// A tournament sponsor, shown on live scores, the web page and share pictures.
+class Sponsor {
+  Sponsor({required this.name, this.role = 'title', this.phone = '', this.place = ''});
+  final String name;
+  final String role; // title, six, potm, other
+  final String phone;
+  final String place;
+
+  Map<String, dynamic> toJson() => {'name': name, 'role': role, if (phone.isNotEmpty) 'phone': phone, if (place.isNotEmpty) 'place': place};
+
+  factory Sponsor.fromJson(Map<String, dynamic> j) =>
+      Sponsor(name: '${j['name'] ?? ''}', role: '${j['role'] ?? 'title'}', phone: '${j['phone'] ?? ''}', place: '${j['place'] ?? ''}');
+}
+
 class Tournament {
   Tournament({
     required this.id,
@@ -86,7 +100,8 @@ class Tournament {
     this.category = 'open',
     this.qualifiers = 2,
     this.venue = '',
-  });
+    List<Sponsor>? sponsors,
+  }) : sponsors = sponsors ?? [];
 
   final String id;
   String name;
@@ -99,6 +114,7 @@ class Tournament {
   final String category; // open, women, u17, u14
   final int qualifiers; // per group (groups) or in total (league)
   String venue;
+  final List<Sponsor> sponsors;
 
   Fixture? fixture(String id) {
     for (final f in fixtures) {
@@ -119,6 +135,7 @@ class Tournament {
         'cat': category,
         'q': qualifiers,
         'venue': venue,
+        if (sponsors.isNotEmpty) 'sponsors': [for (final x in sponsors) x.toJson()],
       };
 
   factory Tournament.fromJson(Map<String, dynamic> j) => Tournament(
@@ -135,6 +152,7 @@ class Tournament {
         category: (j['cat'] as String?) ?? 'open',
         qualifiers: (j['q'] as num?)?.toInt() ?? 2,
         venue: (j['venue'] as String?) ?? '',
+        sponsors: [for (final x in (j['sponsors'] as List? ?? const [])) Sponsor.fromJson(Map<String, dynamic>.from(x as Map))],
       );
 }
 

@@ -346,6 +346,7 @@ table{width:100%;border-collapse:collapse;font-size:14px}th{color:var(--t2);font
 th:first-child,td:first-child{text-align:left}td{text-align:right;padding:7px 0;border-top:1px solid var(--ln)}
 .balls span{display:inline-flex;width:28px;height:28px;border-radius:99px;background:var(--s2);align-items:center;justify-content:center;font-size:12px;font-weight:800;margin-right:4px}
 .foot{color:var(--t2);font-size:12px;text-align:center;margin:20px 0}
+.spon{margin-top:10px;padding:10px 12px;border-radius:12px;background:linear-gradient(90deg,#3a2a00,#1b1400);border:1px solid #6b5212}
 .status{background:rgba(255,201,74,.10);color:var(--gd);border-radius:12px;padding:10px 12px;font-weight:800;margin-top:12px}
 `;
 
@@ -362,6 +363,9 @@ function draw(d){const s=d.summary;const cur=s.innings[s.innings.length-1];
 let h='<div class="hero"><div style="display:flex;justify-content:space-between;align-items:center">'+(d.finished?'<span class="t2" style="font-weight:800">Result</span>':'<span class="live"><i></i>Live</span>')+'<span class="t2" style="font-size:12px">'+e(s.title)+'</span></div>';
 for(const i of s.innings){h+='<div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:12px"><b>'+e(i.team)+'</b><span class="n '+(i===cur?'big':'')+'">'+e(i.score)+' <span class="t2" style="font-size:15px">('+e(i.overs)+')</span></span></div>';}
 h+='<div class="status">'+e(s.status)+'</div>';
+if(s.sponsors&&s.sponsors.length){const R={title:'Title sponsor',six:'Six of the match',potm:'Player of the match',other:'Sponsor'};const t=s.sponsors.find(x=>x.role==='title')||s.sponsors[0];
+h+='<div class="spon"><div class="t2" style="font-size:11px;font-weight:800;letter-spacing:.6px;color:#E9C46A">'+e((R[t.role]||'Sponsor').toUpperCase())+'</div><b>'+e(t.name)+'</b>'+(t.phone||t.place?'<div class="t2" style="font-size:12px">'+e([t.phone,t.place].filter(Boolean).join(' · '))+'</div>':'')+'</div>';
+for(const x of s.sponsors){if(x!==t)h+='<div class="t2" style="font-size:12px;margin-top:4px">'+e(R[x.role]||'Sponsor')+': <b style="color:#F2F5FA">'+e(x.name)+'</b></div>';}}
 if(s.thisOver&&s.thisOver.length){h+='<div class="balls" style="margin-top:12px">'+s.thisOver.map(b=>'<span>'+e(b==='•'?'0':b)+'</span>').join('')+'</div>';}
 h+='</div>';
 for(const i of [...s.innings].reverse()){h+='<div class="card"><b>'+e(i.team)+' '+e(i.score)+' ('+e(i.overs)+')</b><table><tr><th>Batter</th><th>R</th><th>B</th><th>4s</th><th>6s</th></tr>';

@@ -10,6 +10,7 @@ import '../../scoring/stats.dart';
 import '../../scoring/tournament.dart';
 import '../widgets/avatar.dart';
 import '../widgets/common.dart';
+import '../widgets/sponsors.dart';
 import 'certificates.dart';
 import 'help.dart';
 import 'match_centre_screen.dart';
@@ -455,8 +456,12 @@ class TournamentScreen extends StatelessWidget {
                           icon: Icon(Icons.more_vert_rounded, color: p.text),
                           onSelected: (k) {
                             if (k == 'delete') _delete(context, t);
+                            if (k == 'sponsors') showSponsorsSheet(context, t);
                           },
-                          itemBuilder: (ctx) => [PopupMenuItem(value: 'delete', child: Text(ctx.tr('delete_tournament')))],
+                          itemBuilder: (ctx) => [
+                            PopupMenuItem(value: 'sponsors', child: Text(ctx.tr('sponsors'))),
+                            PopupMenuItem(value: 'delete', child: Text(ctx.tr('delete_tournament'))),
+                          ],
                         ),
                       ]),
                     ),
@@ -508,6 +513,10 @@ class TournamentScreen extends StatelessWidget {
                       ),
                     ),
                   ),
+                  if (t.sponsors.isNotEmpty)
+                    SliverToBoxAdapter(
+                      child: Padding(padding: const EdgeInsets.fromLTRB(Space.edge, Space.s, Space.edge, 0), child: SponsorBanner(sponsors: t.sponsors)),
+                    ),
                   SliverPersistentHeader(pinned: true, delegate: _Tabs(p, tabs)),
                 ],
                 body: TabBarView(children: [

@@ -214,7 +214,7 @@ class SettingsScreen extends StatelessWidget {
         ]),
         Padding(
           padding: const EdgeInsets.all(Space.l),
-          child: Text('GullyScore 0.5', textAlign: TextAlign.center, style: Tx.label(p.text2, w: FontWeight.w600)),
+          child: Text('GullyScore 0.6', textAlign: TextAlign.center, style: Tx.label(p.text2, w: FontWeight.w600)),
         ),
       ]),
     );

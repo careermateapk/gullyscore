@@ -31,7 +31,19 @@ String matchStatusOnline(MatchRecord m, MatchState st) {
 Map<String, dynamic> playerLine(MatchState st, String id, String team, String name) {
   var runs = 0, balls = 0, fours = 0, sixes = 0, wkts = 0, bBalls = 0, bRuns = 0;
   var batted = false, bowled = false, out = false;
+  var catches = 0, hatTrick = false;
   for (final inn in st.innings) {
+    var run = 0; // wickets in a row for this bowler
+    for (final b in inn.balls) {
+      if (b.fielder == id && b.outKind == OutKind.caught) catches++;
+      if (b.bowler != id || !b.legal) continue;
+      if (b.isWicket && OutKind.creditsBowler(b.outKind!)) {
+        run++;
+        if (run >= 3) hatTrick = true;
+      } else {
+        run = 0;
+      }
+    }
     final b = inn.batters[id];
     if (b != null) {
       batted = true;
@@ -58,6 +70,8 @@ Map<String, dynamic> playerLine(MatchState st, String id, String team, String na
     'line': {
       if (batted) ...{'r': runs, 'b': balls, '4s': fours, '6s': sixes, 'notOut': !out},
       if (bowled) ...{'w': wkts, 'o': oversText(bBalls), 'rc': bRuns},
+      if (catches > 0) 'ct': catches,
+      if (hatTrick) 'hat': true,
     },
   };
 }
@@ -227,6 +241,8 @@ class SyncService extends ChangeNotifier {
     final st = m.state;
     final summary = buildSummary(state: st, nameA: repo.teamName(m.teamA), nameB: repo.teamName(m.teamB), name: repo.playerName);
     if (m.title.isNotEmpty) summary['title'] = '${summary['title']} · ${m.title}';
+    final sponsors = repo.sponsorsOf(m);
+    if (sponsors.isNotEmpty) summary['sponsors'] = [for (final x in sponsors) x.toJson()];
     final r = st.finished ? st.result : null;
     return {
       'data': repo.cloudData(m),
@@ -302,21 +318,27 @@ class SyncService extends ChangeNotifier {
 
   // ---------- Scorer: players' mobile numbers ----------
 
+  /// Every player of this phone's teams (the squad), with the mobile number when typed.
   List<Map<String, String>> _phoneList() {
     final list = <Map<String, String>>[];
-    for (final p in repo.players.values) {
-      if (p.remote || p.phone.isEmpty) continue;
-      final team = repo.teams.values.where((t) => t.playerIds.contains(p.id)).map((t) => t.name).firstOrNull ?? '';
-      final teamId = repo.teams.values.where((t) => t.playerIds.contains(p.id)).map((t) => t.id).firstOrNull ?? '';
-      list.add({'id': p.id, 'name': p.name, 'team': team, 'teamId': teamId, 'phone': p.phone});
+    for (final t in repo.teams.values) {
+      if (t.remote) continue;
+      for (final id in t.playerIds) {
+        final p = repo.players[id];
+        if (p == null || p.remote) continue;
+        list.add({'id': p.id, 'name': p.name, 'team': t.name, 'teamId': t.id, 'phone': p.phone});
+      }
     }
     list.sort((a, b) => a['id']!.compareTo(b['id']!));
     return list;
   }
 
+  bool get _anyPhone => _phoneList().any((e) => e['phone']!.isNotEmpty);
+
   Future<void> _sendPhones() async {
     if (!repo.loaded) return;
     final list = _phoneList();
+    if (_phonesSig.isEmpty && !list.any((e) => e['phone']!.isNotEmpty)) return; // nothing to link yet
     final sig = list.map((e) => '${e['id']}|${e['phone']}|${e['name']}|${e['team']}|${e['teamId']}').join(';');
     if (sig == _phonesSig) return;
     final auth = await _ensureIdentity();
@@ -403,7 +425,7 @@ class SyncService extends ChangeNotifier {
     final clean = cleanPhone(phone);
     if (clean.isEmpty) throw CloudError(400, 'bad phone');
     // If this phone also scores, send its numbers first so its own players link too.
-    if (_phoneList().isNotEmpty) await _sendPhones();
+    if (_anyPhone) await _sendPhones();
     final info = await cloud.setMyPhone(t, clean);
     myPhone = clean;
     await _prefs?.setString('cloud.myPhone', clean);

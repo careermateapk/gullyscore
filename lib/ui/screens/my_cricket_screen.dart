@@ -9,7 +9,10 @@ import '../../data/models.dart';
 import '../widgets/common.dart';
 import '../widgets/online_cards.dart';
 import 'online.dart';
+import '../../scoring/badges.dart';
+import 'badges_screen.dart';
 import 'ratings_screens.dart';
+import 'team_tools.dart';
 
 class MyCricketScreen extends StatefulWidget {
   const MyCricketScreen({super.key, required this.onOpenTab});
@@ -240,6 +243,13 @@ class _Hero extends StatelessWidget {
             const SizedBox(width: Space.s),
             stat(context.tr('best'), t.matches == 0 ? '-' : '${t.best}${t.bestNotOut ? '*' : ''}', gold: true),
           ]),
+          const SizedBox(height: Space.s),
+          OutlineBtn(
+            label: context.tr('my_badges_n', {'n': earnedBadges(me.matches).length}),
+            icon: Icons.military_tech_rounded,
+            height: 44,
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => BadgesScreen(me: me))),
+          ),
         ]),
       ),
     );
@@ -363,11 +373,41 @@ class OnlineTeamScreen extends StatelessWidget {
               ]),
             ),
           ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(Space.edge, Space.s, Space.edge, 0),
+            child: Row(children: [
+              Expanded(child: _ToolCard(icon: Icons.how_to_reg_rounded, color: p.win, label: context.tr('who_coming'), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AvailabilityScreen(team: team))))),
+              const SizedBox(width: Space.s),
+              Expanded(child: _ToolCard(icon: Icons.account_balance_wallet_rounded, color: p.goldText, label: context.tr('team_khata'), onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => KhataScreen(team: team))))),
+            ]),
+          ),
           if (live.isNotEmpty) ...[SectionHeader(context.tr('live_now')), for (final m in live) card(m)],
           if (up.isNotEmpty) ...[SectionHeader(context.tr('upcoming')), for (final m in up.reversed) card(m)],
           if (past.isNotEmpty) ...[SectionHeader(context.tr('results')), for (final m in past) card(m)],
         ]),
       ),
+    );
+  }
+}
+
+class _ToolCard extends StatelessWidget {
+  const _ToolCard({required this.icon, required this.color, required this.label, required this.onTap});
+  final IconData icon;
+  final Color color;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = Palette.of(context);
+    return AppCard(
+      onTap: onTap,
+      padding: const EdgeInsets.all(12),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Icon(icon, color: color),
+        const SizedBox(height: 6),
+        Text(label, maxLines: 2, overflow: TextOverflow.ellipsis, style: Tx.small(p.text, w: FontWeight.w800)),
+      ]),
     );
   }
 }

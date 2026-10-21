@@ -47,8 +47,9 @@ class Stars extends StatelessWidget {
 
 /// On a finished match: "Rate <other team>" for players of this match.
 class RateTeamButton extends StatefulWidget {
-  const RateTeamButton({super.key, required this.matchId});
+  const RateTeamButton({super.key, required this.matchId, this.bottomGap = false});
   final String matchId;
+  final bool bottomGap;
 
   @override
   State<RateTeamButton> createState() => _RateTeamButtonState();
@@ -68,9 +69,10 @@ class _RateTeamButtonState extends State<RateTeamButton> {
       builder: (context, snap) {
         final t = snap.data;
         if (t == null || t.team == null) return const SizedBox.shrink();
+        final pad = widget.bottomGap ? const EdgeInsets.only(bottom: Space.s) : const EdgeInsets.only(top: Space.s);
         if (t.rated) {
           return Padding(
-            padding: const EdgeInsets.only(top: Space.s),
+            padding: pad,
             child: AppCard(
               onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => TeamRatingsScreen(scorerId: t.scorerId, teamId: t.team!.id, teamName: t.team!.name))),
               child: Row(children: [
@@ -84,7 +86,7 @@ class _RateTeamButtonState extends State<RateTeamButton> {
         }
         if (!t.canRate) return const SizedBox.shrink();
         return Padding(
-          padding: const EdgeInsets.only(top: Space.s),
+          padding: pad,
           child: OutlineBtn(
             label: context.tr('rate_team', {'team': t.team!.name}),
             icon: Icons.star_outline_rounded,

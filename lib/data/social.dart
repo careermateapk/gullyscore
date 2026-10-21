@@ -76,6 +76,60 @@ class RatingTarget {
   TeamRef? get team => j['team'] is Map ? TeamRef('${j['team']['id']}', '${j['team']['name']}') : null;
 }
 
+class AskPlayer {
+  AskPlayer(this.playerId, this.name, this.answer);
+  final String playerId, name, answer;
+}
+
+class Ask {
+  Ask(this.j);
+  final Map<String, dynamic> j;
+  String get id => j['id'] as String;
+  String get title => (j['title'] as String?) ?? '';
+  String get when => (j['when'] as String?) ?? '';
+  String get place => (j['place'] as String?) ?? '';
+  int get need => (j['need'] as num?)?.toInt() ?? 11;
+  bool get mine => j['mine'] == true;
+  String get myAnswer => (j['myAnswer'] as String?) ?? '';
+  int get yes => (j['yes'] as num?)?.toInt() ?? 0;
+  int get no => (j['no'] as num?)?.toInt() ?? 0;
+  int get maybe => (j['maybe'] as num?)?.toInt() ?? 0;
+  int get waiting => (j['waiting'] as num?)?.toInt() ?? 0;
+  List<AskPlayer> get players => [for (final p in (j['players'] as List? ?? const [])) AskPlayer('${p['playerId']}', '${p['name']}', '${p['answer'] ?? ''}')];
+}
+
+class KhataItem {
+  KhataItem(this.j);
+  final Map<String, dynamic> j;
+  String get id => j['id'] as String;
+  bool get expense => j['kind'] == 'expense';
+  int get amount => (j['amount'] as num).toInt();
+  String get note => (j['note'] as String?) ?? '';
+  String get name => (j['name'] as String?) ?? '';
+  DateTime get created => DateTime.fromMillisecondsSinceEpoch((j['created'] as num).toInt());
+}
+
+class KhataPerson {
+  KhataPerson(this.playerId, this.name, this.paid, this.due);
+  final String playerId, name;
+  final int paid, due;
+}
+
+class Khata {
+  Khata(this.j);
+  final Map<String, dynamic> j;
+  String get month => (j['month'] as String?) ?? '';
+  int get spent => (j['spent'] as num?)?.toInt() ?? 0;
+  int get share => (j['share'] as num?)?.toInt() ?? 0;
+  int get players => (j['players'] as num?)?.toInt() ?? 0;
+  int get pending => (j['pending'] as num?)?.toInt() ?? 0;
+  List<KhataPerson> get people => [
+        for (final p in (j['people'] as List? ?? const []))
+          KhataPerson('${p['playerId']}', '${p['name']}', (p['paid'] as num).toInt(), (p['due'] as num).toInt()),
+      ];
+  List<KhataItem> get items => [for (final i in (j['items'] as List? ?? const [])) KhataItem(Map<String, dynamic>.from(i as Map))];
+}
+
 const reactionEmojis = ['👍', '❤️', '😂', '🔥', '👏', '😮'];
 const ratingTags = ['sportsmen', 'tough', 'late', 'again'];
 
@@ -163,5 +217,25 @@ class SocialApi {
   Future<Comment> react(String commentId, String? emoji) async => Comment(await _send('POST', '/v1/comments/$commentId/react', body: {'emoji': emoji}, auth: _need()));
   Future<void> deleteComment(String id) async => _send('DELETE', '/v1/comments/$id', auth: _need());
   Future<void> report(String kind, String id, {String reason = ''}) async => _send('POST', '/v1/reports', body: {'kind': kind, 'id': id, 'reason': reason}, auth: _need());
+  // ----- Team tools -----
+  String _team(String s, String t) => '/v1/teams/${Uri.encodeComponent(s)}/${Uri.encodeComponent(t)}';
+
+  Future<List<Ask>> asks(String scorerId, String teamId) async {
+    final j = await _send('GET', '${_team(scorerId, teamId)}/asks', auth: _need());
+    return [for (final a in (j['asks'] as List? ?? const [])) Ask(Map<String, dynamic>.from(a as Map))];
+  }
+
+  Future<Ask> createAsk(String scorerId, String teamId, {required String title, String when = '', String place = '', int need = 11}) async =>
+      Ask(await _send('POST', '${_team(scorerId, teamId)}/asks', body: {'title': title, 'when': when, 'place': place, 'need': need}, auth: _need()));
+  Future<Ask> answerAsk(String id, String answer) async => Ask(await _send('POST', '/v1/asks/$id/answer', body: {'answer': answer}, auth: _need()));
+  Future<void> deleteAsk(String id) async => _send('DELETE', '/v1/asks/$id', auth: _need());
+
+  Future<Khata> khata(String scorerId, String teamId, {String month = ''}) async =>
+      Khata(await _send('GET', '${_team(scorerId, teamId)}/khata${month.isEmpty ? '' : '?month=$month'}', auth: _need()));
+  Future<Khata> addKhata(String scorerId, String teamId, {required String kind, required int amount, required String playerId, String note = '', String month = ''}) async =>
+      Khata(await _send('POST', '${_team(scorerId, teamId)}/khata',
+          body: {'kind': kind, 'amount': amount, 'playerId': playerId, 'note': note, if (month.isNotEmpty) 'month': month}, auth: _need()));
+  Future<Khata> deleteKhata(String id) async => Khata(await _send('DELETE', '/v1/khata/$id', auth: _need()));
+
   Future<void> deleteAccount() async => _send('DELETE', '/v1/me/account', auth: _need());
 }

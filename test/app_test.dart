@@ -24,6 +24,9 @@ import 'package:gullyscore/ui/screens/team_screen.dart';
 import 'package:gullyscore/ui/screens/tournament_screens.dart';
 import 'package:gullyscore/ui/screens/scoring_screen.dart';
 import 'package:gullyscore/ui/screens/app_drawer.dart';
+import 'package:gullyscore/ui/screens/badges_screen.dart';
+import 'package:gullyscore/ui/screens/team_tools.dart';
+import 'package:gullyscore/scoring/badges.dart';
 import 'package:gullyscore/ui/screens/community_screen.dart';
 import 'package:gullyscore/ui/screens/info_screens.dart';
 import 'package:gullyscore/ui/screens/leaderboard_screen.dart';
@@ -214,6 +217,8 @@ void main() {
       final tour = r.addTournament(
           name: 'Mithila Premier League Winter Edition', format: TFormat.groups, overs: 6, teamIds: [for (final t in r.teamList) t.id], groupCount: 2, qualifiers: 1);
       final ko = r.addTournament(name: 'KO Cup', format: TFormat.knockout, overs: 6, teamIds: [m.teamA, m.teamB]);
+      r.addSponsor(ko, Sponsor(name: 'Sharma Hardware and Sanitary Store Madhubani', phone: '9876543210', place: 'Main road, near the old bus stand'));
+      r.addSponsor(ko, Sponsor(name: 'Mithila Mobiles', role: 'six'));
       final f0 = ko.fixtures.single;
       r.createMatch(a: r.teams[m.teamA]!, b: r.teams[m.teamB]!, playersA: m.playersA, playersB: m.playersB, overs: 6, firstBatting: 0, tournamentId: ko.id, fixtureId: f0.id);
       Widget scaled(Widget child) => MediaQuery(
@@ -442,7 +447,10 @@ void main() {
         await show(TeamRatingsScreen(scorerId: 's1', teamId: 'tA', teamName: 'Madhubani Super Strikers XI'), 'ratings $lang');
         await show(OnlineTeamScreen(team: team), 'team page $lang');
         await show(MatchCentreScreen(matchId: done), 'rate button $lang');
-        expect(find.textContaining(hi ? 'रेटिंग दें' : 'Rate '), findsWidgets);
+        if (find.textContaining(hi ? 'रेटिंग दें' : 'Rate ').evaluate().isEmpty) {
+          FlutterError.onError = _savedOnError;
+          fail('no rate button ($lang)');
+        }
         await tester.tap(find.textContaining(hi ? 'रेटिंग दें' : 'Rate ').first);
         await tester.pumpAndSettle();
         check(tester, 'rate sheet $lang');
@@ -451,6 +459,12 @@ void main() {
         await tester.pumpAndSettle();
         check(tester, 'drawer open $lang');
         await show(const LeaderboardScreen(), 'leaderboard $lang');
+        await show(AvailabilityScreen(team: team), 'who is coming $lang');
+        await tester.tap(find.text(hi ? 'टीम (4)' : 'Squad (4)'));
+        await tester.pumpAndSettle();
+        check(tester, 'who is coming squad $lang');
+        await show(KhataScreen(team: team), 'khata $lang');
+        await show(BadgesScreen(me: MeInfo.fromJson(meJson)), 'badges $lang');
         await show(const NewMatchScreen(), 'new match $lang', taps: [hi ? 'बाद में खेलें' : 'Schedule for later']);
       }
       await tester.pump(const Duration(seconds: 1));
@@ -492,5 +506,29 @@ void main() {
     expect(bowler['wickets'], 0);
     expect((bowler['line'] as Map)['o'], '1.0');
     expect(matchStatusOnline(m, st), 'result');
+  });
+
+  test('badges come from match numbers', () {
+    final me = MeInfo.fromJson(meJson);
+    final ids = earnedBadges(me.matches).map((b) => b.def.id).toSet();
+    expect(ids, containsAll(['debut', 'fifty', 'century', 'six_hitter', 'three_wickets', 'five_wickets', 'hat_trick', 'safe_hands']));
+    expect(ids.contains('ten_matches'), false);
+    expect(earnedBadges(const []), isEmpty);
+  });
+
+  test('sponsors are saved with the tournament and go online with its matches', () async {
+    final r = Repository(store: MemoryStore());
+    await r.load();
+    final a = r.addTeam('A', playerNames: ['a1', 'a2']);
+    final b = r.addTeam('B', playerNames: ['b1', 'b2']);
+    final t = r.addTournament(name: 'Cup', format: TFormat.knockout, overs: 5, teamIds: [a.id, b.id]);
+    final m = r.createMatch(a: a, b: b, playersA: a.playerIds, playersB: b.playerIds, overs: 5, firstBatting: 0, tournamentId: t.id, fixtureId: t.fixtures.single.id);
+    r.addSponsor(t, Sponsor(name: 'Sharma Hardware', phone: '98765'));
+    expect(Tournament.fromJson(t.toJson()).sponsors.single.name, 'Sharma Hardware');
+    final data = r.cloudData(m);
+    expect(((data['match'] as Map)['sponsors'] as List).single['name'], 'Sharma Hardware');
+    final copy = MatchRecord.fromJson({...Map<String, dynamic>.from(data['match'] as Map), 'remote': true});
+    expect(r.sponsorsOf(copy).single.phone, '98765');
+    await r.saveNow();
   });
 }

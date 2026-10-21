@@ -96,6 +96,7 @@ class MatchRecord {
     this.remote = false,
     this.scheduledAt,
     this.tossPending = false,
+    this.sponsors = const [],
     List<Map<String, dynamic>>? events,
     DateTime? updatedAt,
     Set<String>? celebrated,
@@ -116,6 +117,7 @@ class MatchRecord {
   String tossText;
   DateTime? scheduledAt; // when the match is planned (shown as Upcoming until it starts)
   bool tossPending; // scheduled match: the toss is asked when scoring starts
+  final List<Map<String, dynamic>> sponsors; // followed matches only (from the tournament online)
   final String? tournamentId;
   final String? fixtureId;
   final bool remote; // someone else's match, followed from a live link
@@ -148,6 +150,7 @@ class MatchRecord {
         if (remote) 'remote': true,
         if (scheduledAt != null) 'sched': scheduledAt!.toIso8601String(),
         if (tossPending) 'tossPending': true,
+        if (sponsors.isNotEmpty) 'sponsors': sponsors,
         'events': events,
         'celebrated': celebrated.toList(),
       };
@@ -170,6 +173,7 @@ class MatchRecord {
         remote: (j['remote'] as bool?) ?? false,
         scheduledAt: DateTime.tryParse(j['sched'] as String? ?? ''),
         tossPending: (j['tossPending'] as bool?) ?? false,
+        sponsors: [for (final x in (j['sponsors'] as List? ?? const [])) Map<String, dynamic>.from(x as Map)],
         events: [for (final e in (j['events'] as List? ?? const [])) Map<String, dynamic>.from(e as Map)],
         celebrated: {for (final c in (j['celebrated'] as List? ?? const [])) c as String},
       );
