@@ -7,36 +7,128 @@
         "title": "Privacy policy",
         "short": [
           "Scores you make are saved on your phone. They go online only while \"Share matches online\" is on.",
-          "Photos and team logos never leave your phone.",
+          "Player photos and team logos never leave your phone. Ground photos you choose to add are public.",
           "Mobile numbers are kept online only as a locked code (a hash). Nobody can see them.",
           "No ads, no tracking tools, and we never sell your data."
         ],
         "sections": [
-          ["What is saved on your phone", ["Teams, players, matches, tournaments, photos, logos and your settings are saved inside the app on your phone.", "A backup file is made only when you tap Backup. You choose where it goes (for example Google Drive)."]],
-          ["What goes online", ["While \"Share matches online\" is on: match scores, ball-by-ball data, player and team names, ground, date and time, and each player's score in that match.", "Mobile numbers that a scorer types for players are sent to our server and turned into a locked code at once. The number itself is not stored.", "When you log in with Google: your name, email and Google account ID.", "Things you post in Community: posts, polls, votes, ratings, comments, replies and reactions, with your name.", "If you add a WhatsApp number to a post, it is shown only to people who tap \"I'm in\" on that post."]],
-          ["Who can see what", ["Online matches, Community posts, ratings and comments can be seen by everyone who uses GullyScore or opens a match link.", "Your email is shown only to the scorer who added your mobile number, so they can check it is really you.", "Nobody can see mobile numbers, not even us."]],
-          ["Where it is kept", ["Online data is kept on Cloudflare's servers, which may be outside India. It is sent over a secure (HTTPS) connection."]],
-          ["Deleting your data", ["Settings → Delete all data removes everything on this phone and the matches this phone put online.", "Settings → Delete my account removes your login, your linked profiles and everything you posted in Community.", "Turning off \"Share matches online\" stops new uploads."]],
-          ["Children", ["GullyScore is not made for children under 13 on their own. A parent, teacher or coach should score for them."]],
-          ["Changes", ["If this policy changes, the new date is shown at the top."]]
+          [
+            "What is saved on your phone",
+            [
+              "Teams, players, matches, tournaments, photos, logos and your settings are saved inside the app on your phone.",
+              "A backup file is made only when you tap Backup. You choose where it goes (for example Google Drive)."
+            ]
+          ],
+          [
+            "What goes online",
+            [
+              "While \"Share matches online\" is on: match scores, ball-by-ball data, player and team names, ground, date and time, and each player's score in that match.",
+              "Mobile numbers that a scorer types for players are sent to our server and turned into a locked code at once. The number itself is not stored.",
+              "When you log in with Google: your name, email and Google account ID.",
+              "Things you post in Community: posts, polls, votes, ratings, comments, replies and reactions, with your name.",
+              "If you add a WhatsApp number to a post, it is shown only to people who tap \"I'm in\" on that post.",
+              "Grounds you register, ground photos you upload and ground reviews you write are public, with your name on reviews.",
+              "To find places by name, the place you type is sent to OpenStreetMap. Your phone's location is used only on your phone and in the search, never saved."
+            ]
+          ],
+          [
+            "Who can see what",
+            [
+              "Online matches, Community posts, ratings and comments can be seen by everyone who uses GullyScore or opens a match link.",
+              "Your email is shown only to the scorer who added your mobile number, so they can check it is really you.",
+              "Nobody can see mobile numbers, not even us."
+            ]
+          ],
+          [
+            "Where it is kept",
+            [
+              "Online data is kept on Cloudflare's servers, which may be outside India. It is sent over a secure (HTTPS) connection."
+            ]
+          ],
+          [
+            "Deleting your data",
+            [
+              "Settings → Delete all data removes everything on this phone and the matches this phone put online.",
+              "Settings → Delete my account removes your login, your linked profiles and everything you posted in Community.",
+              "Turning off \"Share matches online\" stops new uploads."
+            ]
+          ],
+          [
+            "Children",
+            [
+              "GullyScore is not made for children under 13 on their own. A parent, teacher or coach should score for them."
+            ]
+          ],
+          [
+            "Changes",
+            [
+              "If this policy changes, the new date is shown at the top."
+            ]
+          ]
         ]
       },
       "hi": {
         "title": "प्राइवेसी पॉलिसी",
         "short": [
           "आपके बनाए स्कोर आपके फ़ोन में सेव होते हैं। \"मैच ऑनलाइन शेयर करें\" चालू होने पर ही ऑनलाइन जाते हैं।",
-          "फ़ोटो और टीम लोगो कभी आपके फ़ोन से बाहर नहीं जाते।",
+          "खिलाड़ियों की फ़ोटो और टीम लोगो कभी फ़ोन से बाहर नहीं जाते। आप जो ग्राउंड की फ़ोटो जोड़ते हैं, वे सबको दिखती हैं।",
           "मोबाइल नंबर ऑनलाइन सिर्फ़ एक लॉक कोड (हैश) के रूप में रहते हैं। कोई उन्हें देख नहीं सकता।",
           "कोई विज्ञापन नहीं, कोई ट्रैकिंग नहीं, और हम आपका डेटा कभी नहीं बेचते।"
         ],
         "sections": [
-          ["आपके फ़ोन में क्या सेव होता है", ["टीमें, खिलाड़ी, मैच, टूर्नामेंट, फ़ोटो, लोगो और सेटिंग्स ऐप के अंदर आपके फ़ोन में सेव होते हैं।", "बैकअप फ़ाइल तभी बनती है जब आप बैकअप दबाते हैं। वह कहाँ जाए (जैसे Google Drive), यह आप चुनते हैं।"]],
-          ["क्या ऑनलाइन जाता है", ["\"मैच ऑनलाइन शेयर करें\" चालू होने पर: मैच का स्कोर, हर गेंद का हिसाब, खिलाड़ी और टीम के नाम, ग्राउंड, तारीख और समय, और उस मैच में हर खिलाड़ी का स्कोर।", "स्कोरर जो मोबाइल नंबर डालता है, वह हमारे सर्वर पर आते ही लॉक कोड में बदल जाता है। असली नंबर सेव नहीं होता।", "Google से लॉगिन करने पर: आपका नाम, ईमेल और Google अकाउंट ID।", "कम्युनिटी में आप जो डालते हैं: पोस्ट, पोल, वोट, रेटिंग, कमेंट, जवाब और रिएक्शन, आपके नाम के साथ।", "पोस्ट में WhatsApp नंबर डालने पर वह सिर्फ़ उन्हें दिखता है जो उस पोस्ट पर \"मैं आऊँगा\" दबाते हैं।"]],
-          ["कौन क्या देख सकता है", ["ऑनलाइन मैच, कम्युनिटी पोस्ट, रेटिंग और कमेंट GullyScore इस्तेमाल करने वाला हर व्यक्ति या मैच लिंक खोलने वाला देख सकता है।", "आपका ईमेल सिर्फ़ उस स्कोरर को दिखता है जिसने आपका मोबाइल नंबर डाला है, ताकि वह जाँच सके कि यह आप ही हैं।", "मोबाइल नंबर कोई नहीं देख सकता, हम भी नहीं।"]],
-          ["डेटा कहाँ रहता है", ["ऑनलाइन डेटा Cloudflare के सर्वर पर रहता है, जो भारत से बाहर भी हो सकते हैं। यह सुरक्षित (HTTPS) कनेक्शन से भेजा जाता है।"]],
-          ["अपना डेटा मिटाना", ["सेटिंग्स → सारा डेटा मिटाएँ: इस फ़ोन का सब कुछ और इस फ़ोन से ऑनलाइन गए मैच मिट जाते हैं।", "सेटिंग्स → मेरा अकाउंट मिटाएँ: आपका लॉगिन, जुड़ी प्रोफ़ाइल और कम्युनिटी में डाला सब कुछ मिट जाता है।", "\"मैच ऑनलाइन शेयर करें\" बंद करने पर नए मैच ऑनलाइन नहीं जाते।"]],
-          ["बच्चे", ["GullyScore 13 साल से कम उम्र के बच्चों के अकेले इस्तेमाल के लिए नहीं है। माता-पिता, टीचर या कोच उनके लिए स्कोर करें।"]],
-          ["बदलाव", ["अगर यह पॉलिसी बदलती है, तो नई तारीख ऊपर दिखेगी।"]]
+          [
+            "आपके फ़ोन में क्या सेव होता है",
+            [
+              "टीमें, खिलाड़ी, मैच, टूर्नामेंट, फ़ोटो, लोगो और सेटिंग्स ऐप के अंदर आपके फ़ोन में सेव होते हैं।",
+              "बैकअप फ़ाइल तभी बनती है जब आप बैकअप दबाते हैं। वह कहाँ जाए (जैसे Google Drive), यह आप चुनते हैं।"
+            ]
+          ],
+          [
+            "क्या ऑनलाइन जाता है",
+            [
+              "\"मैच ऑनलाइन शेयर करें\" चालू होने पर: मैच का स्कोर, हर गेंद का हिसाब, खिलाड़ी और टीम के नाम, ग्राउंड, तारीख और समय, और उस मैच में हर खिलाड़ी का स्कोर।",
+              "स्कोरर जो मोबाइल नंबर डालता है, वह हमारे सर्वर पर आते ही लॉक कोड में बदल जाता है। असली नंबर सेव नहीं होता।",
+              "Google से लॉगिन करने पर: आपका नाम, ईमेल और Google अकाउंट ID।",
+              "कम्युनिटी में आप जो डालते हैं: पोस्ट, पोल, वोट, रेटिंग, कमेंट, जवाब और रिएक्शन, आपके नाम के साथ।",
+              "पोस्ट में WhatsApp नंबर डालने पर वह सिर्फ़ उन्हें दिखता है जो उस पोस्ट पर \"मैं आऊँगा\" दबाते हैं।",
+              "आप जो ग्राउंड जोड़ते हैं, ग्राउंड की फ़ोटो और ग्राउंड रिव्यू सबको दिखते हैं, रिव्यू पर आपका नाम रहता है।",
+              "नाम से जगह खोजने पर आपका लिखा नाम OpenStreetMap को भेजा जाता है। फ़ोन की लोकेशन सिर्फ़ खोजने में इस्तेमाल होती है, कभी सेव नहीं होती।"
+            ]
+          ],
+          [
+            "कौन क्या देख सकता है",
+            [
+              "ऑनलाइन मैच, कम्युनिटी पोस्ट, रेटिंग और कमेंट GullyScore इस्तेमाल करने वाला हर व्यक्ति या मैच लिंक खोलने वाला देख सकता है।",
+              "आपका ईमेल सिर्फ़ उस स्कोरर को दिखता है जिसने आपका मोबाइल नंबर डाला है, ताकि वह जाँच सके कि यह आप ही हैं।",
+              "मोबाइल नंबर कोई नहीं देख सकता, हम भी नहीं।"
+            ]
+          ],
+          [
+            "डेटा कहाँ रहता है",
+            [
+              "ऑनलाइन डेटा Cloudflare के सर्वर पर रहता है, जो भारत से बाहर भी हो सकते हैं। यह सुरक्षित (HTTPS) कनेक्शन से भेजा जाता है।"
+            ]
+          ],
+          [
+            "अपना डेटा मिटाना",
+            [
+              "सेटिंग्स → सारा डेटा मिटाएँ: इस फ़ोन का सब कुछ और इस फ़ोन से ऑनलाइन गए मैच मिट जाते हैं।",
+              "सेटिंग्स → मेरा अकाउंट मिटाएँ: आपका लॉगिन, जुड़ी प्रोफ़ाइल और कम्युनिटी में डाला सब कुछ मिट जाता है।",
+              "\"मैच ऑनलाइन शेयर करें\" बंद करने पर नए मैच ऑनलाइन नहीं जाते।"
+            ]
+          ],
+          [
+            "बच्चे",
+            [
+              "GullyScore 13 साल से कम उम्र के बच्चों के अकेले इस्तेमाल के लिए नहीं है। माता-पिता, टीचर या कोच उनके लिए स्कोर करें।"
+            ]
+          ],
+          [
+            "बदलाव",
+            [
+              "अगर यह पॉलिसी बदलती है, तो नई तारीख ऊपर दिखेगी।"
+            ]
+          ]
         ]
       }
     },
@@ -49,13 +141,51 @@
           "Win chance, ratings and reports are for fun. Never for betting."
         ],
         "sections": [
-          ["Using GullyScore", ["By using the app you agree to these terms. Children under 13 should use it with a parent, teacher or coach."]],
-          ["Your content", ["You are responsible for the matches, names, posts, polls, ratings and comments you add.", "Add a player's mobile number only with their permission.", "Do not post anything rude, hateful, false or that belongs to someone else.", "We may hide or remove content that breaks these rules, and block accounts that keep breaking them."]],
-          ["Ratings and comments", ["Rate only teams you really played against. Be honest and polite. Fake or abusive ratings will be removed."]],
-          ["Entry fees and payments", ["GullyScore does not collect or hold money. Entry fees are paid directly to the organiser (for example by UPI). Any payment is between you and the organiser, and GullyScore is not responsible for it."]],
-          ["No betting", ["Using GullyScore for betting or gambling is not allowed."]],
-          ["No guarantee", ["We work hard to keep the app and the online service running, but they are provided \"as is\". Online features can sometimes be unavailable. Keep a backup of your data."]],
-          ["Changes", ["We may update these terms. The new date is shown at the top. Using the app after a change means you accept the new terms."]]
+          [
+            "Using GullyScore",
+            [
+              "By using the app you agree to these terms. Children under 13 should use it with a parent, teacher or coach."
+            ]
+          ],
+          [
+            "Your content",
+            [
+              "You are responsible for the matches, names, posts, polls, ratings and comments you add.",
+              "Add a player's mobile number only with their permission.",
+              "Do not post anything rude, hateful, false or that belongs to someone else.",
+              "We may hide or remove content that breaks these rules, and block accounts that keep breaking them."
+            ]
+          ],
+          [
+            "Ratings and comments",
+            [
+              "Rate only teams you really played against. Be honest and polite. Fake or abusive ratings will be removed."
+            ]
+          ],
+          [
+            "Entry fees and payments",
+            [
+              "GullyScore does not collect or hold money. Entry fees are paid directly to the organiser (for example by UPI). Any payment is between you and the organiser, and GullyScore is not responsible for it."
+            ]
+          ],
+          [
+            "No betting",
+            [
+              "Using GullyScore for betting or gambling is not allowed."
+            ]
+          ],
+          [
+            "No guarantee",
+            [
+              "We work hard to keep the app and the online service running, but they are provided \"as is\". Online features can sometimes be unavailable. Keep a backup of your data."
+            ]
+          ],
+          [
+            "Changes",
+            [
+              "We may update these terms. The new date is shown at the top. Using the app after a change means you accept the new terms."
+            ]
+          ]
         ]
       },
       "hi": {
@@ -66,13 +196,51 @@
           "जीत का अनुमान, रेटिंग और रिपोर्ट मज़े के लिए हैं। सट्टे के लिए कभी नहीं।"
         ],
         "sections": [
-          ["GullyScore का इस्तेमाल", ["ऐप इस्तेमाल करके आप इन नियमों से सहमत होते हैं। 13 साल से कम उम्र के बच्चे माता-पिता, टीचर या कोच के साथ इस्तेमाल करें।"]],
-          ["आपका डाला हुआ कंटेंट", ["आप जो मैच, नाम, पोस्ट, पोल, रेटिंग और कमेंट डालते हैं, उसकी ज़िम्मेदारी आपकी है।", "खिलाड़ी का मोबाइल नंबर उसकी इजाज़त से ही डालें।", "कुछ भी गंदा, नफ़रत वाला, झूठा या किसी और का सामान न डालें।", "नियम तोड़ने वाला कंटेंट हम छिपा या हटा सकते हैं, और बार-बार नियम तोड़ने वाले अकाउंट बंद कर सकते हैं।"]],
-          ["रेटिंग और कमेंट", ["सिर्फ़ उन्हीं टीमों को रेटिंग दें जिनसे आप सच में खेले। ईमानदार और तमीज़ से रहें। झूठी या गाली वाली रेटिंग हटा दी जाएगी।"]],
-          ["एंट्री फ़ीस और पेमेंट", ["GullyScore पैसे न लेता है न रखता है। एंट्री फ़ीस सीधे आयोजक को दी जाती है (जैसे UPI से)। कोई भी पेमेंट आपके और आयोजक के बीच है, GullyScore उसका ज़िम्मेदार नहीं है।"]],
-          ["सट्टा मना है", ["GullyScore का इस्तेमाल सट्टे या जुए के लिए करना मना है।"]],
-          ["कोई गारंटी नहीं", ["हम ऐप और ऑनलाइन सेवा चलाए रखने की पूरी कोशिश करते हैं, पर ये \"जैसे हैं वैसे\" दिए जाते हैं। ऑनलाइन फ़ीचर कभी-कभी बंद हो सकते हैं। अपने डेटा का बैकअप रखें।"]],
-          ["बदलाव", ["हम ये नियम बदल सकते हैं। नई तारीख ऊपर दिखेगी। बदलाव के बाद ऐप इस्तेमाल करने का मतलब है कि आप नए नियम मानते हैं।"]]
+          [
+            "GullyScore का इस्तेमाल",
+            [
+              "ऐप इस्तेमाल करके आप इन नियमों से सहमत होते हैं। 13 साल से कम उम्र के बच्चे माता-पिता, टीचर या कोच के साथ इस्तेमाल करें।"
+            ]
+          ],
+          [
+            "आपका डाला हुआ कंटेंट",
+            [
+              "आप जो मैच, नाम, पोस्ट, पोल, रेटिंग और कमेंट डालते हैं, उसकी ज़िम्मेदारी आपकी है।",
+              "खिलाड़ी का मोबाइल नंबर उसकी इजाज़त से ही डालें।",
+              "कुछ भी गंदा, नफ़रत वाला, झूठा या किसी और का सामान न डालें।",
+              "नियम तोड़ने वाला कंटेंट हम छिपा या हटा सकते हैं, और बार-बार नियम तोड़ने वाले अकाउंट बंद कर सकते हैं।"
+            ]
+          ],
+          [
+            "रेटिंग और कमेंट",
+            [
+              "सिर्फ़ उन्हीं टीमों को रेटिंग दें जिनसे आप सच में खेले। ईमानदार और तमीज़ से रहें। झूठी या गाली वाली रेटिंग हटा दी जाएगी।"
+            ]
+          ],
+          [
+            "एंट्री फ़ीस और पेमेंट",
+            [
+              "GullyScore पैसे न लेता है न रखता है। एंट्री फ़ीस सीधे आयोजक को दी जाती है (जैसे UPI से)। कोई भी पेमेंट आपके और आयोजक के बीच है, GullyScore उसका ज़िम्मेदार नहीं है।"
+            ]
+          ],
+          [
+            "सट्टा मना है",
+            [
+              "GullyScore का इस्तेमाल सट्टे या जुए के लिए करना मना है।"
+            ]
+          ],
+          [
+            "कोई गारंटी नहीं",
+            [
+              "हम ऐप और ऑनलाइन सेवा चलाए रखने की पूरी कोशिश करते हैं, पर ये \"जैसे हैं वैसे\" दिए जाते हैं। ऑनलाइन फ़ीचर कभी-कभी बंद हो सकते हैं। अपने डेटा का बैकअप रखें।"
+            ]
+          ],
+          [
+            "बदलाव",
+            [
+              "हम ये नियम बदल सकते हैं। नई तारीख ऊपर दिखेगी। बदलाव के बाद ऐप इस्तेमाल करने का मतलब है कि आप नए नियम मानते हैं।"
+            ]
+          ]
         ]
       }
     },
@@ -84,9 +252,27 @@
           "Score every ball, share live scores on WhatsApp, and let every player see their own matches on their phone."
         ],
         "sections": [
-          ["Why we made it", ["Every Sunday, thousands of matches are played on local grounds, but the scores live on paper and are lost. GullyScore keeps every run, wicket and record of local cricketers safe, and lets friends and family follow the match live."]],
-          ["What makes it different", ["Works without internet. The score is saved on the phone first.", "Simple big buttons, in English and Hindi.", "Ball-by-ball commentary, wagon wheel, reports and certificates made automatically.", "Free to use, with no ads."]],
-          ["Talk to us", ["Ideas, problems or a tournament you want on GullyScore? Reach us through Help & FAQs in the app or on our social media pages."]]
+          [
+            "Why we made it",
+            [
+              "Every Sunday, thousands of matches are played on local grounds, but the scores live on paper and are lost. GullyScore keeps every run, wicket and record of local cricketers safe, and lets friends and family follow the match live."
+            ]
+          ],
+          [
+            "What makes it different",
+            [
+              "Works without internet. The score is saved on the phone first.",
+              "Simple big buttons, in English and Hindi.",
+              "Ball-by-ball commentary, wagon wheel, reports and certificates made automatically.",
+              "Free to use, with no ads."
+            ]
+          ],
+          [
+            "Talk to us",
+            [
+              "Ideas, problems or a tournament you want on GullyScore? Reach us through Help & FAQs in the app or on our social media pages."
+            ]
+          ]
         ]
       },
       "hi": {
@@ -96,28 +282,62 @@
           "हर गेंद स्कोर करें, लाइव स्कोर WhatsApp पर शेयर करें, और हर खिलाड़ी अपने फ़ोन पर अपने मैच देखे।"
         ],
         "sections": [
-          ["हमने इसे क्यों बनाया", ["हर रविवार हज़ारों मैच लोकल ग्राउंड पर खेले जाते हैं, पर स्कोर कागज़ पर रहकर खो जाते हैं। GullyScore लोकल खिलाड़ियों का हर रन, हर विकेट और हर रिकॉर्ड सँभालता है, और दोस्त-परिवार मैच लाइव देख पाते हैं।"]],
-          ["क्या अलग है", ["इंटरनेट के बिना भी चलता है। स्कोर पहले फ़ोन में सेव होता है।", "बड़े आसान बटन, हिंदी और अंग्रेज़ी में।", "हर गेंद की कमेंट्री, वैगन व्हील, रिपोर्ट और सर्टिफ़िकेट अपने आप बनते हैं।", "मुफ़्त, बिना विज्ञापन।"]],
-          ["हमसे बात करें", ["कोई सुझाव, दिक्कत या टूर्नामेंट GullyScore पर लाना है? ऐप में सहायता और सवाल से या हमारे सोशल मीडिया पेज पर संपर्क करें।"]]
+          [
+            "हमने इसे क्यों बनाया",
+            [
+              "हर रविवार हज़ारों मैच लोकल ग्राउंड पर खेले जाते हैं, पर स्कोर कागज़ पर रहकर खो जाते हैं। GullyScore लोकल खिलाड़ियों का हर रन, हर विकेट और हर रिकॉर्ड सँभालता है, और दोस्त-परिवार मैच लाइव देख पाते हैं।"
+            ]
+          ],
+          [
+            "क्या अलग है",
+            [
+              "इंटरनेट के बिना भी चलता है। स्कोर पहले फ़ोन में सेव होता है।",
+              "बड़े आसान बटन, हिंदी और अंग्रेज़ी में।",
+              "हर गेंद की कमेंट्री, वैगन व्हील, रिपोर्ट और सर्टिफ़िकेट अपने आप बनते हैं।",
+              "मुफ़्त, बिना विज्ञापन।"
+            ]
+          ],
+          [
+            "हमसे बात करें",
+            [
+              "कोई सुझाव, दिक्कत या टूर्नामेंट GullyScore पर लाना है? ऐप में सहायता और सवाल से या हमारे सोशल मीडिया पेज पर संपर्क करें।"
+            ]
+          ]
         ]
       }
     }
   },
-  "social": {"instagram": "", "facebook": "", "youtube": "", "x": ""},
+  "social": {
+    "instagram": "",
+    "facebook": "",
+    "youtube": "",
+    "x": ""
+  },
   "blog": [
     {
       "slug": "score-your-first-match",
       "date": "2026-10-22",
       "title": "Score your first gully match in 2 minutes",
       "summary": "Make two teams, pick overs, and start tapping. Here is the quickest way to score on GullyScore.",
-      "body": ["Open GullyScore and tap Score a match (or the ☰ menu → Create a match).", "Type the two team names and the players. You can type all players at once, one per line.", "Choose the overs and who bats first, then tap Start.", "Tap the run buttons after each ball. Wide, no-ball, bye and wicket each have their own button. Made a mistake? Tap Undo.", "Turn on \"Ask where the ball went\" to get commentary and a wagon wheel for every batter."]
+      "body": [
+        "Open GullyScore and tap Score a match (or the ☰ menu → Create a match).",
+        "Type the two team names and the players. You can type all players at once, one per line.",
+        "Choose the overs and who bats first, then tap Start.",
+        "Tap the run buttons after each ball. Wide, no-ball, bye and wicket each have their own button. Made a mistake? Tap Undo.",
+        "Turn on \"Ask where the ball went\" to get commentary and a wagon wheel for every batter."
+      ]
     },
     {
       "slug": "share-live-score-on-whatsapp",
       "date": "2026-10-22",
       "title": "Share the live score on WhatsApp",
       "summary": "Friends and family can follow your match live in their browser, even without the app.",
-      "body": ["Open the match and tap the Share button at the top.", "Choose Share live link and send it on WhatsApp.", "Anyone who opens the link sees the score update by itself every few seconds.", "Players who log in with Google and their mobile number see all their matches in My Cricket."]
+      "body": [
+        "Open the match and tap the Share button at the top.",
+        "Choose Share live link and send it on WhatsApp.",
+        "Anyone who opens the link sees the score update by itself every few seconds.",
+        "Players who log in with Google and their mobile number see all their matches in My Cricket."
+      ]
     }
   ]
 }

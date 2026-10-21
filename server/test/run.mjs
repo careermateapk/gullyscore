@@ -403,42 +403,97 @@ assert.equal(big.status, 413);
   assert.equal((await call('GET', base + '/khata?month=2020-01', undefined, kapil)).body.spent, 0);
 }
 
-// ================= v0.7: grounds =================
+// ================= v0.8: grounds =================
 {
-  let googleCalls = 0;
-  env.FAKE_PLACES = async (q) => {
-    googleCalls++;
-    return [
-      { placeId: 'gp1', name: 'Rajnagar Stadium', address: 'Rajnagar, Bihar', lat: 26.40, lng: 86.10 },
-      { placeId: 'gp2', name: 'Far Ground', address: 'Patna', lat: 25.6, lng: 85.1 },
-    ];
-  };
+  env.FAKE_PLACES = async (q) => [{ name: 'Darbhanga', detail: 'Bihar, India', lat: 26.15, lng: 85.9 }];
+  assert.equal((await call('GET', '/v1/places?q=Darbh')).body.places[0].name, 'Darbhanga');
+  assert.equal((await call('GET', '/v1/places?q=D')).body.places.length, 0);
   const u = (await call('POST', '/v1/login', { idToken: 'good:groundman:g@x.com' })).body.token;
+  const v = (await call('POST', '/v1/login', { idToken: 'good:groundfan:f@x.com' })).body.token;
   assert.equal((await call('POST', '/v1/grounds', { name: 'X', lat: 1, lng: 2 })).status, 401);
   assert.equal((await call('POST', '/v1/grounds', { name: '', lat: 1, lng: 2 }, u)).status, 400);
-  const g1 = (await call('POST', '/v1/grounds', { name: 'Sakri High School ground', address: 'Sakri', lat: 26.30, lng: 86.05, pitch: 'matting', fee: 'Free', phone: '98765 43210', toilet: true }, u)).body;
-  assert.equal(g1.name, 'Sakri High School ground');
-  assert.equal(g1.toilet, true);
-  let near = (await call('GET', '/v1/grounds?lat=26.35&lng=86.07')).body;
-  assert.equal(near.grounds.length, 1);
-  assert.ok(near.grounds[0].km > 0 && near.grounds[0].km < 10);
-  assert.equal((await call('GET', '/v1/grounds?lat=10&lng=10')).body.grounds.length, 0, 'far away');
-  let s = (await call('GET', '/v1/grounds/search?q=sakri&lat=26.35&lng=86.07')).body;
-  assert.equal(s.ours.length, 1);
-  assert.equal(s.google.length, 2);
-  // Save a Google result: next search shows it as ours, not twice.
-  const saved = (await call('POST', '/v1/grounds', { name: 'Rajnagar Stadium', lat: 26.40, lng: 86.10, placeId: 'gp1', fee: '₹1,500 / match' }, u)).body;
-  assert.equal((await call('POST', '/v1/grounds', { name: 'dup', lat: 26.40, lng: 86.10, placeId: 'gp1' }, u)).body.id, saved.id, 'same place once');
-  s = (await call('GET', '/v1/grounds/search?q=rajnagar')).body;
-  assert.ok(s.ours.some((g) => g.placeId === 'gp1'));
-  assert.ok(!s.google.some((g) => g.placeId === 'gp1'));
-  assert.equal((await call('GET', '/v1/grounds/search?q=a')).status, 400);
-  // Daily cap: Google is not asked once the cap is reached.
-  db.prepare("UPDATE config SET v = '99999' WHERE k LIKE 'places:%'").run();
-  const before = googleCalls;
-  s = (await call('GET', '/v1/grounds/search?q=stadium')).body;
-  assert.equal(googleCalls, before, 'capped');
-  assert.equal(s.google.length, 0);
+  const g1 = (await call('POST', '/v1/grounds', {
+    name: 'Rajnagar Stadium', address: 'Near bus stand', city: 'Madhubani', lat: 26.40, lng: 86.10,
+    pitches: ['turf', 'lava'], facilities: ['lights', 'washrooms', 'jacuzzi'], feeMin: 1500, feeMax: 1000, boundaryMin: 55, boundaryMax: 70,
+    timings: '6 AM - 10 PM', phone: '98765 43210',
+  }, u)).body;
+  assert.deepEqual(g1.pitches, ['turf']);
+  assert.deepEqual(g1.facilities, ['lights', 'washrooms']);
+  assert.equal(g1.feeMax, 1500, 'max is never below min');
+  const g2 = (await call('POST', '/v1/grounds', { name: 'Sakri School', city: 'Sakri', lat: 26.30, lng: 86.05, pitches: ['matting'], feeMin: 0 }, u)).body;
+  await call('POST', '/v1/grounds', { name: 'Patna Ground', lat: 25.6, lng: 85.1 }, u);
+
+  let near = (await call('GET', '/v1/grounds?lat=26.35&lng=86.07&km=15')).body;
+  assert.equal(near.total, 2, 'Patna is too far');
+  assert.ok(near.grounds[0].km <= near.grounds[1].km, 'nearest first');
+  near = (await call('GET', '/v1/grounds?lat=26.35&lng=86.07&km=15&pitch=turf')).body;
+  assert.deepEqual(near.grounds.map((g) => g.name), ['Rajnagar Stadium']);
+  near = (await call('GET', '/v1/grounds?lat=26.35&lng=86.07&km=15&fac=lights,washrooms')).body;
+  assert.equal(near.total, 1);
+  near = (await call('GET', '/v1/grounds?lat=26.35&lng=86.07&km=15&feeMax=1000')).body;
+  assert.deepEqual(near.grounds.map((g) => g.name), ['Sakri School']);
+  near = (await call('GET', '/v1/grounds?lat=26.35&lng=86.07&km=300&sort=name')).body;
+  assert.deepEqual(near.grounds.map((g) => g.name), ['Patna Ground', 'Rajnagar Stadium', 'Sakri School']);
+  assert.equal((await call('GET', '/v1/grounds?q=madhu')).body.grounds[0].name, 'Rajnagar Stadium', 'search by city');
+
+  // Photos
+  const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4, 0xff, 0xd9]).toString('base64');
+  assert.equal((await call('POST', '/v1/grounds/' + g1.id + '/photos', { jpeg: 'aGVsbG8=' }, v)).status, 400, 'must be a JPEG');
+  const ph = (await call('POST', '/v1/grounds/' + g1.id + '/photos', { jpeg }, v)).body;
+  assert.ok(ph.id);
+  const r = await worker.fetch(new Request('https://x.test/v1/grounds/' + g1.id + '/photos/' + ph.id), env);
+  assert.equal(r.headers.get('content-type'), 'image/jpeg');
+  assert.equal(Buffer.from(await r.arrayBuffer()).toString('base64'), jpeg);
+  let d = (await call('GET', '/v1/grounds/' + g1.id + '?lat=26.35&lng=86.07', undefined, u)).body;
+  assert.deepEqual(d.photoIds, [ph.id]);
+  assert.equal(d.mine, true);
+  assert.equal(d.photo, ph.id);
+  assert.equal((await call('GET', '/v1/grounds/' + g1.id, undefined, v)).body.mine, false);
+  // Owner of the ground can remove anyone's photo there.
+  assert.equal((await call('DELETE', '/v1/grounds/' + g1.id + '/photos/' + ph.id, undefined, u)).status, 200);
+  await call('POST', '/v1/grounds/' + g1.id + '/photos', { jpeg }, v);
+
+  // Edit (owner only)
+  assert.equal((await call('PUT', '/v1/grounds/' + g1.id, { feeMin: 2000 }, v)).status, 403);
+  assert.equal((await call('PUT', '/v1/grounds/' + g1.id, { feeMin: 2000, feeMax: 2500 }, u)).body.feeMin, 2000);
+
+  // Reviews
+  await call('POST', '/v1/grounds/' + g1.id + '/reviews', { stars: 5, body: 'Great turf' }, v);
+  await call('POST', '/v1/grounds/' + g1.id + '/reviews', { stars: 3 }, u);
+  await call('POST', '/v1/grounds/' + g1.id + '/reviews', { stars: 4, body: 'Nice' }, u);
+  d = (await call('GET', '/v1/grounds/' + g1.id)).body;
+  assert.equal(d.reviews, 2, 'one review per person');
+  assert.equal(d.rating, 4.5);
+  assert.equal((await call('GET', '/v1/grounds/' + g1.id + '/reviews')).body.reviews.length, 2);
+
+  // Matches at the ground → matches, tournaments, insights
+  const s7 = await call('POST', '/v1/register');
+  const sc = s7.body.scorerId + '.' + s7.body.token;
+  const mk = (id, a, b, sa, sb, winner) =>
+    call('PUT', '/v1/matches/' + id, {
+      data: {}, title: 'MPL 2026', status: 'result', finished: true, groundId: g1.id, winner,
+      teamA: { id: 'ta', name: a }, teamB: { id: 'tb', name: b },
+      summary: { title: a + ' vs ' + b, status: 'done', innings: [{ team: a, score: sa, overs: '10.0' }, { team: b, score: sb, overs: '10.0' }] },
+      players: [{ id: 'pp1', team: 'ta', name: 'Suraj', runs: 70, wickets: 1 }, { id: 'pp2', team: 'tb', name: 'Amit', runs: 5, wickets: 3 }],
+    }, sc);
+  await mk('gm1', 'Kings', 'Tigers', '150/4', '120/9', 'ta');
+  await mk('gm2', 'Kings', 'Tigers', '90/9', '91/2', 'tb');
+  d = (await call('GET', '/v1/grounds/' + g1.id)).body;
+  assert.equal(d.matches, 2);
+  const gm = (await call('GET', '/v1/grounds/' + g1.id + '/matches')).body;
+  assert.equal(gm.matches.length, 2);
+  assert.deepEqual(gm.tournaments.map((t) => [t.title, t.matches]), [['MPL 2026', 2]]);
+  const ins = (await call('GET', '/v1/grounds/' + g1.id + '/insights')).body;
+  assert.equal(ins.matches, 2);
+  assert.equal(ins.avgFirst, 120);
+  assert.equal(ins.highest.runs, 150);
+  assert.equal(ins.lowest.runs, 90);
+  assert.equal(ins.batFirstWinPct, 50);
+  assert.equal(ins.topRuns[0].name, 'Suraj');
+  assert.equal(ins.topRuns[0].value, 140);
+  assert.equal(ins.topWickets[0].name, 'Amit');
+  assert.equal(ins.days.reduce((a, b) => a + b, 0), 2);
+  assert.equal((await call('GET', '/v1/grounds/nope')).status, 404);
   delete env.FAKE_PLACES;
 }
 

@@ -165,15 +165,16 @@ async function route(request, env, ctx) {
     const tb = body.teamB && typeof body.teamB === 'object' ? body.teamB : {};
     const stmts = [
       env.DB.prepare(
-        `INSERT INTO matches (id, scorer_id, updated, finished, title, summary, data, status, scheduled, ground, team_a, team_b, team_a_name, team_b_name, winner)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `INSERT INTO matches (id, scorer_id, updated, finished, title, summary, data, status, scheduled, ground, team_a, team_b, team_a_name, team_b_name, winner, ground_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET updated = excluded.updated, finished = excluded.finished, title = excluded.title,
          summary = excluded.summary, data = excluded.data, status = excluded.status, scheduled = excluded.scheduled,
          ground = excluded.ground, team_a = excluded.team_a, team_b = excluded.team_b, team_a_name = excluded.team_a_name,
-         team_b_name = excluded.team_b_name, winner = excluded.winner`,
+         team_b_name = excluded.team_b_name, winner = excluded.winner, ground_id = excluded.ground_id`,
       ).bind(
         matchId, scorer, now, body.finished ? 1 : 0, title, JSON.stringify(body.summary), JSON.stringify(body.data),
         status, scheduled, str(body.ground, 120), str(ta.id), str(tb.id), str(ta.name), str(tb.name), str(body.winner),
+        /^[A-Za-z0-9]{1,40}$/.test(body.groundId || '') ? body.groundId : '',
       ),
       env.DB.prepare('DELETE FROM match_players WHERE match_id = ?').bind(matchId),
       ...players.map((x) =>

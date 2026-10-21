@@ -124,6 +124,8 @@ export async function deleteUserEverywhere(env, userId) {
     env.DB.prepare('DELETE FROM ratings WHERE user_id = ?').bind(userId),
     env.DB.prepare('DELETE FROM reports WHERE user_id = ?').bind(userId),
     env.DB.prepare("UPDATE grounds SET user_id = '' WHERE user_id = ?").bind(userId),
+    env.DB.prepare('DELETE FROM ground_reviews WHERE user_id = ?').bind(userId),
+    env.DB.prepare('DELETE FROM ground_photos WHERE user_id = ?').bind(userId),
     env.DB.prepare('DELETE FROM users WHERE id = ?').bind(userId),
   ]);
 }
