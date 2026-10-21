@@ -6,6 +6,8 @@ import 'package:gullyscore/app/scope.dart';
 import 'package:gullyscore/app/settings.dart';
 import 'package:gullyscore/app/theme.dart';
 import 'package:gullyscore/data/backup.dart';
+import 'package:gullyscore/data/cloud.dart';
+import 'package:gullyscore/data/sync.dart';
 import 'package:gullyscore/data/models.dart';
 import 'package:gullyscore/data/repository.dart';
 import 'package:gullyscore/main.dart';
@@ -37,6 +39,7 @@ Widget wrap(Settings s, Repository r, Widget child, {ThemeMode mode = ThemeMode.
       builder: (context, _) => AppScope(
         repo: r,
         settings: s,
+        sync: SyncService(r, HttpCloud('')),
         rev: s.rev,
         child: MaterialApp(
           theme: buildTheme(Palette.lightP),

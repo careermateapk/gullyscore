@@ -8,6 +8,7 @@ import '../../scoring/stats.dart';
 import '../widgets/common.dart';
 import '../widgets/ground_map.dart';
 import 'match_centre_screen.dart';
+import 'online.dart';
 import '../widgets/avatar.dart';
 
 class PlayerScreen extends StatefulWidget {
@@ -123,6 +124,15 @@ class _PlayerScreenState extends State<PlayerScreen> {
                   ),
                 ]),
               ),
+              if (context.sync.enabled && !pl.remote) ...[
+                const SizedBox(height: Space.m),
+                OutlineBtn(
+                  label: context.tr('invite_player', {'name': pl.name}),
+                  icon: Icons.send_to_mobile_rounded,
+                  height: 48,
+                  onPressed: () => invitePlayer(context, pl),
+                ),
+              ],
               const SizedBox(height: Space.m),
               Row(children: [
                 kv(context.tr('matches'), '${s.matches}'),

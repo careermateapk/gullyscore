@@ -1,0 +1,81 @@
+name: Deploy online service
+
+# Puts the server (server/) on Cloudflare: a Worker plus a D1 database.
+# Needs two repository secrets: CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "server/**"
+      - ".github/workflows/deploy-server.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-server
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: server
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+
+      - name: Test the server
+        run: node --experimental-sqlite test/run.mjs
+
+      - name: Check Cloudflare secrets
+        id: secrets
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::warning title=Cloudflare not connected::Add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID in Settings → Secrets and variables → Actions."
+            echo "ready=no" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=yes" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create the database (first time only)
+        if: steps.secrets.outputs.ready == 'yes'
+        run: |
+          set -o pipefail
+          npx --yes wrangler@4 d1 list --json > /tmp/d1.json
+          id=$(python3 -c "import json;print(next((d['uuid'] for d in json.load(open('/tmp/d1.json')) if d['name']=='gullyscore'),''))")
+          if [ -z "$id" ]; then
+            npx --yes wrangler@4 d1 create gullyscore
+            npx --yes wrangler@4 d1 list --json > /tmp/d1.json
+            id=$(python3 -c "import json;print(next((d['uuid'] for d in json.load(open('/tmp/d1.json')) if d['name']=='gullyscore'),''))")
+          fi
+          if [ -z "$id" ]; then echo "::error::Could not find or create the D1 database"; exit 1; fi
+          sed -i "s/REPLACED_BY_DEPLOY/$id/" wrangler.toml
+          echo "Database: $id"
+
+      - name: Update database tables
+        if: steps.secrets.outputs.ready == 'yes'
+        run: npx --yes wrangler@4 d1 migrations apply gullyscore --remote
+
+      - name: Deploy
+        if: steps.secrets.outputs.ready == 'yes'
+        run: npx --yes wrangler@4 deploy
+
+      - name: Check it is online
+        if: steps.secrets.outputs.ready == 'yes'
+        run: |
+          sub=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/subdomain" | python3 -c "import json,sys;print(json.load(sys.stdin)['result']['subdomain'])")
+          url="https://gullyscore-api.$sub.workers.dev"
+          echo "Service address: $url"
+          for i in 1 2 3 4 5 6; do
+            if curl -sf "$url/v1/health" | grep -q gullyscore; then echo "Online"; exit 0; fi
+            sleep 10
+          done
+          echo "::error::The service did not answer at $url"
+          exit 1

@@ -10,6 +10,7 @@ import '../widgets/common.dart';
 import 'backup_ui.dart';
 import 'match_centre_screen.dart';
 import 'new_match_screen.dart';
+import 'online.dart';
 import 'search_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -93,6 +94,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                     ),
                   ),
+                const MyMatchesSection(),
                 if (all.isEmpty)
                   const _FirstRun()
                 else ...[
@@ -178,6 +180,10 @@ class _TopBar extends StatelessWidget {
             Text(context.tr('saved_on_phone'), style: Tx.label(p.text2, w: FontWeight.w600)),
           ]),
         ),
+        if (context.sync.enabled) ...[
+          IconBtn(icon: Icons.link_rounded, tooltip: context.tr('follow_a_match'), onPressed: () => followMatchByLink(context)),
+          const SizedBox(width: Space.s),
+        ],
         IconBtn(icon: Icons.search_rounded, tooltip: context.tr('search'), onPressed: onSearch),
         const SizedBox(width: Space.s),
         IconBtn(icon: Icons.person_outline_rounded, tooltip: context.tr('nav_profile'), onPressed: onProfile),

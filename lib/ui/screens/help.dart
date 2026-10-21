@@ -33,6 +33,7 @@ const faqs = <Faq>[
   Faq('delete', 'data', {'settings'}),
   Faq('share', 'sharing', {'match_centre'}),
   Faq('live', 'sharing', {'match_centre'}),
+  Faq('player_phone', 'sharing', {'settings', 'match_centre'}),
   Faq('win_chance', 'other', {'match_centre'}),
   Faq('commentary', 'other', {'match_centre'}),
   Faq('reports', 'other', {'news'}),

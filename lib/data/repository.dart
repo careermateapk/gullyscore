@@ -90,7 +90,8 @@ class Repository extends ChangeNotifier {
 
   // ---------- teams and players ----------
 
-  List<Team> get teamList => teams.values.toList()..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+  /// This phone's own teams (not ones from followed matches), by name.
+  List<Team> get teamList => teams.values.where((t) => !t.remote).toList()..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
   Team addTeam(String name, {List<String> playerNames = const []}) {
     final t = Team(id: newId(), name: name.trim(), colorIndex: teams.length % 8);
@@ -211,6 +212,48 @@ class Repository extends ChangeNotifier {
       }
     }
     _changed();
+  }
+
+  // ---------- followed matches ----------
+
+  /// Stores (or refreshes) a match followed from a live link. Data that
+  /// belongs to this phone is never overwritten.
+  void upsertRemote(Map<String, dynamic> data) {
+    final mj = data['match'];
+    if (mj is! Map) return;
+    final id = mj['id'];
+    if (id is! String) return;
+    final mine = matches[id];
+    if (mine != null && !mine.remote) return; // this phone scores it
+    for (final t in (data['teams'] as List? ?? const [])) {
+      final team = Team.fromJson({...Map<String, dynamic>.from(t as Map), 'remote': true});
+      final local = teams[team.id];
+      if (local != null && !local.remote) continue;
+      if (local != null) team.logo = local.logo;
+      teams[team.id] = team;
+    }
+    for (final pj in (data['players'] as List? ?? const [])) {
+      final pl = Player.fromJson({...Map<String, dynamic>.from(pj as Map), 'remote': true});
+      final local = players[pl.id];
+      if (local != null && !local.remote) continue;
+      if (local != null) pl.photo = local.photo;
+      players[pl.id] = pl;
+    }
+    final record = MatchRecord.fromJson({...Map<String, dynamic>.from(mj), 'remote': true});
+    if (mine != null) record.celebrated.addAll(mine.celebrated);
+    matches[id] = record;
+    _changed();
+  }
+
+  /// What a match looks like online (no photos, no logos).
+  Map<String, dynamic> cloudData(MatchRecord m) {
+    final ids = {...m.playersA, ...m.playersB};
+    final json = m.toJson()..remove('celebrated');
+    return {
+      'match': json,
+      'teams': [for (final t in [teams[m.teamA], teams[m.teamB]]) if (t != null) t.toCloud()],
+      'players': [for (final id in ids) if (players[id] != null) players[id]!.toCloud()],
+    };
   }
 
   // ---------- tournaments ----------

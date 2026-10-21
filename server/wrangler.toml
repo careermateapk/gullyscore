@@ -1,0 +1,8 @@
+name = "gullyscore-api"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "gullyscore"
+database_id = "REPLACED_BY_DEPLOY"

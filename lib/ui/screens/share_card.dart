@@ -14,6 +14,44 @@ import '../../scoring/engine.dart';
 import '../widgets/common.dart';
 import 'scoring_sheets.dart';
 
+/// Share choices for a match: picture, and live link when online is set up.
+Future<void> showShareOptions(BuildContext context, MatchRecord m) async {
+  final sync = context.sync;
+  if (!sync.enabled) return shareMatchCard(context, m);
+  final choice = await showAppSheet<String>(context, (ctx) {
+    final p = Palette.of(ctx);
+    Widget option(IconData icon, String title, String sub, String value) => ListTile(
+          leading: Icon(icon, color: p.goldText),
+          title: Text(title, style: Tx.body(p.text, w: FontWeight.w700)),
+          subtitle: Text(sub, style: Tx.label(p.text2, w: FontWeight.w500)),
+          minTileHeight: 64,
+          onTap: () => Navigator.pop(ctx, value),
+        );
+    return Padding(
+      padding: const EdgeInsets.only(bottom: Space.l),
+      child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        SheetTitle(ctx.tr('share_score')),
+        option(Icons.link_rounded, ctx.tr('share_live_link'), ctx.tr('share_live_link_sub'), 'link'),
+        option(Icons.image_outlined, ctx.tr('share_picture'), ctx.tr('share_picture_sub'), 'picture'),
+      ]),
+    );
+  });
+  if (choice == null || !context.mounted) return;
+  if (choice == 'picture') return shareMatchCard(context, m);
+  final repo = context.repo;
+  final messenger = ScaffoldMessenger.of(context);
+  final offline = context.tr('link_needs_internet');
+  final text = context.tr('live_link_text', {'a': repo.teamName(m.teamA), 'b': repo.teamName(m.teamB), 'link': sync.liveLink(m.id)});
+  var online = true;
+  try {
+    if (!m.remote) await sync.pushNow(m.id);
+  } catch (_) {
+    online = false; // the link still works once this phone gets internet
+  }
+  await SharePlus.instance.share(ShareParams(text: text));
+  if (!online) messenger.showSnackBar(SnackBar(content: Text(offline)));
+}
+
 /// Share sheet for any picture: shows [child] and shares it as a PNG.
 Future<void> sharePicture(BuildContext context, {required String title, required Widget child, required String text, required String fileName}) {
   return showAppSheet<void>(context, (ctx) => _ShareSheet(title: title, text: text, fileName: fileName, child: child));

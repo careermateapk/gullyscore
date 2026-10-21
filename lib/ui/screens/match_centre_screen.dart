@@ -62,7 +62,7 @@ class MatchCentreScreen extends StatelessWidget {
           length: 5,
           child: Scaffold(
             backgroundColor: p.bg,
-            floatingActionButton: status == MatchStatus.finished
+            floatingActionButton: status == MatchStatus.finished || m.remote
                 ? null
                 : FloatingActionButton.extended(
                     backgroundColor: p.gold,
@@ -91,7 +91,7 @@ class MatchCentreScreen extends StatelessWidget {
                         ),
                         IconBtn(icon: Icons.help_outline_rounded, tooltip: context.tr('help'), onPressed: () => showHelp(context, 'match_centre')),
                         const SizedBox(width: Space.s),
-                        IconBtn(icon: Icons.ios_share_rounded, tooltip: context.tr('share_score'), onPressed: () => shareMatchCard(context, m)),
+                        IconBtn(icon: Icons.ios_share_rounded, tooltip: context.tr('share_score'), onPressed: () => showShareOptions(context, m)),
                       ]),
                     ),
                   ),
@@ -228,6 +228,7 @@ class _Hero extends StatelessWidget {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           Flexible(child: badge),
+          if (m.remote) ...[const SizedBox(width: 6), Flexible(child: Tag(context.tr('following_live'), color: p.goldText, background: p.gold.withValues(alpha: 0.14)))],
           const SizedBox(width: Space.s),
           Expanded(
             child: status == MatchStatus.notStarted

@@ -7,6 +7,8 @@ on:
     branches: [main]
     paths-ignore:
       - "**.md"
+      - "server/**"
+      - ".github/workflows/deploy-server.yml"
   workflow_dispatch:
 
 permissions:
@@ -47,6 +49,23 @@ jobs:
           grep -q 'allowBackup="true"' android/app/src/main/AndroidManifest.xml
           python3 ci/patch_signing.py
 
+      - name: Find the online service address
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          url=""
+          if [ -n "$CLOUDFLARE_API_TOKEN" ] && [ -n "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            sub=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/subdomain" | python3 -c "import json,sys
+          try:
+              print(json.load(sys.stdin)['result']['subdomain'] or '')
+          except Exception:
+              print('')")
+            [ -n "$sub" ] && url="https://gullyscore-api.$sub.workers.dev"
+          fi
+          if [ -z "$url" ]; then echo "::warning::Online features are off in this build (Cloudflare not connected yet)."; else echo "Online service: $url"; fi
+          echo "CLOUD_URL=$url" >> "$GITHUB_ENV"
+
       - name: Get packages
         run: ci/run_and_report.sh flutter pub get
 
@@ -58,12 +77,12 @@ jobs:
 
       - name: Build APK
         run: |
-          ci/run_and_report.sh flutter build apk --release
+          ci/run_and_report.sh flutter build apk --release --dart-define=CLOUD_URL=${{ env.CLOUD_URL }}
           mkdir -p dist && cp build/app/outputs/flutter-apk/app-release.apk dist/GullyScore-all-phones.apk
 
       - name: Build smaller APKs (one per phone type)
         run: |
-          ci/run_and_report.sh flutter build apk --release --split-per-abi
+          ci/run_and_report.sh flutter build apk --release --split-per-abi --dart-define=CLOUD_URL=${{ env.CLOUD_URL }}
           cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk dist/GullyScore-most-phones.apk
           cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk dist/GullyScore-older-phones.apk
           ls -la dist

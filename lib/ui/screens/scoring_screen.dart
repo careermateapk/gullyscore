@@ -251,6 +251,12 @@ class _ScoringScreenState extends State<ScoringScreen> {
             body: Center(child: EmptyState(icon: Icons.search_off_rounded, title: context.tr('match_not_found'), body: context.tr('match_not_found_body'))),
           );
         }
+        if (m.remote) {
+          return Scaffold(
+            appBar: AppBar(backgroundColor: p.bg),
+            body: Center(child: EmptyState(icon: Icons.lock_outline_rounded, title: context.tr('scored_elsewhere'), body: context.tr('scored_elsewhere_body'))),
+          );
+        }
         final st = m.state;
         final inn = st.current;
         final batTeam = st.battingTeamNow;

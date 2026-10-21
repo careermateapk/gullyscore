@@ -7,6 +7,7 @@ import '../widgets/common.dart';
 import 'backup_ui.dart';
 import 'help.dart';
 import 'match_centre_screen.dart';
+import 'online.dart';
 import 'scoring_sheets.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -171,6 +172,26 @@ class SettingsScreen extends StatelessWidget {
           link(Icons.help_outline_rounded, const Color(0xFF5B9BFF), context.tr('help_and_faq'), () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FaqScreen()))),
           link(Icons.lock_outline_rounded, p.win, context.tr('privacy_title'), () => _privacy(context)),
         ]),
+        if (context.sync.enabled)
+          ListenableBuilder(
+            listenable: context.sync,
+            builder: (context, _) {
+              final sync = context.sync;
+              return group(context.tr('online'), [
+                toggle(Icons.public_rounded, p.win, context.tr('share_online'), context.tr('share_online_sub'), sync.shareOnline, sync.setShareOnline),
+                Padding(padding: const EdgeInsets.fromLTRB(14, 10, 14, 12), child: const SyncStatusLine()),
+                if (sync.linkedPlayerId == null)
+                  link(Icons.badge_outlined, p.goldText, context.tr('this_is_me'), () => linkMyProfile(context))
+                else
+                  link(Icons.badge_rounded, p.goldText, context.tr('linked_as', {'name': sync.linkedName ?? ''}), () => sync.unlinkProfile(), trailing: context.tr('unlink')),
+                link(Icons.link_rounded, const Color(0xFF5B9BFF), context.tr('follow_a_match'), () => followMatchByLink(context)),
+              ]);
+            },
+          )
+        else
+          group(context.tr('online'), [
+            Padding(padding: const EdgeInsets.all(14), child: Text(context.tr('online_not_set_up'), style: Tx.small(p.text2))),
+          ]),
         group(context.tr('backup'), [
           link(Icons.cloud_upload_outlined, p.goldText, context.tr('make_backup'), () => makeBackup(context),
               trailing: s.lastBackup == null ? context.tr('never') : agoText(context, s.lastBackup!)),
