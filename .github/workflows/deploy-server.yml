@@ -8,6 +8,7 @@ on:
     paths:
       - "server/**"
       - "google-client-id.txt"
+      - "assets/content/**"
       - ".github/workflows/deploy-server.yml"
   workflow_dispatch:
 

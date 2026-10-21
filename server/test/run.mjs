@@ -1,12 +1,12 @@
 // Runs the Worker against a real SQLite database (node:sqlite) to check the API.
 // Usage: node --experimental-sqlite test/run.mjs
 import { DatabaseSync } from 'node:sqlite';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import assert from 'node:assert/strict';
 import worker from '../src/index.js';
 
 const db = new DatabaseSync(':memory:');
-for (const f of ['0001_init.sql', '0002_login.sql']) db.exec(readFileSync(new URL('../migrations/' + f, import.meta.url), 'utf8'));
+for (const f of readdirSync(new URL('../migrations/', import.meta.url)).filter((x) => x.endsWith('.sql')).sort()) db.exec(readFileSync(new URL('../migrations/' + f, import.meta.url), 'utf8'));
 
 // Minimal D1 look-alike.
 function stmt(sql) {
@@ -159,4 +159,191 @@ assert.equal((await call('GET', '/v1/players/p1/matches')).body.matches.length, 
 
 const big = await call('PUT', '/v1/matches/m_big', { data: { x: 'a'.repeat(700 * 1024) }, summary }, tok);
 assert.equal(big.status, 413);
+
+// ================= v0.5: feed, My Cricket, leaderboard, community, ratings =================
+{
+  const s1 = await call('POST', '/v1/register');
+  const sc = s1.body.scorerId + '.' + s1.body.token;
+  const sum = (t, st) => ({ title: t, status: st, innings: [], thisOver: [] });
+  const now = Date.now();
+  // Live match: DD (p_a1, p_a2) vs GB (p_b1)
+  await call('PUT', '/v1/matches/live1', {
+    data: {}, summary: sum('DD vs GB', 'GB need 10'), finished: false, status: 'live', ground: 'Gaziabad',
+    teamA: { id: 'tDD', name: 'Delhi Daredevils' }, teamB: { id: 'tGB', name: 'Gaziabad Bulldozers' },
+    players: [
+      { id: 'p_a1', team: 'tDD', name: 'Suraj', runs: 58, wickets: 0, line: { r: 58, b: 31, notOut: true } },
+      { id: 'p_a2', team: 'tDD', name: 'Ravi', runs: 4, wickets: 2 },
+      { id: 'p_b1', team: 'tGB', name: 'Amit', runs: 12, wickets: 1 },
+    ],
+  }, sc);
+  // Finished match DD beat PT
+  await call('PUT', '/v1/matches/res1', {
+    data: {}, summary: sum('DD vs PT', 'DD won by 24 runs'), finished: true, status: 'result', winner: 'tDD',
+    teamA: { id: 'tDD', name: 'Delhi Daredevils' }, teamB: { id: 'tPT', name: 'Pandaul Tigers' },
+    players: [
+      { id: 'p_a1', team: 'tDD', name: 'Suraj', runs: 75, wickets: 2, line: { r: 75, b: 38, notOut: true } },
+      { id: 'p_c1', team: 'tPT', name: 'Mohan', runs: 30, wickets: 3 },
+    ],
+  }, sc);
+  // Upcoming DD vs SK tomorrow
+  await call('PUT', '/v1/matches/up1', {
+    data: {}, summary: sum('DD vs SK', 'Tomorrow'), finished: false, status: 'upcoming', scheduled: now + 20 * 3600e3, ground: 'Rajnagar',
+    teamA: { id: 'tDD', name: 'Delhi Daredevils' }, teamB: { id: 'tSK', name: 'Sakri Kings' },
+    players: [{ id: 'p_a1', team: 'tDD', name: 'Suraj' }],
+  }, sc);
+  // Old app format still works.
+  assert.equal((await call('PUT', '/v1/matches/old1', { data: {}, summary: sum('x', 'y'), players: ['zz'] }, sc)).status, 200);
+
+  let f = await call('GET', '/v1/feed?kind=live');
+  assert.ok(f.body.matches.some((x) => x.id === 'live1'));
+  assert.equal(f.body.matches.find((x) => x.id === 'live1').ground, 'Gaziabad');
+  assert.ok(!f.body.matches.some((x) => x.id === 'res1' || x.id === 'up1'));
+  f = await call('GET', '/v1/feed?kind=upcoming');
+  assert.deepEqual(f.body.matches.map((x) => x.id), ['up1']);
+  assert.ok(f.body.counts.live >= 1 && f.body.counts.upcoming === 1);
+  f = await call('GET', '/v1/feed?kind=results');
+  assert.equal(f.body.matches[0].id, 'res1');
+  assert.equal(f.body.matches[0].winner, 'tDD');
+
+  // Suraj logs in with his number; scorer had typed it for p_a1 in team tDD.
+  await call('POST', '/v1/players/phones', { players: [{ id: 'p_a1', name: 'Suraj', team: 'Delhi Daredevils', teamId: 'tDD', phone: '9111111111' }] }, sc);
+  const su = (await call('POST', '/v1/login', { idToken: 'good:suraj:suraj@gmail.com' })).body.token;
+  const me = (await call('PUT', '/v1/me/phone', { phone: '9111111111' }, su)).body;
+  assert.equal(me.matches.length, 3, 'live, result and upcoming');
+  assert.equal(me.matches.find((x) => x.id === 'live1').me.r, 58);
+  assert.equal(me.totals.matches, 2, 'upcoming not counted');
+  assert.equal(me.totals.runs, 133);
+  assert.equal(me.totals.wickets, 2);
+  assert.equal(me.totals.best, 75);
+  assert.equal(me.totals.bestNotOut, true);
+  assert.equal(me.teams.length, 1);
+  const dd = me.teams[0];
+  assert.equal(dd.name, 'Delhi Daredevils');
+  assert.equal(dd.played, 1);
+  assert.equal(dd.won, 1);
+  assert.deepEqual(dd.form, ['W']);
+  assert.equal(dd.next.id, 'up1');
+  const teamPage = await call('GET', '/v1/teams/' + s1.body.scorerId + '/tDD');
+  assert.equal(teamPage.body.matches.length, 3);
+
+  // Leaderboard
+  let lb = await call('GET', '/v1/leaderboard?kind=runs');
+  assert.equal(lb.body.players[0].name, 'Suraj');
+  assert.equal(lb.body.players[0].runs, 133);
+  assert.equal(lb.body.players[0].team, 'Delhi Daredevils');
+  lb = await call('GET', '/v1/leaderboard?kind=wickets');
+  assert.equal(lb.body.players[0].name, 'Mohan');
+
+  // ----- Ratings -----
+  // Mohan (PT) logs in; rates DD for the finished match.
+  await call('POST', '/v1/players/phones', { players: [
+    { id: 'p_a1', name: 'Suraj', team: 'Delhi Daredevils', teamId: 'tDD', phone: '9111111111' },
+    { id: 'p_c1', name: 'Mohan', team: 'Pandaul Tigers', teamId: 'tPT', phone: '9222222222' },
+  ] }, sc);
+  const mo = (await call('POST', '/v1/login', { idToken: 'good:mohan:mohan@gmail.com' })).body.token;
+  await call('PUT', '/v1/me/phone', { phone: '9222222222' }, mo);
+  let t = await call('GET', '/v1/matches/res1/rating', undefined, mo);
+  assert.equal(t.body.canRate, true);
+  assert.equal(t.body.team.name, 'Delhi Daredevils');
+  assert.equal((await call('GET', '/v1/matches/live1/rating', undefined, mo)).body.canRate, false, 'not his match');
+  assert.equal((await call('GET', '/v1/matches/live1/rating', undefined, su)).body.reason, 'not finished');
+  assert.equal((await call('POST', '/v1/matches/res1/rating', { fair: 5, behaviour: 4, ontime: 3, tags: ['sportsmen', 'bogus'], comment: 'Great match!' }, mo)).status, 200);
+  assert.equal((await call('POST', '/v1/matches/res1/rating', { fair: 1, behaviour: 1, ontime: 1 }, mo)).status, 403, 'only once');
+  // Suraj rates PT.
+  await call('POST', '/v1/matches/res1/rating', { fair: 4, behaviour: 4, ontime: 4 }, su);
+  let rp = await call('GET', '/v1/teams/' + s1.body.scorerId + '/tDD/ratings');
+  assert.equal(rp.body.count, 1);
+  assert.equal(rp.body.overall, 4);
+  assert.equal(rp.body.tags.sportsmen, 1);
+  assert.equal(rp.body.comments.length, 1);
+  const cid = rp.body.comments[0].id;
+  assert.equal(rp.body.comments[0].author.name, 'mohan');
+  assert.equal(rp.body.comments[0].author.team, 'Pandaul Tigers');
+  // Reactions: Suraj 👍, Mohan ❤️, Suraj switches to 🔥, then removes it.
+  await call('POST', '/v1/comments/' + cid + '/react', { emoji: '👍' }, su);
+  let c = (await call('POST', '/v1/comments/' + cid + '/react', { emoji: '❤️' }, mo)).body;
+  assert.equal(c.reactions.length, 2);
+  c = (await call('POST', '/v1/comments/' + cid + '/react', { emoji: '🔥' }, su)).body;
+  assert.equal(c.myReaction, '🔥');
+  assert.equal(c.reactions.reduce((a, x) => a + x.n, 0), 2);
+  c = (await call('POST', '/v1/comments/' + cid + '/react', { emoji: '🔥' }, su)).body;
+  assert.equal(c.myReaction, null);
+  assert.equal((await call('POST', '/v1/comments/' + cid + '/react', { emoji: '💩' }, su)).body.myReaction, null, 'unknown emoji removes');
+  // Replies: Suraj is a DD player → Team tag.
+  const r1 = (await call('POST', '/v1/comments/' + cid + '/replies', { body: 'Thank you bhai!' }, su)).body;
+  assert.equal(r1.isTeam, true);
+  const r2 = (await call('POST', '/v1/comments/' + r1.id + '/replies', { body: 'Next time again' }, mo)).body;
+  assert.equal(r2.isTeam, false);
+  assert.equal(r2.parentId, cid, 'reply to a reply stays in the same thread');
+  rp = await call('GET', '/v1/teams/' + s1.body.scorerId + '/tDD/ratings');
+  assert.equal(rp.body.comments[0].replies, 2);
+  assert.equal(rp.body.comments[0].firstReplies.length, 2);
+  assert.equal((await call('GET', '/v1/comments/' + cid + '/replies')).body.replies.length, 2);
+  assert.equal((await call('POST', '/v1/comments/' + cid + '/replies', { body: 'x' })).status, 401);
+  assert.equal(me.teams[0].rating, null);
+  assert.equal((await call('GET', '/v1/me', undefined, su)).body.teams[0].rating, 4);
+
+  // Reports: three people hide a comment.
+  const users = [];
+  for (const n of ['a', 'b', 'c']) users.push((await call('POST', '/v1/login', { idToken: `good:rep${n}:${n}@x.com` })).body.token);
+  for (const u of users) await call('POST', '/v1/reports', { kind: 'comment', id: r2.id, reason: 'rude' }, u);
+  assert.equal((await call('GET', '/v1/comments/' + cid + '/replies')).body.replies.length, 1);
+
+  // ----- Community -----
+  assert.equal((await call('POST', '/v1/posts', { kind: 'players', body: 'Need 2' })).status, 401, 'login needed');
+  const post = (await call('POST', '/v1/posts', { kind: 'players', body: 'Sunday 7 AM, need a bowler', place: 'Gaziabad', need: 2, contact: '+91 91111-11111' }, su)).body;
+  assert.equal(post.mine, true);
+  assert.equal(post.contact, '+919111111111');
+  let list = (await call('GET', '/v1/posts')).body.posts;
+  assert.equal(list[0].id, post.id);
+  assert.equal(list[0].contact, undefined, 'number hidden from strangers');
+  assert.equal(list[0].hasContact, true);
+  const joined = (await call('POST', '/v1/posts/' + post.id + '/join', {}, mo)).body;
+  assert.equal(joined.joined, true);
+  assert.equal(joined.contact, '+919111111111', 'shown after joining');
+  assert.equal(joined.joins, 1);
+  const who = (await call('GET', '/v1/posts/' + post.id + '/joins', undefined, su)).body.joins;
+  assert.equal(who[0].name, 'mohan');
+  assert.equal((await call('GET', '/v1/posts/' + post.id + '/joins', undefined, mo)).status, 403);
+  // Poll
+  assert.equal((await call('POST', '/v1/posts', { kind: 'poll', body: 'Best batter?', options: ['Suraj'] }, su)).status, 400);
+  const poll = (await call('POST', '/v1/posts', { kind: 'poll', body: 'Best batter?', options: ['Suraj', 'Ravi', 'Amit'] }, su)).body;
+  await call('POST', '/v1/posts/' + poll.id + '/vote', { option: 0 }, mo);
+  let pv = (await call('POST', '/v1/posts/' + poll.id + '/vote', { option: 2 }, su)).body;
+  assert.deepEqual(pv.votes, [1, 0, 1]);
+  pv = (await call('POST', '/v1/posts/' + poll.id + '/vote', { option: 1 }, su)).body;
+  assert.deepEqual(pv.votes, [1, 1, 0], 'changing a vote');
+  assert.equal(pv.myVote, 1);
+  assert.equal((await call('POST', '/v1/posts/' + poll.id + '/vote', { option: 7 }, su)).status, 400);
+  // Tournament with entry fee and paid tick.
+  const tour = (await call('POST', '/v1/posts', { kind: 'tournament', body: 'MPL 2026, 8 teams', fee: 500, upi: 'mpl@upi', teams: 8, lastDate: '2026-10-28', prize: '₹5,000' }, su)).body;
+  assert.equal(tour.extra.fee, 500);
+  await call('POST', '/v1/posts/' + tour.id + '/join', { note: 'Pandaul Tigers' }, mo);
+  const reg = (await call('GET', '/v1/posts/' + tour.id + '/joins', undefined, su)).body.joins[0];
+  assert.equal(reg.note, 'Pandaul Tigers');
+  await call('POST', '/v1/posts/' + tour.id + '/paid', { userId: reg.userId, paid: true }, su);
+  assert.equal((await call('GET', '/v1/posts/' + tour.id + '/joins', undefined, su)).body.joins[0].paid, true);
+  assert.equal((await call('GET', '/v1/posts?kind=poll')).body.posts.length, 1);
+  // Only the author deletes.
+  assert.equal((await call('DELETE', '/v1/posts/' + poll.id, undefined, mo)).status, 403);
+  assert.equal((await call('DELETE', '/v1/posts/' + poll.id, undefined, su)).status, 200);
+
+  // ----- Delete my account -----
+  assert.equal((await call('DELETE', '/v1/me/account', undefined, mo)).status, 200);
+  assert.equal((await call('GET', '/v1/me', undefined, mo)).status, 401);
+  rp = await call('GET', '/v1/teams/' + s1.body.scorerId + '/tDD/ratings');
+  assert.equal(rp.body.count, 0, 'his rating is gone');
+  assert.equal(rp.body.comments.length, 0, 'his comment and its replies are gone');
+  assert.equal((await call('GET', '/v1/posts/' + tour.id + '/joins', undefined, su)).body.joins.length, 0);
+
+  // ----- Web pages -----
+  for (const path of ['/', '/privacy', '/terms', '/about', '/blog', '/privacy?lang=hi', '/blog/score-your-first-match']) {
+    const r = await call('GET', path);
+    assert.equal(r.status, 200, path);
+    assert.ok(String(r.body).includes('GullyScore'), path);
+  }
+  assert.ok(String((await call('GET', '/privacy?lang=hi')).body).includes('प्राइवेसी'));
+  assert.equal((await call('GET', '/blog/nope')).status, 404);
+}
+
 console.log('server tests passed');

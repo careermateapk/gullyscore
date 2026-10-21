@@ -7,9 +7,9 @@
 // kept only as keyed hashes.
 // Photos never come here: they stay on the phones.
 
-const MAX_BODY = 600 * 1024; // a long match is ~50 KB; this leaves room
-const ID_RE = /^[A-Za-z0-9_\-]{1,80}$/;
-const TOKEN_ALPHABET = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+import { HttpError, ID_RE, TOKEN_ALPHABET, auth, esc, html, json, randomString, readJson, sha256, userAuth } from './util.js';
+import { myCricket, socialRoutes, deleteUserEverywhere } from './social.js';
+import { contentRoutes } from './pages.js';
 
 export default {
   async fetch(request, env) {
@@ -22,71 +22,7 @@ export default {
   },
 };
 
-class HttpError extends Error {
-  constructor(status, message) {
-    super(message);
-    this.status = status;
-  }
-}
 
-function json(body, status = 200, extra = {}) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      'content-type': 'application/json; charset=utf-8',
-      'access-control-allow-origin': '*',
-      'cache-control': 'no-store',
-      ...extra,
-    },
-  });
-}
-
-async function readJson(request) {
-  const len = Number(request.headers.get('content-length') || '0');
-  if (len > MAX_BODY) throw new HttpError(413, 'too large');
-  const text = await request.text();
-  if (text.length > MAX_BODY) throw new HttpError(413, 'too large');
-  try {
-    return JSON.parse(text);
-  } catch {
-    throw new HttpError(400, 'bad json');
-  }
-}
-
-function randomString(n, alphabet) {
-  const bytes = new Uint8Array(n);
-  crypto.getRandomValues(bytes);
-  let s = '';
-  for (const b of bytes) s += alphabet[b % alphabet.length];
-  return s;
-}
-
-async function sha256(text) {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
-  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
-}
-
-/** Checks "Authorization: Bearer <scorerId>.<token>" and returns the scorer id. */
-async function auth(request, env) {
-  const h = request.headers.get('authorization') || '';
-  const m = /^Bearer ([A-Za-z0-9_\-]+)\.([A-Za-z0-9_\-]+)$/.exec(h);
-  if (!m) throw new HttpError(401, 'not signed in');
-  const row = await env.DB.prepare('SELECT token_hash FROM scorers WHERE id = ?').bind(m[1]).first();
-  if (!row || row.token_hash !== (await sha256(m[2]))) throw new HttpError(401, 'not signed in');
-  return m[1];
-}
-
-/** Checks "Authorization: Bearer U<token>" (a logged-in player) and returns the user row. */
-async function userAuth(request, env) {
-  const h = request.headers.get('authorization') || '';
-  const m = /^Bearer U([A-Za-z0-9]+)$/.exec(h);
-  if (!m) throw new HttpError(401, 'not logged in');
-  const row = await env.DB.prepare('SELECT u.id, u.email, u.name, u.phone_hash FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ?')
-    .bind(await sha256(m[1]))
-    .first();
-  if (!row) throw new HttpError(401, 'not logged in');
-  return row;
-}
 
 /** The random key used to hash mobile numbers (made once, kept in the database). */
 async function phoneKey(env) {
@@ -139,24 +75,19 @@ async function verifyGoogle(idToken, env) {
 }
 
 /** Everything a logged-in player sees: their profiles and their matches. */
+/** Everything a logged-in player sees: profiles, their matches, their teams and totals. */
 async function meInfo(user, env) {
   const profiles = await env.DB.prepare(
     `SELECT c.status, pp.name, pp.team FROM claims c
      LEFT JOIN player_phones pp ON pp.scorer_id = c.scorer_id AND pp.player_id = c.player_id
      WHERE c.user_id = ? ORDER BY c.created`,
   ).bind(user.id).all();
-  const matches = await env.DB.prepare(
-    `SELECT DISTINCT m.id, m.updated, m.finished, m.title, m.summary FROM claims c
-     JOIN match_players mp ON mp.player_id = c.player_id
-     JOIN matches m ON m.id = mp.match_id AND m.scorer_id = c.scorer_id
-     WHERE c.user_id = ? AND c.status = 'ok' ORDER BY m.updated DESC LIMIT 100`,
-  ).bind(user.id).all();
   return {
     email: user.email,
     name: user.name,
     hasPhone: !!user.phone_hash,
     profiles: (profiles.results || []).map((r) => ({ status: r.status, name: r.name || '', team: r.team || '' })),
-    matches: (matches.results || []).map((r) => ({ id: r.id, updated: r.updated, finished: !!r.finished, title: r.title, summary: JSON.parse(r.summary) })),
+    ...(await myCricket(user, env)),
   };
 }
 
@@ -175,7 +106,12 @@ async function route(request, env) {
     });
   }
 
-  if (p === '/' || p === '/v1/health') return json({ ok: true, service: 'gullyscore', login: !!String(env.GOOGLE_CLIENT_ID || '').trim() });
+  if (p === '/v1/health') return json({ ok: true, service: 'gullyscore', login: !!String(env.GOOGLE_CLIENT_ID || '').trim() });
+
+  const social = await socialRoutes(p, method, url, request, env);
+  if (social) return social;
+  const page = contentRoutes(p, method, url);
+  if (page) return page;
 
   // A phone asks for its own identity once.
   if (p === '/v1/register' && method === 'POST') {
@@ -198,17 +134,44 @@ async function route(request, env) {
     }
     const existing = await env.DB.prepare('SELECT scorer_id FROM matches WHERE id = ?').bind(matchId).first();
     if (existing && existing.scorer_id !== scorer) throw new HttpError(403, 'not your match');
-    const players = Array.isArray(body.players) ? body.players.filter((x) => typeof x === 'string' && ID_RE.test(x)).slice(0, 80) : [];
+    // Players: ids (old apps) or {id, team, name, runs, wickets, line} (new apps).
+    const players = [];
+    for (const x of Array.isArray(body.players) ? body.players.slice(0, 80) : []) {
+      const o = typeof x === 'string' ? { id: x } : x && typeof x === 'object' ? x : null;
+      if (!o || typeof o.id !== 'string' || !ID_RE.test(o.id)) continue;
+      players.push({
+        id: o.id,
+        team: typeof o.team === 'string' ? o.team.slice(0, 80) : '',
+        name: typeof o.name === 'string' ? o.name.slice(0, 80) : '',
+        runs: Number.isFinite(o.runs) ? Math.max(0, Math.min(1000, Math.trunc(o.runs))) : 0,
+        wickets: Number.isFinite(o.wickets) ? Math.max(0, Math.min(20, Math.trunc(o.wickets))) : 0,
+        line: JSON.stringify(o.line && typeof o.line === 'object' ? o.line : {}).slice(0, 2000),
+      });
+    }
     const now = Date.now();
     const title = typeof body.title === 'string' ? body.title.slice(0, 120) : '';
+    const str = (v, n = 80) => (typeof v === 'string' ? v.slice(0, n) : '');
+    const status = ['upcoming', 'live', 'result'].includes(body.status) ? body.status : body.finished ? 'result' : 'live';
+    const scheduled = Number.isFinite(body.scheduled) ? Math.trunc(body.scheduled) : null;
+    const ta = body.teamA && typeof body.teamA === 'object' ? body.teamA : {};
+    const tb = body.teamB && typeof body.teamB === 'object' ? body.teamB : {};
     const stmts = [
       env.DB.prepare(
-        `INSERT INTO matches (id, scorer_id, updated, finished, title, summary, data) VALUES (?, ?, ?, ?, ?, ?, ?)
+        `INSERT INTO matches (id, scorer_id, updated, finished, title, summary, data, status, scheduled, ground, team_a, team_b, team_a_name, team_b_name, winner)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET updated = excluded.updated, finished = excluded.finished, title = excluded.title,
-         summary = excluded.summary, data = excluded.data`,
-      ).bind(matchId, scorer, now, body.finished ? 1 : 0, title, JSON.stringify(body.summary), JSON.stringify(body.data)),
+         summary = excluded.summary, data = excluded.data, status = excluded.status, scheduled = excluded.scheduled,
+         ground = excluded.ground, team_a = excluded.team_a, team_b = excluded.team_b, team_a_name = excluded.team_a_name,
+         team_b_name = excluded.team_b_name, winner = excluded.winner`,
+      ).bind(
+        matchId, scorer, now, body.finished ? 1 : 0, title, JSON.stringify(body.summary), JSON.stringify(body.data),
+        status, scheduled, str(body.ground, 120), str(ta.id), str(tb.id), str(ta.name), str(tb.name), str(body.winner),
+      ),
       env.DB.prepare('DELETE FROM match_players WHERE match_id = ?').bind(matchId),
-      ...players.map((pid) => env.DB.prepare('INSERT OR IGNORE INTO match_players (match_id, player_id) VALUES (?, ?)').bind(matchId, pid)),
+      ...players.map((x) =>
+        env.DB.prepare('INSERT OR IGNORE INTO match_players (match_id, player_id, team, name, runs, wickets, line) VALUES (?, ?, ?, ?, ?, ?, ?)')
+          .bind(matchId, x.id, x.team, x.name, x.runs, x.wickets, x.line),
+      ),
     ];
     await env.DB.batch(stmts);
     return json({ ok: true, updated: now });
@@ -258,14 +221,21 @@ async function route(request, env) {
       if (!x || typeof x.id !== 'string' || !ID_RE.test(x.id)) continue;
       const d = cleanPhone(x.phone);
       if (!d) continue;
-      rows.push({ id: x.id, h: await phoneHash(key, d), n: String(x.name ?? '').slice(0, 80), t: String(x.team ?? '').slice(0, 80) });
+      rows.push({
+        id: x.id,
+        h: await phoneHash(key, d),
+        n: String(x.name ?? '').slice(0, 80),
+        t: String(x.team ?? '').slice(0, 80),
+        ti: String(x.teamId ?? '').slice(0, 80),
+      });
     }
     const now = Date.now();
     await env.DB.batch([
       env.DB.prepare('DELETE FROM player_phones WHERE scorer_id = ?').bind(scorer),
       env.DB.prepare(
-        `INSERT OR REPLACE INTO player_phones (scorer_id, player_id, phone_hash, name, team)
-         SELECT ?, json_extract(value, '$.id'), json_extract(value, '$.h'), json_extract(value, '$.n'), json_extract(value, '$.t') FROM json_each(?)`,
+        `INSERT OR REPLACE INTO player_phones (scorer_id, player_id, phone_hash, name, team, team_id)
+         SELECT ?, json_extract(value, '$.id'), json_extract(value, '$.h'), json_extract(value, '$.n'), json_extract(value, '$.t'),
+         json_extract(value, '$.ti') FROM json_each(?)`,
       ).bind(scorer, JSON.stringify(rows)),
       // A profile whose number changed no longer belongs to the old person.
       env.DB.prepare(
@@ -357,14 +327,6 @@ async function route(request, env) {
   if ((m = /^\/m\/([^/]+)$/.exec(p)) && method === 'GET') return html(matchPage(m[1]));
 
   throw new HttpError(404, 'not found');
-}
-
-function html(body) {
-  return new Response(body, { headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } });
-}
-
-function esc(s) {
-  return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
 const STYLE = `

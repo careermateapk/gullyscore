@@ -30,4 +30,7 @@ const list = await call('GET', '/v1/players/smoke_player/matches');
 assert.ok(list.body.matches.some((m) => m.id === id), 'player list');
 assert.equal((await call('DELETE', '/v1/matches/' + id, undefined, tok)).status, 200, 'delete');
 assert.equal((await call('GET', '/v1/matches/' + id)).status, 404, 'gone');
+for (const path of ['/privacy', '/terms', '/blog', '/v1/feed?kind=live', '/v1/leaderboard', '/v1/posts']) {
+  assert.equal((await call('GET', path)).status, 200, path);
+}
 console.log('Live service works end to end');
