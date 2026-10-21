@@ -254,10 +254,13 @@ class _PostCardState extends State<PostCard> {
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(post.author, maxLines: 1, overflow: TextOverflow.ellipsis, style: Tx.small(p.text, w: FontWeight.w800)),
-              Text(agoText(context, post.created), style: Tx.label(p.text2, w: FontWeight.w600)),
+              const SizedBox(height: 2),
+              Wrap(spacing: 6, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                Tag(context.tr('kind_${post.kind}'), color: p.goldText),
+                Text(agoText(context, post.created), style: Tx.label(p.text2, w: FontWeight.w600)),
+              ]),
             ]),
           ),
-          Tag(context.tr('kind_${post.kind}'), color: p.goldText),
           IconButton(tooltip: context.tr('more'), icon: Icon(Icons.more_vert_rounded, size: 20, color: p.text2), onPressed: _menu),
         ]),
         const SizedBox(height: Space.s),
