@@ -278,7 +278,7 @@ void main() {
     await expectLater(mine.setMyPhone('12345'), throwsA(isA<CloudError>()));
     await mine.setMyPhone('09876543210');
     expect(mine.me!.profiles.single.approved, true);
-    expect(mine.me!.matches.length, 1, 'no approval needed');
+    expect(mine.me!.matches.length, 1, reason: 'no approval needed');
 
     // The scorer sees the linked account on the player's profile and can remove it.
     await scorer.checkClaims();

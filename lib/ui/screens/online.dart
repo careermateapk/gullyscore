@@ -9,7 +9,6 @@ import '../../data/cloud.dart';
 import '../../data/google_auth.dart';
 import '../../data/models.dart';
 import '../../data/sync.dart';
-import '../widgets/avatar.dart';
 import '../widgets/common.dart';
 import 'match_centre_screen.dart';
 
