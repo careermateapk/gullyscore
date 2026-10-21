@@ -94,7 +94,7 @@ Future<void> shareChampionCertificate(BuildContext context, Tournament t, String
       line: t.name,
       detail: context.tr('players_n', {'n': team?.playerIds.length ?? 0}),
       date: _date(DateTime.now()),
-      badge: Crest(color: Palette.team(team?.colorIndex ?? 0), text: team?.short ?? '', size: 64),
+      badge: Crest(logo: team?.logo, color: Palette.team(team?.colorIndex ?? 0), text: team?.short ?? '', size: 64),
     ),
   );
 }

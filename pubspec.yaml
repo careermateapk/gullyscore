@@ -18,6 +18,10 @@ dependencies:
   share_plus: any
   # Player photos from camera or gallery (kept on the phone only)
   image_picker: any
+  # Choosing a backup file to restore
+  file_picker: ^13.1.0
+  # Small JPEG pictures after cropping (keeps backups small)
+  image: any
 
 dev_dependencies:
   flutter_test:

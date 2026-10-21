@@ -4,18 +4,39 @@ import 'package:flutter/services.dart';
 
 import '../../app/scope.dart';
 import '../../app/theme.dart';
+import '../../data/photos.dart';
 
 // ---------------------------------------------------------------- crest
 
-/// Shield-shaped team badge with initials.
+/// Team badge: the team's logo if it has one, otherwise a shield with initials.
 class Crest extends StatelessWidget {
-  const Crest({super.key, required this.color, this.text = '', this.size = 28});
+  const Crest({super.key, required this.color, this.text = '', this.size = 28, this.logo});
   final Color color;
   final String text;
   final double size;
+  final String? logo; // file name of the team logo saved on this phone
 
   @override
   Widget build(BuildContext context) {
+    final file = PhotoStore.file(logo);
+    if (file != null) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(size * 0.24),
+        child: Image.file(
+          file,
+          width: size,
+          height: size * 1.1,
+          fit: BoxFit.cover,
+          cacheWidth: (size * MediaQuery.devicePixelRatioOf(context)).round(),
+          gaplessPlayback: true,
+          errorBuilder: (c, e, st) => _shield(),
+        ),
+      );
+    }
+    return _shield();
+  }
+
+  Widget _shield() {
     return SizedBox(
       width: size,
       height: size * 1.1,

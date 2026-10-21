@@ -1,8 +1,11 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gullyscore/app/scope.dart';
 import 'package:gullyscore/app/settings.dart';
 import 'package:gullyscore/app/theme.dart';
+import 'package:gullyscore/data/backup.dart';
 import 'package:gullyscore/data/models.dart';
 import 'package:gullyscore/data/repository.dart';
 import 'package:gullyscore/main.dart';
@@ -309,6 +312,50 @@ void main() {
       await tester.pumpAndSettle();
     }
     expect(find.text('Player of the Match'), findsNothing); // only shown in match centre
+    await tester.pump(const Duration(seconds: 1));
+  });
+
+  test('team logo name is saved and read back', () {
+    final t = Team(id: 't1', name: 'Rajnagar XI', colorIndex: 1, logo: 'logo_t1_1.jpg');
+    expect(Team.fromJson(t.toJson()).logo, 'logo_t1_1.jpg');
+    expect(Team.fromJson(Team(id: 't2', name: 'X', colorIndex: 0).toJson()).logo, isNull);
+  });
+
+  test('backup file round trip restores everything', () async {
+    final r = Repository(store: MemoryStore());
+    await r.load();
+    final id = seedMatch(r);
+    final t = r.addTournament(name: 'Cup', format: TFormat.knockout, overs: 5, teamIds: r.teamList.map((t) => t.id).toList());
+    final bytes = Backup.build(r.toJson(), at: DateTime(2026, 10, 21));
+    final back = Backup.read(bytes);
+    expect(back.matchCount, 1);
+    expect(back.teamCount, 2);
+    expect(back.created, DateTime(2026, 10, 21));
+
+    final fresh = Repository(store: MemoryStore());
+    await fresh.load();
+    await fresh.restoreFrom(back.data);
+    expect(fresh.matches[id]!.playersA.length, 3);
+    expect(fresh.tournaments[t.id]!.fixtures.length, 1);
+    expect(fresh.players.length, 6);
+    await fresh.saveNow();
+    await r.saveNow();
+  });
+
+  test('a random file is not mistaken for a backup', () {
+    expect(() => Backup.read(Uint8List.fromList('hello'.codeUnits)), throwsFormatException);
+    expect(() => Backup.read(Uint8List.fromList('{"a":1}'.codeUnits)), throwsFormatException);
+  });
+
+  testWidgets('team screen offers a logo', (tester) async {
+    final (s, r) = await setUpApp();
+    final id = seedMatch(r);
+    await tester.pumpWidget(wrap(s, r, TeamScreen(teamId: r.matches[id]!.teamA)));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Add team logo'));
+    await tester.pumpAndSettle();
+    expect(find.text('Choose from gallery'), findsOneWidget);
+    expect(find.text('Remove logo'), findsNothing);
     await tester.pump(const Duration(seconds: 1));
   });
 }

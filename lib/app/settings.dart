@@ -9,6 +9,7 @@ class Settings extends ChangeNotifier {
   bool askShotDirection = true;
   bool haptics = true;
   bool onboarded = false;
+  DateTime? lastBackup;
   final Set<String> favouriteTeams = {};
 
   SharedPreferences? _prefs;
@@ -32,6 +33,7 @@ class Settings extends ChangeNotifier {
       askShotDirection = p.getBool('askShot') ?? true;
       haptics = p.getBool('haptics') ?? true;
       onboarded = p.getBool('onboarded') ?? false;
+      lastBackup = DateTime.tryParse(p.getString('lastBackup') ?? '');
       favouriteTeams
         ..clear()
         ..addAll(p.getStringList('favTeams') ?? const []);
@@ -70,6 +72,11 @@ class Settings extends ChangeNotifier {
   void setHaptics(bool v) {
     haptics = v;
     _save((p) => p.setBool('haptics', v));
+  }
+
+  void setLastBackup(DateTime t) {
+    lastBackup = t;
+    _save((p) => p.setString('lastBackup', t.toIso8601String()));
   }
 
   void setOnboarded() {

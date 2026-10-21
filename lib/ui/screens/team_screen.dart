@@ -84,7 +84,28 @@ class _TeamScreenState extends State<TeamScreen> {
                   IconBtn(icon: Icons.arrow_back_rounded, tooltip: context.tr('back'), onPressed: () => Navigator.maybePop(context)),
                   const SizedBox(width: Space.m),
                   Expanded(child: Text(team == null ? context.tr('new_team') : team.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: Tx.title(p.text).copyWith(fontSize: 20))),
-                  if (team != null) Crest(color: Palette.team(team.colorIndex), text: team.short, size: 36),
+                  if (team != null)
+                    Pressable(
+                      onTap: () => editTeamLogo(context, team.id),
+                      semanticLabel: context.tr('team_logo'),
+                      child: SizedBox(
+                        width: 48,
+                        height: 50,
+                        child: Stack(children: [
+                          Crest(logo: team.logo, color: Palette.team(team.colorIndex), text: team.short, size: 42),
+                          Positioned(
+                            right: 0,
+                            bottom: 0,
+                            child: Container(
+                              width: 20,
+                              height: 20,
+                              decoration: BoxDecoration(color: p.gold, shape: BoxShape.circle, border: Border.all(color: p.bg, width: 2)),
+                              child: const Icon(Icons.photo_camera_rounded, size: 11, color: Color(0xFF0B1220)),
+                            ),
+                          ),
+                        ]),
+                      ),
+                    ),
                 ]),
               ),
               Expanded(
@@ -116,6 +137,13 @@ class _TeamScreenState extends State<TeamScreen> {
                     const SizedBox(height: Space.l),
                     GoldButton(label: context.tr('save_team'), icon: Icons.check_rounded, onPressed: _create),
                   ] else ...[
+                    OutlineBtn(
+                      label: team.logo == null ? context.tr('add_team_logo') : context.tr('change_team_logo'),
+                      icon: Icons.add_photo_alternate_outlined,
+                      height: 48,
+                      onPressed: () => editTeamLogo(context, team.id),
+                    ),
+                    const SizedBox(height: Space.l),
                     Row(children: [
                       Expanded(child: Text(context.tr('players_n', {'n': team.playerIds.length}), style: Tx.section(p.text).copyWith(fontSize: 15))),
                       Text(context.tr('left_handed_q'), style: Tx.label(p.text2)),

@@ -27,6 +27,7 @@ const faqs = <Faq>[
   Faq('missing_player', 'scoring', {'scoring', 'new_match'}),
   Faq('offline', 'data', {'scoring', 'settings'}),
   Faq('where_saved', 'data', {'settings'}),
+  Faq('backup', 'data', {'settings'}),
   Faq('uninstall', 'data', {'settings'}),
   Faq('photos', 'data', {'settings'}),
   Faq('delete', 'data', {'settings'}),

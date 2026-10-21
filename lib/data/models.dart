@@ -26,23 +26,25 @@ class Player {
 }
 
 class Team {
-  Team({required this.id, required this.name, required this.colorIndex, List<String>? playerIds})
+  Team({required this.id, required this.name, required this.colorIndex, List<String>? playerIds, this.logo})
       : playerIds = playerIds ?? [];
   final String id;
   String name;
   int colorIndex;
   final List<String> playerIds;
+  String? logo; // file name of the logo saved on this phone
 
   /// Two-letter short name, e.g. "Madhubani Strikers" → "MS".
   String get short => initials(name);
 
-  Map<String, dynamic> toJson() => {'id': id, 'name': name, 'color': colorIndex, 'players': playerIds};
+  Map<String, dynamic> toJson() => {'id': id, 'name': name, 'color': colorIndex, 'players': playerIds, if (logo != null) 'logo': logo};
 
   factory Team.fromJson(Map<String, dynamic> j) => Team(
         id: j['id'] as String,
         name: (j['name'] as String?) ?? '',
         colorIndex: (j['color'] as num?)?.toInt() ?? 0,
         playerIds: [for (final p in (j['players'] as List? ?? const [])) p as String],
+        logo: j['logo'] as String?,
       );
 }
 

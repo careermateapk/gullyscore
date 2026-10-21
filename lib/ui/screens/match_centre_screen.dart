@@ -238,7 +238,7 @@ class _Hero extends StatelessWidget {
         ]),
         const SizedBox(height: Space.m),
         Row(children: [
-          Crest(color: Palette.team(team(mainTeam)?.colorIndex ?? 0), text: team(mainTeam)?.short ?? '', size: 40),
+          Crest(logo: team(mainTeam)?.logo, color: Palette.team(team(mainTeam)?.colorIndex ?? 0), text: team(mainTeam)?.short ?? '', size: 40),
           const SizedBox(width: Space.m),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -263,7 +263,7 @@ class _Hero extends StatelessWidget {
         ]),
         Container(height: 1, color: p.line, margin: const EdgeInsets.symmetric(vertical: Space.m)),
         Row(children: [
-          Crest(color: Palette.team(team(other)?.colorIndex ?? 0), text: team(other)?.short ?? '', size: 28),
+          Crest(logo: team(other)?.logo, color: Palette.team(team(other)?.colorIndex ?? 0), text: team(other)?.short ?? '', size: 28),
           const SizedBox(width: Space.m),
           Expanded(child: Text(team(other)?.name ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: Tx.body(p.text2, w: FontWeight.w700).copyWith(fontSize: 14))),
           const SizedBox(width: Space.s),
@@ -883,7 +883,7 @@ class _SquadsTab extends StatelessWidget {
       final t = repo.teams[teamId];
       return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          Crest(color: Palette.team(t?.colorIndex ?? 0), text: t?.short ?? '', size: 26),
+          Crest(logo: t?.logo, color: Palette.team(t?.colorIndex ?? 0), text: t?.short ?? '', size: 26),
           const SizedBox(width: Space.s),
           Expanded(child: Text(t?.name ?? '', style: Tx.section(p.text).copyWith(fontSize: 15))),
           Text(context.tr('players_n', {'n': ids.length}), style: Tx.label(p.text2)),

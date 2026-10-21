@@ -87,7 +87,7 @@ class _LeadStory extends StatelessWidget {
           Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Expanded(child: Text(r.headline, style: Tx.title(p.text).copyWith(fontSize: 22, height: 1.25))),
             const SizedBox(width: Space.m),
-            Crest(color: Palette.team(team?.colorIndex ?? 0), text: team?.short ?? '', size: 44),
+            Crest(logo: team?.logo, color: Palette.team(team?.colorIndex ?? 0), text: team?.short ?? '', size: 44),
           ]),
           const SizedBox(height: Space.s),
           Text([if (m.title.isNotEmpty) m.title, agoText(context, m.updatedAt)].join(' · '), style: Tx.label(p.text2)),

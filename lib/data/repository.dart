@@ -29,8 +29,13 @@ class Repository extends ChangeNotifier {
   Timer? _saveTimer;
 
   Future<void> load() async {
+    if (_saveTimer != null) await saveNow(); // never lose a change that was about to be saved
     try {
       final data = await _store.read();
+      players.clear();
+      teams.clear();
+      matches.clear();
+      tournaments.clear();
       if (data != null) {
         for (final p in (data['players'] as List? ?? const [])) {
           final pl = Player.fromJson(Map<String, dynamic>.from(p as Map));
@@ -119,6 +124,14 @@ class Repository extends ChangeNotifier {
   Future<void> setPlayerPhoto(Player p, String? fileName) async {
     final old = p.photo;
     p.photo = fileName;
+    _changed();
+    if (old != null && old != fileName) await PhotoStore.delete(old);
+  }
+
+  /// Sets or clears (null) a team's logo. The old picture file is removed.
+  Future<void> setTeamLogo(Team t, String? fileName) async {
+    final old = t.logo;
+    t.logo = fileName;
     _changed();
     if (old != null && old != fileName) await PhotoStore.delete(old);
   }
@@ -251,6 +264,12 @@ class Repository extends ChangeNotifier {
       teams[m.id] = [m.teamA, m.teamB];
     }
     return TournamentView(t, states, teams);
+  }
+
+  /// Replaces everything on this phone with the data from a backup.
+  Future<void> restoreFrom(Map<String, dynamic> data) async {
+    await _store.write(data);
+    await load();
   }
 
   /// Removes everything saved on this phone.

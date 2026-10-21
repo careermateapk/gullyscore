@@ -119,7 +119,7 @@ class _TeamRow extends StatelessWidget {
       padding: const EdgeInsets.only(left: 12, right: 4, top: 4, bottom: 4),
       onTap: () => openTeamEditor(context, teamId: team.id),
       child: Row(children: [
-        Crest(color: Palette.team(team.colorIndex), text: team.short, size: 30),
+        Crest(logo: team.logo, color: Palette.team(team.colorIndex), text: team.short, size: 30),
         const SizedBox(width: Space.m),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -167,7 +167,7 @@ class PointsTableView extends StatelessWidget {
             SizedBox(width: 20, child: Text('${i + 1}', style: c.copyWith(color: p.text2))),
             Expanded(
               child: Row(children: [
-                Crest(color: Palette.team(repo.teams[rows[i].teamId]?.colorIndex ?? 0), size: 18),
+                Crest(logo: repo.teams[rows[i].teamId]?.logo, color: Palette.team(repo.teams[rows[i].teamId]?.colorIndex ?? 0), size: 18),
                 const SizedBox(width: 6),
                 Expanded(child: Text(repo.teamName(rows[i].teamId), maxLines: 1, overflow: TextOverflow.ellipsis, style: c.copyWith(fontWeight: FontWeight.w800))),
               ]),

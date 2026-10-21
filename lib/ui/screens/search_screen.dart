@@ -100,7 +100,7 @@ class _SearchScreenState extends State<SearchScreen> {
                             padding: const EdgeInsets.only(left: 12, right: 4, top: 4, bottom: 4),
                             onTap: () => openTeamEditor(context, teamId: t.id),
                             child: Row(children: [
-                              Crest(color: Palette.team(t.colorIndex), text: t.short, size: 32),
+                              Crest(logo: t.logo, color: Palette.team(t.colorIndex), text: t.short, size: 32),
                               const SizedBox(width: Space.m),
                               Expanded(
                                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

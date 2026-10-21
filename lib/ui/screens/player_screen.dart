@@ -106,7 +106,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                       if (team != null) ...[
                         const SizedBox(height: 4),
                         Row(children: [
-                          Crest(color: Palette.team(team.colorIndex), size: 16),
+                          Crest(logo: team.logo, color: Palette.team(team.colorIndex), size: 16),
                           const SizedBox(width: 6),
                           Expanded(child: Text(team.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: Tx.small(p.text2))),
                         ]),

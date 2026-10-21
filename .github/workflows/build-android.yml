@@ -42,6 +42,9 @@ jobs:
           ci/run_and_report.sh flutter create . --platforms android --org in.gullyscore --project-name gullyscore
           rm -f test/widget_test.dart
           sed -i 's/android:label="gullyscore"/android:label="GullyScore"/' android/app/src/main/AndroidManifest.xml
+          # Let Android back up app data to the user's Google account (restored on reinstall)
+          sed -i 's#<application#<application android:allowBackup="true"#' android/app/src/main/AndroidManifest.xml
+          grep -q 'allowBackup="true"' android/app/src/main/AndroidManifest.xml
           python3 ci/patch_signing.py
 
       - name: Get packages

@@ -114,7 +114,7 @@ class ScoreCardImage extends StatelessWidget {
         padding: const EdgeInsets.only(top: Space.m),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
-            Crest(color: Palette.team(t?.colorIndex ?? 0), text: t?.short ?? '', size: 30),
+            Crest(logo: t?.logo, color: Palette.team(t?.colorIndex ?? 0), text: t?.short ?? '', size: 30),
             const SizedBox(width: Space.s),
             Expanded(child: Text(t?.name ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: Tx.body(p.text, w: FontWeight.w800))),
             const SizedBox(width: Space.s),

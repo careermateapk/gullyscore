@@ -7,6 +7,7 @@ import '../../data/models.dart';
 import '../../scoring/engine.dart';
 import '../../scoring/predictor.dart';
 import '../widgets/common.dart';
+import 'backup_ui.dart';
 import 'match_centre_screen.dart';
 import 'new_match_screen.dart';
 import 'search_screen.dart';
@@ -272,6 +273,15 @@ class _FirstRun extends StatelessWidget {
             icon: Icons.add_rounded,
             onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NewMatchScreen())),
           ),
+          const SizedBox(height: Space.s),
+          Center(
+            child: TextButton.icon(
+              onPressed: () => restoreBackup(context),
+              style: TextButton.styleFrom(foregroundColor: p.goldText, minimumSize: const Size(48, 44)),
+              icon: const Icon(Icons.settings_backup_restore_rounded, size: 18),
+              label: Text(context.tr('have_backup')),
+            ),
+          ),
         ]),
       ),
     );
@@ -299,7 +309,7 @@ class FeaturedMatchCard extends StatelessWidget {
       }
       final batting = inn != null && !inn.ended && inn.battingTeam == t;
       return Row(children: [
-        Crest(color: Palette.team(team?.colorIndex ?? 0), text: team?.short ?? '', size: 26),
+        Crest(logo: team?.logo, color: Palette.team(team?.colorIndex ?? 0), text: team?.short ?? '', size: 26),
         const SizedBox(width: Space.s + 2),
         Expanded(
           child: Text(team?.name ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: Tx.body(batting ? p.text : p.text2, w: batting ? FontWeight.w800 : FontWeight.w700)),
@@ -403,7 +413,7 @@ class ResultCard extends StatelessWidget {
       return Padding(
         padding: const EdgeInsets.only(bottom: 6),
         child: Row(children: [
-          Crest(color: Palette.team(team?.colorIndex ?? 0), size: 20),
+          Crest(logo: team?.logo, color: Palette.team(team?.colorIndex ?? 0), size: 20),
           const SizedBox(width: Space.s),
           Expanded(child: Text(team?.name ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: Tx.body(won ? p.text : p.text2, w: won ? FontWeight.w800 : FontWeight.w600))),
           const SizedBox(width: Space.s),

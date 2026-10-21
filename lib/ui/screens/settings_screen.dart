@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import '../../app/scope.dart';
 import '../../app/theme.dart';
 import '../widgets/common.dart';
+import 'backup_ui.dart';
 import 'help.dart';
+import 'match_centre_screen.dart';
 import 'scoring_sheets.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -168,6 +170,15 @@ class SettingsScreen extends StatelessWidget {
         group(context.tr('help'), [
           link(Icons.help_outline_rounded, const Color(0xFF5B9BFF), context.tr('help_and_faq'), () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FaqScreen()))),
           link(Icons.lock_outline_rounded, p.win, context.tr('privacy_title'), () => _privacy(context)),
+        ]),
+        group(context.tr('backup'), [
+          link(Icons.cloud_upload_outlined, p.goldText, context.tr('make_backup'), () => makeBackup(context),
+              trailing: s.lastBackup == null ? context.tr('never') : agoText(context, s.lastBackup!)),
+          link(Icons.settings_backup_restore_rounded, const Color(0xFF5B9BFF), context.tr('restore_from_backup'), () => restoreBackup(context)),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+            child: Text(context.tr('backup_note'), style: Tx.label(p.text2, w: FontWeight.w500)),
+          ),
         ]),
         group(context.tr('your_data'), [
           link(Icons.phone_android_rounded, p.text2, context.tr('saved_on_phone'), () => showHelp(context, 'settings'), trailing: context.tr('matches_n', {'n': repo.matches.length})),

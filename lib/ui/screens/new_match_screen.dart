@@ -77,7 +77,7 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                     onTap: () => Navigator.pop(ctx, t.id),
                     child: Row(children: [
-                      Crest(color: Palette.team(t.colorIndex), text: t.short, size: 30),
+                      Crest(logo: t.logo, color: Palette.team(t.colorIndex), text: t.short, size: 30),
                       const SizedBox(width: Space.m),
                       Expanded(child: Text(t.name, style: Tx.body(p.text, w: FontWeight.w700))),
                       Text(ctx.tr('players_n', {'n': t.playerIds.length}), style: Tx.label(p.text2)),
@@ -203,7 +203,7 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
                   child: Icon(Icons.add_rounded, color: p.goldText),
                 )
               else
-                Crest(color: Palette.team(t.colorIndex), text: t.short, size: 36),
+                Crest(logo: t.logo, color: Palette.team(t.colorIndex), text: t.short, size: 36),
               const SizedBox(width: Space.m),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

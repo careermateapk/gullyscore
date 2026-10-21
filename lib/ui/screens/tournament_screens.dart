@@ -218,7 +218,7 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                       value: _teams.contains(t.id),
                       activeColor: p.gold,
                       checkColor: const Color(0xFF0B1220),
-                      secondary: Crest(color: Palette.team(t.colorIndex), text: t.short, size: 28),
+                      secondary: Crest(logo: t.logo, color: Palette.team(t.colorIndex), text: t.short, size: 28),
                       title: Text(t.name, style: Tx.body(p.text, w: FontWeight.w700)),
                       onChanged: (v) {
                         setSheet(() => v == true ? _teams.add(t.id) : _teams.remove(t.id));
@@ -356,7 +356,7 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                   child: AppCard(
                     padding: const EdgeInsets.only(left: 12, right: 4, top: 4, bottom: 4),
                     child: Row(children: [
-                      Crest(color: Palette.team(repo.teams[id]?.colorIndex ?? 0), text: repo.teams[id]?.short ?? '', size: 26),
+                      Crest(logo: repo.teams[id]?.logo, color: Palette.team(repo.teams[id]?.colorIndex ?? 0), text: repo.teams[id]?.short ?? '', size: 26),
                       const SizedBox(width: Space.m),
                       Expanded(child: Text(repo.teamName(id), maxLines: 1, overflow: TextOverflow.ellipsis, style: Tx.body(p.text, w: FontWeight.w700))),
                       IconButton(
@@ -474,7 +474,7 @@ class TournamentScreen extends StatelessWidget {
                           const SizedBox(height: Space.m),
                           if (champ != null) ...[
                             Row(children: [
-                              Crest(color: Palette.team(repo.teams[champ]?.colorIndex ?? 0), text: repo.teams[champ]?.short ?? '', size: 40),
+                              Crest(logo: repo.teams[champ]?.logo, color: Palette.team(repo.teams[champ]?.colorIndex ?? 0), text: repo.teams[champ]?.short ?? '', size: 40),
                               const SizedBox(width: Space.m),
                               Expanded(
                                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -603,7 +603,7 @@ class FixtureCard extends StatelessWidget {
               child: AppCard(
                 onTap: () => Navigator.pop(ctx, team),
                 child: Row(children: [
-                  Crest(color: Palette.team(repo.teams[team]?.colorIndex ?? 0), text: repo.teams[team]?.short ?? '', size: 30),
+                  Crest(logo: repo.teams[team]?.logo, color: Palette.team(repo.teams[team]?.colorIndex ?? 0), text: repo.teams[team]?.short ?? '', size: 30),
                   const SizedBox(width: Space.m),
                   Expanded(child: Text(repo.teamName(team), style: Tx.body(p.text, w: FontWeight.w800))),
                 ]),
@@ -636,7 +636,7 @@ class FixtureCard extends StatelessWidget {
       final won = winner != null && winner == id;
       return Row(children: [
         if (tm != null)
-          Crest(color: Palette.team(tm.colorIndex), text: tm.short, size: 24)
+          Crest(logo: tm.logo, color: Palette.team(tm.colorIndex), text: tm.short, size: 24)
         else
           Container(
             width: 24,
@@ -892,7 +892,7 @@ class _TeamsTab extends StatelessWidget {
           child: AppCard(
             onTap: () => openTeamEditor(context, teamId: id),
             child: Row(children: [
-              Crest(color: Palette.team(repo.teams[id]?.colorIndex ?? 0), text: repo.teams[id]?.short ?? '', size: 32),
+              Crest(logo: repo.teams[id]?.logo, color: Palette.team(repo.teams[id]?.colorIndex ?? 0), text: repo.teams[id]?.short ?? '', size: 32),
               const SizedBox(width: Space.m),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

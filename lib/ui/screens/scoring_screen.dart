@@ -495,7 +495,7 @@ class _ScoreHero extends StatelessWidget {
     return HeroCard(
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          Crest(color: Palette.team(team?.colorIndex ?? 0), text: team?.short ?? '', size: 40),
+          Crest(logo: team?.logo, color: Palette.team(team?.colorIndex ?? 0), text: team?.short ?? '', size: 40),
           const SizedBox(width: Space.m),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

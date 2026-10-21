@@ -1,6 +1,7 @@
 // Player photos. They are copied into the app's own folder on this phone
 // and never uploaded anywhere.
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
@@ -28,24 +29,31 @@ class PhotoStore {
     return f.existsSync() ? f : null;
   }
 
-  /// Lets the user take or choose a photo; returns the saved file name, or
-  /// null if they backed out.
-  static Future<String?> pick(String playerId, {required bool camera}) async {
+  /// Lets the user take or choose a picture; returns its temporary path,
+  /// or null if they backed out. Cropping happens afterwards.
+  static Future<String?> pickRaw({required bool camera}) async {
+    final x = await ImagePicker().pickImage(
+      source: camera ? ImageSource.camera : ImageSource.gallery,
+      maxWidth: 1600,
+      maxHeight: 1600,
+      imageQuality: 90,
+      preferredCameraDevice: CameraDevice.rear,
+    );
+    return x?.path;
+  }
+
+  /// Saves cropped picture bytes; returns the new file name.
+  static Future<String> saveBytes(String prefix, Uint8List bytes) async {
     if (_dir == null) await init();
     final d = _dir;
     if (d == null) throw StateError('no photo folder');
-    final x = await ImagePicker().pickImage(
-      source: camera ? ImageSource.camera : ImageSource.gallery,
-      maxWidth: 600,
-      maxHeight: 600,
-      imageQuality: 82,
-      preferredCameraDevice: CameraDevice.rear,
-    );
-    if (x == null) return null;
-    final name = '${playerId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
-    await File(x.path).copy('$d/$name');
+    final name = '${prefix}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+    await File('$d/$name').writeAsBytes(bytes, flush: true);
     return name;
   }
+
+  /// Folder path, for backups.
+  static String? get dir => _dir;
 
   static Future<void> delete(String fileName) async {
     try {
