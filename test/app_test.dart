@@ -23,7 +23,17 @@ import 'package:gullyscore/ui/screens/search_screen.dart';
 import 'package:gullyscore/ui/screens/team_screen.dart';
 import 'package:gullyscore/ui/screens/tournament_screens.dart';
 import 'package:gullyscore/ui/screens/scoring_screen.dart';
+import 'package:gullyscore/ui/screens/app_drawer.dart';
+import 'package:gullyscore/ui/screens/community_screen.dart';
+import 'package:gullyscore/ui/screens/info_screens.dart';
+import 'package:gullyscore/ui/screens/leaderboard_screen.dart';
+import 'package:gullyscore/ui/screens/matches_screen.dart';
+import 'package:gullyscore/ui/screens/my_cricket_screen.dart';
+import 'package:gullyscore/ui/screens/ratings_screens.dart';
+import 'package:gullyscore/ui/screens/series_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'online_fakes.dart';
 
 Future<(Settings, Repository)> setUpApp({bool onboarded = true, bool reduceMotion = true}) async {
   SharedPreferences.setMockInitialValues({'onboarded': onboarded, 'reduceMotion': reduceMotion, 'askShot': false});
@@ -92,7 +102,8 @@ void main() {
     await tester.tap(find.text('Skip'));
     await tester.pumpAndSettle();
     expect(find.text('Score your first match'), findsOneWidget);
-    expect(find.text('Series'), findsOneWidget);
+    expect(find.text('Community'), findsOneWidget);
+    expect(find.text('My Cricket'), findsOneWidget);
   });
 
   testWidgets('switching to Hindi changes the navigation', (tester) async {
@@ -225,6 +236,12 @@ void main() {
         const CreateTournamentScreen(),
         TournamentScreen(tournamentId: tour.id),
         TournamentScreen(tournamentId: ko.id),
+        const InfoScreen(kind: 'privacy'),
+        const InfoScreen(kind: 'terms'),
+        const InfoScreen(kind: 'about'),
+        const LeaderboardScreen(),
+        const SeriesScreen(pushed: true),
+        const NewsScreen(pushed: true),
       ];
       for (final screen in screens) {
         await tester.pumpWidget(scaled(wrap(s, r, screen, mode: mode)));
@@ -360,5 +377,120 @@ void main() {
     expect(find.text('Choose from gallery'), findsOneWidget);
     expect(find.text('Remove logo'), findsNothing);
     await tester.pump(const Duration(seconds: 1));
+  });
+
+  for (final mode in [ThemeMode.dark, ThemeMode.light]) {
+    testWidgets('online screens fit on a small phone with large text (${mode.name})', (tester) async {
+      tester.view.physicalSize = const Size(320 * 3, 640 * 3);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+      _savedOnError = FlutterError.onError;
+      FlutterError.onError = _errors.add;
+      SharedPreferences.setMockInitialValues({
+        'onboarded': true,
+        'reduceMotion': true,
+        'askShot': false,
+        'cloud.user': 'Utoken',
+        'cloud.userEmail': 'surajkumarthakur.longname@gmail.com',
+        'cloud.myPhone': '9111111111',
+      });
+      final s = Settings();
+      await s.load();
+      s.setTheme(mode);
+      final r = Repository(store: MemoryStore());
+      await r.load();
+      final done = seedFinished(r);
+      final sync = SyncService(r, OnlineCloud(), google: NoGoogle(), socialSender: fakeSend);
+      await sync.start(timers: false);
+      await sync.refreshMe();
+      final team = MeInfo.fromJson(meJson).teams.first;
+      Widget app(Widget child) => MediaQuery(
+            data: const MediaQueryData(size: Size(320, 640), textScaler: TextScaler.linear(1.3)),
+            child: ListenableBuilder(
+              listenable: s,
+              builder: (context, _) => AppScope(
+                repo: r,
+                settings: s,
+                sync: sync,
+                rev: s.rev,
+                child: MaterialApp(
+                  theme: buildTheme(Palette.lightP),
+                  darkTheme: buildTheme(Palette.darkP),
+                  themeMode: mode,
+                  home: child,
+                ),
+              ),
+            ),
+          );
+      Future<void> show(Widget w, String name, {List<String> taps = const []}) async {
+        await tester.pumpWidget(app(w));
+        await tester.pumpAndSettle();
+        check(tester, name);
+        for (final t in taps) {
+          await tester.tap(find.text(t).first);
+          await tester.pumpAndSettle();
+          check(tester, '$name → $t');
+        }
+      }
+
+      for (final lang in ['en', 'hi']) {
+        s.setLang(lang);
+        final hi = lang == 'hi';
+        await show(Scaffold(body: MyCricketScreen(onOpenTab: (_) {})), 'my cricket $lang', taps: [hi ? 'मेरी टीमें' : 'My teams']);
+        await show(const Scaffold(body: CommunityScreen()), 'community $lang');
+        await show(const Scaffold(body: MatchesScreen()), 'feed $lang', taps: [hi ? 'आने वाले · 4' : 'Upcoming · 4', hi ? 'नतीजे' : 'Results']);
+        await show(TeamRatingsScreen(scorerId: 's1', teamId: 'tA', teamName: 'Madhubani Super Strikers XI'), 'ratings $lang');
+        await show(OnlineTeamScreen(team: team), 'team page $lang');
+        await show(MatchCentreScreen(matchId: done), 'rate button $lang');
+        expect(find.textContaining(hi ? 'रेटिंग दें' : 'Rate '), findsWidgets);
+        await tester.tap(find.textContaining(hi ? 'रेटिंग दें' : 'Rate ').first);
+        await tester.pumpAndSettle();
+        check(tester, 'rate sheet $lang');
+        await show(const Scaffold(drawer: AppDrawer(), body: SizedBox()), 'drawer $lang');
+        tester.state<ScaffoldState>(find.byType(Scaffold)).openDrawer();
+        await tester.pumpAndSettle();
+        check(tester, 'drawer open $lang');
+        await show(const LeaderboardScreen(), 'leaderboard $lang');
+        await show(const NewMatchScreen(), 'new match $lang', taps: [hi ? 'बाद में खेलें' : 'Schedule for later']);
+      }
+      await tester.pump(const Duration(seconds: 1));
+      FlutterError.onError = _savedOnError;
+    });
+  }
+
+  testWidgets('a scheduled match asks the toss when scoring starts', (tester) async {
+    final (s, r) = await setUpApp();
+    final a = r.addTeam('Rajnagar XI', playerNames: ['Ravi', 'Raju', 'Rohit']);
+    final b = r.addTeam('Madhubani Strikers', playerNames: ['Sanjay', 'Vikas', 'Amit']);
+    final m = r.createMatch(a: a, b: b, playersA: a.playerIds, playersB: b.playerIds, overs: 2, firstBatting: 0, scheduledAt: DateTime.now().add(const Duration(days: 1)));
+    expect(m.tossPending, true);
+    expect(MatchRecord.fromJson(m.toJson()).scheduledAt, isNotNull);
+    expect(matchStatusOnline(m, m.state), 'upcoming');
+    await tester.pumpWidget(wrap(s, r, ScoringScreen(matchId: m.id)));
+    await tester.pumpAndSettle();
+    expect(find.text('Who won the toss?'), findsOneWidget);
+    await tester.tap(find.text('Madhubani Strikers'));
+    await tester.tap(find.text('Bowl'));
+    await tester.tap(find.text('Start match'));
+    await tester.pumpAndSettle();
+    expect(m.tossPending, false);
+    expect(m.firstBatting, 0, reason: 'B won and chose to bowl, so A bats');
+    expect(find.text('Pick openers and bowler'), findsWidgets);
+    await tester.pump(const Duration(seconds: 1));
+  });
+
+  test('player numbers for My Cricket and the leaderboard', () async {
+    final r = Repository(store: MemoryStore());
+    await r.load();
+    final id = seedFinished(r);
+    final m = r.matches[id]!;
+    final st = m.state;
+    final opener = playerLine(st, m.playersA[0], m.teamA, 'Kishan');
+    expect(opener['runs'], 3);
+    expect((opener['line'] as Map)['notOut'], true);
+    final bowler = playerLine(st, m.playersB[0], m.teamB, 'Deepak');
+    expect(bowler['wickets'], 0);
+    expect((bowler['line'] as Map)['o'], '1.0');
+    expect(matchStatusOnline(m, st), 'result');
   });
 }

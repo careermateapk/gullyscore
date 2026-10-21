@@ -114,6 +114,15 @@ class Repository extends ChangeNotifier {
     return p;
   }
 
+  /// Toss for a scheduled match, decided when scoring starts.
+  void setToss(MatchRecord m, {required int firstBatting, required String tossText}) {
+    m.firstBatting = firstBatting;
+    m.tossText = tossText;
+    m.tossPending = false;
+    m.updatedAt = DateTime.now();
+    _changed();
+  }
+
   void updatePlayer(Player p, {String? name, bool? leftHanded, String? role, String? phone}) {
     if (name != null && name.trim().isNotEmpty) p.name = name.trim();
     if (phone != null) p.phone = cleanPhone(phone);
@@ -160,6 +169,7 @@ class Repository extends ChangeNotifier {
     String tossText = '',
     String? tournamentId,
     String? fixtureId,
+    DateTime? scheduledAt,
   }) {
     final m = MatchRecord(
       id: newId(),
@@ -175,6 +185,8 @@ class Repository extends ChangeNotifier {
       tossText: tossText,
       tournamentId: tournamentId,
       fixtureId: fixtureId,
+      scheduledAt: scheduledAt,
+      tossPending: scheduledAt != null,
     );
     matches[m.id] = m;
     if (tournamentId != null && fixtureId != null) {

@@ -8,16 +8,66 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../scoring/engine.dart';
 import '../scoring/format.dart';
 import 'cloud.dart';
 import 'google_auth.dart';
+import 'social.dart';
 import 'models.dart';
 import 'repository.dart';
 
 enum SyncState { off, idle, working, offline, error }
 
+/// upcoming (not started yet), live, or result.
+String matchStatusOnline(MatchRecord m, MatchState st) {
+  if (st.finished) return 'result';
+  if (m.tossPending || st.innings.isEmpty || (st.innings.length == 1 && st.innings[0].balls.isEmpty)) {
+    return m.scheduledAt != null || m.tossPending ? 'upcoming' : 'live';
+  }
+  return 'live';
+}
+
+/// One player's numbers in a match, for My Cricket and the leaderboard.
+Map<String, dynamic> playerLine(MatchState st, String id, String team, String name) {
+  var runs = 0, balls = 0, fours = 0, sixes = 0, wkts = 0, bBalls = 0, bRuns = 0;
+  var batted = false, bowled = false, out = false;
+  for (final inn in st.innings) {
+    final b = inn.batters[id];
+    if (b != null) {
+      batted = true;
+      runs += b.runs;
+      balls += b.balls;
+      fours += b.fours;
+      sixes += b.sixes;
+      out = out || b.out;
+    }
+    final w = inn.bowlers[id];
+    if (w != null && w.balls + w.wides + w.noBalls > 0) {
+      bowled = true;
+      wkts += w.wickets;
+      bBalls += w.balls;
+      bRuns += w.runs;
+    }
+  }
+  return {
+    'id': id,
+    'team': team,
+    'name': name,
+    'runs': runs,
+    'wickets': wkts,
+    'line': {
+      if (batted) ...{'r': runs, 'b': balls, '4s': fours, '6s': sixes, 'notOut': !out},
+      if (bowled) ...{'w': wkts, 'o': oversText(bBalls), 'rc': bRuns},
+    },
+  };
+}
+
 class SyncService extends ChangeNotifier {
-  SyncService(this.repo, this.cloud, {GoogleAuth? google}) : google = google ?? PluginGoogleAuth();
+  SyncService(this.repo, this.cloud, {GoogleAuth? google, Sender? socialSender})
+      : google = google ?? PluginGoogleAuth(),
+        _socialSender = socialSender;
+
+  final Sender? _socialSender; // tests
 
   final Repository repo;
   final CloudApi cloud;
@@ -177,12 +227,22 @@ class SyncService extends ChangeNotifier {
     final st = m.state;
     final summary = buildSummary(state: st, nameA: repo.teamName(m.teamA), nameB: repo.teamName(m.teamB), name: repo.playerName);
     if (m.title.isNotEmpty) summary['title'] = '${summary['title']} · ${m.title}';
+    final r = st.finished ? st.result : null;
     return {
       'data': repo.cloudData(m),
       'summary': summary,
-      'players': [...m.playersA, ...m.playersB],
+      'players': [
+        for (final id in m.playersA) playerLine(st, id, m.teamA, repo.playerName(id)),
+        for (final id in m.playersB) playerLine(st, id, m.teamB, repo.playerName(id)),
+      ],
       'finished': st.finished,
       'title': m.title,
+      'status': matchStatusOnline(m, st),
+      if (m.scheduledAt != null) 'scheduled': m.scheduledAt!.millisecondsSinceEpoch,
+      'ground': m.venue,
+      'teamA': {'id': m.teamA, 'name': repo.teamName(m.teamA)},
+      'teamB': {'id': m.teamB, 'name': repo.teamName(m.teamB)},
+      'winner': r == null ? '' : (r.tie ? 'tie' : (r.winner == null ? '' : (r.winner == 0 ? m.teamA : m.teamB))),
     };
   }
 
@@ -247,7 +307,8 @@ class SyncService extends ChangeNotifier {
     for (final p in repo.players.values) {
       if (p.remote || p.phone.isEmpty) continue;
       final team = repo.teams.values.where((t) => t.playerIds.contains(p.id)).map((t) => t.name).firstOrNull ?? '';
-      list.add({'id': p.id, 'name': p.name, 'team': team, 'phone': p.phone});
+      final teamId = repo.teams.values.where((t) => t.playerIds.contains(p.id)).map((t) => t.id).firstOrNull ?? '';
+      list.add({'id': p.id, 'name': p.name, 'team': team, 'teamId': teamId, 'phone': p.phone});
     }
     list.sort((a, b) => a['id']!.compareTo(b['id']!));
     return list;
@@ -256,7 +317,7 @@ class SyncService extends ChangeNotifier {
   Future<void> _sendPhones() async {
     if (!repo.loaded) return;
     final list = _phoneList();
-    final sig = list.map((e) => '${e['id']}|${e['phone']}|${e['name']}|${e['team']}').join(';');
+    final sig = list.map((e) => '${e['id']}|${e['phone']}|${e['name']}|${e['team']}|${e['teamId']}').join(';');
     if (sig == _phonesSig) return;
     final auth = await _ensureIdentity();
     await cloud.putPlayerPhones(auth, list);
@@ -297,6 +358,24 @@ class SyncService extends ChangeNotifier {
   // ---------- Player login ----------
 
   bool get loginAvailable => enabled && google.available;
+
+  /// Feed, community, ratings (calls the service directly).
+  late final SocialApi social = SocialApi(
+    _socialSender ??
+        (method, path, {body, auth}) {
+      final c = cloud;
+      if (c is HttpCloud) return c.send(method, path, body: body, auth: auth);
+      return Future.error(CloudError(0, 'online is off'));
+    },
+    () => _userToken,
+  );
+
+  /// Settings → Delete my account: removes the login and everything posted.
+  Future<void> deleteAccount() async {
+    await social.deleteAccount();
+    await _forgetUser();
+    await google.signOut();
+  }
   bool get loggedIn => _userToken != null;
 
   Future<void> _saveMe(MeInfo info) async {

@@ -229,6 +229,8 @@ class _MyMatchesSectionState extends State<MyMatchesSection> {
                 onTap: () => _run(() => askMyPhone(context))),
           ]);
         }
+        // Logged in with a number: everything is in the My Cricket tab.
+        if (me.hasPhone) return const SizedBox.shrink();
         _future ??= sync.refreshMe();
         return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           SectionHeader(context.tr('my_matches'), action: context.tr('refresh'), onAction: _reload),

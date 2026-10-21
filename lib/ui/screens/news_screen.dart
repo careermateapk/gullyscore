@@ -12,7 +12,8 @@ import 'match_centre_screen.dart';
 import 'share_card.dart';
 
 class NewsScreen extends StatelessWidget {
-  const NewsScreen({super.key});
+  const NewsScreen({super.key, this.pushed = false});
+  final bool pushed; // opened from the side menu or Home (has a back button)
 
   @override
   Widget build(BuildContext context) {
@@ -27,12 +28,16 @@ class NewsScreen extends StatelessWidget {
           final r = buildReport(m.state, teamA: repo.teamName(m.teamA), teamB: repo.teamName(m.teamB), name: repo.playerName, lang: lang);
           if (r != null) items.add((m, r));
         }
-        return SafeArea(
+        final page = SafeArea(
           bottom: false,
           child: ListView(padding: const EdgeInsets.only(bottom: Space.xl), children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(Space.edge, Space.m, Space.edge, Space.s),
               child: Row(children: [
+                if (pushed) ...[
+                  IconBtn(icon: Icons.arrow_back_rounded, tooltip: context.tr('back'), onPressed: () => Navigator.maybePop(context)),
+                  const SizedBox(width: Space.m),
+                ],
                 Expanded(child: Semantics(header: true, child: Text(context.tr('nav_news'), style: Tx.title(p.text)))),
                 IconBtn(icon: Icons.help_outline_rounded, tooltip: context.tr('help'), onPressed: () => showHelp(context, 'news')),
               ]),
@@ -56,8 +61,33 @@ class NewsScreen extends StatelessWidget {
             ],
           ]),
         );
+        return pushed ? Scaffold(backgroundColor: p.bg, body: page) : page;
       },
     );
+  }
+}
+
+/// The newest two reports, shown on Home.
+class NewsPreview extends StatelessWidget {
+  const NewsPreview({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final repo = context.repo;
+    final lang = AppScope.of(context).settings.lang;
+    final items = <(MatchRecord, MatchReport)>[];
+    for (final m in repo.matchList) {
+      final r = buildReport(m.state, teamA: repo.teamName(m.teamA), teamB: repo.teamName(m.teamB), name: repo.playerName, lang: lang);
+      if (r != null) items.add((m, r));
+      if (items.length == 2) break;
+    }
+    if (items.isEmpty) return const SizedBox.shrink();
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      SectionHeader(context.tr('nav_news'),
+          action: context.tr('all'), onAction: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NewsScreen(pushed: true)))),
+      for (final it in items)
+        Padding(padding: const EdgeInsets.fromLTRB(Space.edge, 0, Space.edge, Space.s), child: _StoryRow(m: it.$1, r: it.$2)),
+    ]);
   }
 }
 

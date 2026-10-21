@@ -25,6 +25,11 @@ void main() {
       used.addAll(['fmt_$f', 'fmt_${f}_body']);
     }
     used.add('bracket');
+    used.addAll(['players', 'opponent', 'poll', 'tournament', 'general'].map((k) => 'kind_$k'));
+    used.addAll(['players', 'opponent', 'poll', 'tournament'].map((k) => 'hint_$k'));
+    used.addAll(['sportsmen', 'tough', 'late', 'again'].map((k) => 'tag_$k'));
+    used.addAll(['registered', 'joined', 'accept_challenge', 'im_in', 'paid', 'not_paid', 'schedule_match', 'no_live_now', 'no_upcoming']);
+    used.addAll(['no_upcoming_body', 'feed_empty_body', 'in_short', 'about_short', 'most_runs', 'most_wickets', 'runs', 'wickets']);
     for (final f in faqs) {
       used.add('faq_${f.id}_q');
       used.add('faq_${f.id}_a');

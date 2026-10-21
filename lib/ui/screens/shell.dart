@@ -1,12 +1,14 @@
-// Bottom navigation: Home, Matches, Series, News, Profile.
+// Bottom navigation: Home, Matches, My Cricket, Community, Profile,
+// plus the ☰ side menu (tournaments, news, help, policies...).
 import 'package:flutter/material.dart';
 
 import '../../app/scope.dart';
 import '../../app/theme.dart';
+import 'app_drawer.dart';
+import 'community_screen.dart';
 import 'home_screen.dart';
 import 'matches_screen.dart';
-import 'news_screen.dart';
-import 'series_screen.dart';
+import 'my_cricket_screen.dart';
 import 'settings_screen.dart';
 
 class Shell extends StatefulWidget {
@@ -27,8 +29,8 @@ class _ShellState extends State<Shell> {
     final pages = [
       HomeScreen(onOpenTab: go),
       const MatchesScreen(),
-      const SeriesScreen(),
-      const NewsScreen(),
+      MyCricketScreen(onOpenTab: go),
+      const CommunityScreen(),
       const SettingsScreen(),
     ];
     return PopScope(
@@ -38,6 +40,7 @@ class _ShellState extends State<Shell> {
       },
       child: Scaffold(
         backgroundColor: p.bg,
+        drawer: const AppDrawer(),
         body: AnimatedSwitcher(
           duration: context.reduceMotion ? Duration.zero : Motion.fade,
           switchInCurve: Motion.enter,
@@ -67,8 +70,8 @@ class _ShellState extends State<Shell> {
               destinations: [
                 NavigationDestination(icon: const Icon(Icons.home_outlined), selectedIcon: const Icon(Icons.home_rounded), label: context.tr('nav_home')),
                 NavigationDestination(icon: const Icon(Icons.sports_cricket_outlined), selectedIcon: const Icon(Icons.sports_cricket_rounded), label: context.tr('nav_matches')),
-                NavigationDestination(icon: const Icon(Icons.emoji_events_outlined), selectedIcon: const Icon(Icons.emoji_events_rounded), label: context.tr('nav_series')),
-                NavigationDestination(icon: const Icon(Icons.article_outlined), selectedIcon: const Icon(Icons.article_rounded), label: context.tr('nav_news')),
+                NavigationDestination(icon: const Icon(Icons.sports_handball_outlined), selectedIcon: const Icon(Icons.sports_handball_rounded), label: context.tr('nav_my_cricket')),
+                NavigationDestination(icon: const Icon(Icons.groups_outlined), selectedIcon: const Icon(Icons.groups_rounded), label: context.tr('nav_community')),
                 NavigationDestination(icon: const Icon(Icons.person_outline_rounded), selectedIcon: const Icon(Icons.person_rounded), label: context.tr('nav_profile')),
               ],
             ),

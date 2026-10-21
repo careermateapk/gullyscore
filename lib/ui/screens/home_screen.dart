@@ -10,6 +10,7 @@ import '../widgets/common.dart';
 import 'backup_ui.dart';
 import 'match_centre_screen.dart';
 import 'new_match_screen.dart';
+import 'news_screen.dart';
 import 'online.dart';
 import 'search_screen.dart';
 
@@ -76,7 +77,7 @@ class _HomeScreenState extends State<HomeScreen> {
               backgroundColor: p.surface,
               onRefresh: repo.load,
               child: ListView(padding: const EdgeInsets.only(bottom: 120), children: [
-                _TopBar(onSearch: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen())), onProfile: () => widget.onOpenTab(4)),
+                _TopBar(onSearch: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen()))),
                 if (all.isNotEmpty)
                   SizedBox(
                     height: 48,
@@ -136,6 +137,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: ResultCard(m: m, st: states[m.id]!),
                       ),
                   ],
+                  const NewsPreview(),
                   if (list.isEmpty)
                     EmptyState(
                       icon: Icons.star_outline_rounded,
@@ -162,9 +164,8 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class _TopBar extends StatelessWidget {
-  const _TopBar({required this.onSearch, required this.onProfile});
+  const _TopBar({required this.onSearch});
   final VoidCallback onSearch;
-  final VoidCallback onProfile;
 
   @override
   Widget build(BuildContext context) {
@@ -172,8 +173,8 @@ class _TopBar extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(Space.edge, Space.m, Space.edge, Space.s),
       child: Row(children: [
-        const AppLogo(size: 36),
-        const SizedBox(width: Space.s + 2),
+        IconBtn(icon: Icons.menu_rounded, tooltip: context.tr('menu'), onPressed: () => Scaffold.of(context).openDrawer()),
+        const SizedBox(width: Space.m),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text('GullyScore', style: Tx.score(24, p.text, w: FontWeight.w800)),
@@ -185,8 +186,6 @@ class _TopBar extends StatelessWidget {
           const SizedBox(width: Space.s),
         ],
         IconBtn(icon: Icons.search_rounded, tooltip: context.tr('search'), onPressed: onSearch),
-        const SizedBox(width: Space.s),
-        IconBtn(icon: Icons.person_outline_rounded, tooltip: context.tr('nav_profile'), onPressed: onProfile),
       ]),
     );
   }

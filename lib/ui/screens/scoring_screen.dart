@@ -257,6 +257,7 @@ class _ScoringScreenState extends State<ScoringScreen> {
             body: Center(child: EmptyState(icon: Icons.lock_outline_rounded, title: context.tr('scored_elsewhere'), body: context.tr('scored_elsewhere_body'))),
           );
         }
+        if (m.tossPending) return _TossGate(m: m);
         final st = m.state;
         final inn = st.current;
         final batTeam = st.battingTeamNow;
@@ -708,5 +709,58 @@ class _Keypad extends StatelessWidget {
         ]),
       ],
     ]);
+  }
+}
+
+/// A scheduled match: ask the toss before the first ball.
+class _TossGate extends StatefulWidget {
+  const _TossGate({required this.m});
+  final MatchRecord m;
+
+  @override
+  State<_TossGate> createState() => _TossGateState();
+}
+
+class _TossGateState extends State<_TossGate> {
+  int _winner = 0;
+  bool _bat = true;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = Palette.of(context);
+    final repo = context.repo;
+    final a = repo.teamName(widget.m.teamA);
+    final b = repo.teamName(widget.m.teamB);
+    return Scaffold(
+      backgroundColor: p.bg,
+      body: SafeArea(
+        child: ListView(padding: const EdgeInsets.all(Space.edge), children: [
+          Row(children: [
+            IconBtn(icon: Icons.close_rounded, tooltip: context.tr('close'), onPressed: () => Navigator.maybePop(context)),
+            const SizedBox(width: Space.m),
+            Expanded(child: Text(context.tr('toss'), style: Tx.title(p.text).copyWith(fontSize: 20))),
+          ]),
+          const SizedBox(height: Space.l),
+          Text('$a ${context.tr('vs')} $b', style: Tx.body(p.text, w: FontWeight.w800).copyWith(fontSize: 17)),
+          const SizedBox(height: Space.l),
+          Text(context.tr('who_won_toss'), style: Tx.label(p.text2)),
+          const SizedBox(height: 6),
+          Segmented<int>(values: const [0, 1], labels: [a, b], selected: _winner, onChanged: (v) => setState(() => _winner = v)),
+          const SizedBox(height: Space.m),
+          Text(context.tr('chose_to'), style: Tx.label(p.text2)),
+          const SizedBox(height: 6),
+          Segmented<bool>(values: const [true, false], labels: [context.tr('bat'), context.tr('bowl')], selected: _bat, onChanged: (v) => setState(() => _bat = v)),
+          const SizedBox(height: Space.xl),
+          GoldButton(
+            label: context.tr('start_match'),
+            icon: Icons.sports_cricket_rounded,
+            onPressed: () {
+              final first = _bat ? _winner : 1 - _winner;
+              repo.setToss(widget.m, firstBatting: first, tossText: context.tr(_bat ? 'toss_bat' : 'toss_bowl', {'team': _winner == 0 ? a : b}));
+            },
+          ),
+        ]),
+      ),
+    );
   }
 }

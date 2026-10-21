@@ -6,6 +6,8 @@ import '../../app/theme.dart';
 import '../../data/models.dart';
 import '../widgets/common.dart';
 import 'help.dart';
+import 'match_centre_screen.dart';
+import '../widgets/online_cards.dart';
 import 'scoring_screen.dart';
 import 'scoring_sheets.dart';
 import 'team_screen.dart';
@@ -38,6 +40,8 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
   final _venue = TextEditingController();
   final _title = TextEditingController();
   String? _error;
+  bool _later = false; // schedule for later instead of starting now
+  DateTime? _when;
 
   @override
   void initState() {
@@ -161,9 +165,13 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
       setState(() => _error = context.tr('two_players_each'));
       return;
     }
+    if (_later && _when == null) {
+      setState(() => _error = context.tr('pick_date_time'));
+      return;
+    }
     final winner = _tossWinner == 0 ? a : b;
-    final first = _tossBat ? _tossWinner : 1 - _tossWinner;
-    final toss = context.tr(_tossBat ? 'toss_bat' : 'toss_bowl', {'team': winner.name});
+    final first = _later ? 0 : (_tossBat ? _tossWinner : 1 - _tossWinner);
+    final toss = _later ? '' : context.tr(_tossBat ? 'toss_bat' : 'toss_bowl', {'team': winner.name});
     final m = repo.createMatch(
       a: a,
       b: b,
@@ -176,8 +184,24 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
       tossText: toss,
       tournamentId: widget.tournamentId,
       fixtureId: widget.fixtureId,
+      scheduledAt: _later ? _when : null,
     );
+    if (_later) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('match_scheduled', {'t': whenText(context, _when!)}))));
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => MatchCentreScreen(matchId: m.id)));
+      return;
+    }
     Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => ScoringScreen(matchId: m.id)));
+  }
+
+  Future<void> _pickWhen() async {
+    final now = DateTime.now();
+    final start = _when ?? DateTime(now.year, now.month, now.day + 1, 7);
+    final d = await showDatePicker(context: context, initialDate: start, firstDate: DateTime(now.year, now.month, now.day), lastDate: now.add(const Duration(days: 365)));
+    if (d == null || !mounted) return;
+    final t = await showTimePicker(context: context, initialTime: TimeOfDay.fromDateTime(start));
+    if (t == null) return;
+    setState(() => _when = DateTime(d.year, d.month, d.day, t.hour, t.minute));
   }
 
   @override
@@ -237,6 +261,28 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
               ),
               Expanded(
                 child: ListView(padding: const EdgeInsets.fromLTRB(Space.edge, Space.s, Space.edge, Space.xl), children: [
+                  Segmented<bool>(
+                    values: const [false, true],
+                    labels: [context.tr('start_now'), context.tr('schedule_later')],
+                    selected: _later,
+                    onChanged: (v) => setState(() => _later = v),
+                  ),
+                  if (_later) ...[
+                    const SizedBox(height: Space.s),
+                    AppCard(
+                      onTap: _pickWhen,
+                      child: Row(children: [
+                        Icon(Icons.event_rounded, color: p.goldText),
+                        const SizedBox(width: Space.m),
+                        Expanded(
+                          child: Text(_when == null ? context.tr('pick_date_time') : whenText(context, _when!),
+                              style: Tx.body(_when == null ? p.text2 : p.text, w: FontWeight.w800)),
+                        ),
+                        Icon(Icons.edit_calendar_rounded, color: p.text2),
+                      ]),
+                    ),
+                  ],
+                  const SizedBox(height: Space.m),
                   teamSlot(a, true),
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 6),
@@ -267,7 +313,7 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
                     IconBtn(icon: Icons.add_rounded, tooltip: context.tr('more_overs'), onPressed: _overs < 50 ? () => setState(() => _overs++) : null),
                   ]),
                   ],
-                  if (a != null && b != null) ...[
+                  if (a != null && b != null && !_later) ...[
                     const SizedBox(height: Space.xl),
                     Text(context.tr('toss'), style: Tx.section(p.text).copyWith(fontSize: 15)),
                     const SizedBox(height: Space.s),
@@ -293,7 +339,11 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(Space.edge, Space.s, Space.edge, Space.l),
-                child: GoldButton(label: context.tr('start_match'), icon: Icons.sports_cricket_rounded, onPressed: _start),
+                child: GoldButton(
+                  label: context.tr(_later ? 'schedule_match' : 'start_match'),
+                  icon: _later ? Icons.event_available_rounded : Icons.sports_cricket_rounded,
+                  onPressed: _start,
+                ),
               ),
             ]),
           ),

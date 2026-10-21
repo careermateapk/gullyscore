@@ -6,9 +6,9 @@ import '../../app/theme.dart';
 import '../widgets/common.dart';
 import 'backup_ui.dart';
 import 'help.dart';
+import 'info_screens.dart';
 import 'match_centre_screen.dart';
 import 'online.dart';
-import 'scoring_sheets.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -33,26 +33,28 @@ class SettingsScreen extends StatelessWidget {
     }
   }
 
-  void _privacy(BuildContext context) {
-    showAppSheet<void>(context, (ctx) {
-      final p = Palette.of(ctx);
-      return SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(Space.edge, 0, Space.edge, Space.xl),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(ctx.tr('privacy_title'), style: Tx.section(p.text).copyWith(fontSize: 19)),
-          const SizedBox(height: Space.m),
-          for (final k in const ['privacy_1', 'privacy_5', 'privacy_2', 'privacy_3', 'privacy_4'])
-            Padding(
-              padding: const EdgeInsets.only(bottom: Space.m),
-              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Padding(padding: const EdgeInsets.only(top: 3), child: Icon(Icons.check_circle_rounded, size: 18, color: p.win)),
-                const SizedBox(width: Space.m),
-                Expanded(child: Text(ctx.tr(k), style: Tx.body(p.text))),
-              ]),
-            ),
-        ]),
-      );
-    });
+  Future<void> _deleteAccount(BuildContext context) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(ctx.tr('delete_account_q')),
+        content: Text(ctx.tr('delete_account_body')),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(ctx.tr('cancel'))),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text(ctx.tr('delete'), style: TextStyle(color: Palette.of(ctx).liveText))),
+        ],
+      ),
+    );
+    if (ok != true || !context.mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final done = context.tr('account_deleted');
+    final failed = context.tr('online_failed');
+    try {
+      await context.sync.deleteAccount();
+      messenger.showSnackBar(SnackBar(content: Text(done)));
+    } catch (_) {
+      messenger.showSnackBar(SnackBar(content: Text(failed)));
+    }
   }
 
   @override
@@ -170,7 +172,9 @@ class SettingsScreen extends StatelessWidget {
         ]),
         group(context.tr('help'), [
           link(Icons.help_outline_rounded, const Color(0xFF5B9BFF), context.tr('help_and_faq'), () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FaqScreen()))),
-          link(Icons.lock_outline_rounded, p.win, context.tr('privacy_title'), () => _privacy(context)),
+          link(Icons.lock_outline_rounded, p.win, context.tr('privacy_policy'), () => openInfo(context, 'privacy')),
+          link(Icons.description_outlined, p.text2, context.tr('terms'), () => openInfo(context, 'terms')),
+          link(Icons.info_outline_rounded, const Color(0xFFFF8A3D), context.tr('about_us'), () => openInfo(context, 'about')),
         ]),
         if (context.sync.enabled)
           ListenableBuilder(
@@ -184,6 +188,7 @@ class SettingsScreen extends StatelessWidget {
                   link(Icons.account_circle_rounded, p.goldText, sync.me?.email ?? context.tr('logged_in'), () => logoutPlayer(context), trailing: context.tr('logout')),
                   link(Icons.phone_android_rounded, p.goldText, sync.myPhone.isEmpty ? context.tr('add_my_mobile') : context.tr('my_mobile_n', {'n': sync.myPhone}),
                       () => askMyPhone(context)),
+                  link(Icons.person_remove_outlined, p.liveText, context.tr('delete_account'), () => _deleteAccount(context), textColor: p.liveText),
                 ] else if (sync.loginAvailable)
                   link(Icons.login_rounded, p.goldText, context.tr('login_google'), () => loginAsPlayer(context)),
                 link(Icons.link_rounded, const Color(0xFF5B9BFF), context.tr('follow_a_match'), () => followMatchByLink(context)),
@@ -209,7 +214,7 @@ class SettingsScreen extends StatelessWidget {
         ]),
         Padding(
           padding: const EdgeInsets.all(Space.l),
-          child: Text('GullyScore 0.4', textAlign: TextAlign.center, style: Tx.label(p.text2, w: FontWeight.w600)),
+          child: Text('GullyScore 0.5', textAlign: TextAlign.center, style: Tx.label(p.text2, w: FontWeight.w600)),
         ),
       ]),
     );

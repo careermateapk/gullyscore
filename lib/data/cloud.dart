@@ -28,22 +28,122 @@ class RemoteMatch {
   final Map<String, dynamic> data;
 }
 
+class TeamRef {
+  const TeamRef(this.id, this.name);
+  final String id;
+  final String name;
+}
+
+/// A match in a list (feed, My Cricket, team page).
 class MatchListItem {
-  MatchListItem({required this.id, required this.updated, required this.finished, required this.title, required this.summary});
+  MatchListItem({
+    required this.id,
+    required this.updated,
+    required this.finished,
+    required this.title,
+    required this.summary,
+    this.status = '',
+    this.scheduled,
+    this.ground = '',
+    this.teamA = const TeamRef('', ''),
+    this.teamB = const TeamRef('', ''),
+    this.winner = '',
+    this.me,
+  });
   final String id;
   final int updated;
   final bool finished;
   final String title;
   final Map<String, dynamic> summary;
+  final String status; // upcoming, live, result
+  final DateTime? scheduled;
+  final String ground;
+  final TeamRef teamA;
+  final TeamRef teamB;
+  final String winner; // team id, 'tie' or ''
+  final Map<String, dynamic>? me; // my numbers (My Cricket): r, b, 4s, 6s, notOut, w, o, rc, team
+
+  bool get live => status == 'live' || (status.isEmpty && !finished);
+  bool get upcoming => status == 'upcoming';
+  String get headline => '${summary['status'] ?? ''}';
 }
 
-MatchListItem _item(dynamic m) => MatchListItem(
-      id: m['id'] as String,
-      updated: (m['updated'] as num).toInt(),
-      finished: m['finished'] == true,
-      title: (m['title'] as String?) ?? '',
-      summary: Map<String, dynamic>.from(m['summary'] as Map),
-    );
+MatchListItem _item(dynamic m) {
+  TeamRef team(dynamic t) => t is Map ? TeamRef('${t['id'] ?? ''}', '${t['name'] ?? ''}') : const TeamRef('', '');
+  final sch = m['scheduled'];
+  return MatchListItem(
+    id: m['id'] as String,
+    updated: (m['updated'] as num).toInt(),
+    finished: m['finished'] == true,
+    title: (m['title'] as String?) ?? '',
+    summary: Map<String, dynamic>.from((m['summary'] as Map?) ?? const {}),
+    status: (m['status'] as String?) ?? '',
+    scheduled: sch is num ? DateTime.fromMillisecondsSinceEpoch(sch.toInt()) : null,
+    ground: (m['ground'] as String?) ?? '',
+    teamA: team(m['teamA']),
+    teamB: team(m['teamB']),
+    winner: (m['winner'] as String?) ?? '',
+    me: m['me'] is Map ? Map<String, dynamic>.from(m['me'] as Map) : null,
+  );
+}
+
+MatchListItem parseMatchItem(dynamic m) => _item(m);
+
+/// One of my teams: record, form, next match, rating, matches.
+class TeamSummary {
+  TeamSummary({
+    required this.scorerId,
+    required this.id,
+    required this.name,
+    required this.played,
+    required this.won,
+    required this.lost,
+    required this.form,
+    required this.next,
+    required this.rating,
+    required this.ratings,
+    required this.matches,
+  });
+  final String scorerId;
+  final String id;
+  final String name;
+  final int played, won, lost;
+  final List<String> form; // newest first: W, L, T
+  final MatchListItem? next;
+  final double? rating;
+  final int ratings;
+  final List<MatchListItem> matches;
+
+  factory TeamSummary.fromJson(Map<String, dynamic> j) => TeamSummary(
+        scorerId: (j['scorerId'] as String?) ?? '',
+        id: (j['id'] as String?) ?? '',
+        name: (j['name'] as String?) ?? '',
+        played: (j['played'] as num?)?.toInt() ?? 0,
+        won: (j['won'] as num?)?.toInt() ?? 0,
+        lost: (j['lost'] as num?)?.toInt() ?? 0,
+        form: [for (final f in (j['form'] as List? ?? const [])) '$f'],
+        next: j['next'] == null ? null : _item(j['next']),
+        rating: (j['rating'] as num?)?.toDouble(),
+        ratings: (j['ratings'] as num?)?.toInt() ?? 0,
+        matches: [for (final m in (j['matches'] as List? ?? const [])) _item(m)],
+      );
+}
+
+class MyTotals {
+  const MyTotals({this.matches = 0, this.runs = 0, this.wickets = 0, this.best = 0, this.bestNotOut = false});
+  final int matches, runs, wickets, best;
+  final bool bestNotOut;
+
+  factory MyTotals.fromJson(Map<String, dynamic>? j) => j == null
+      ? const MyTotals()
+      : MyTotals(
+          matches: (j['matches'] as num?)?.toInt() ?? 0,
+          runs: (j['runs'] as num?)?.toInt() ?? 0,
+          wickets: (j['wickets'] as num?)?.toInt() ?? 0,
+          best: (j['best'] as num?)?.toInt() ?? 0,
+          bestNotOut: j['bestNotOut'] == true,
+        );
+}
 
 /// A player profile some scorer made with this person's mobile number.
 class MyProfile {
@@ -58,13 +158,24 @@ class MyProfile {
 
 /// What a logged-in player sees.
 class MeInfo {
-  MeInfo({required this.email, required this.name, required this.hasPhone, required this.profiles, required this.matches, this.token});
+  MeInfo({
+    required this.email,
+    required this.name,
+    required this.hasPhone,
+    required this.profiles,
+    required this.matches,
+    this.token,
+    this.teams = const [],
+    this.totals = const MyTotals(),
+  });
   final String email;
   final String name;
   final bool hasPhone;
   final List<MyProfile> profiles;
   final List<MatchListItem> matches;
   final String? token; // only after logging in
+  final List<TeamSummary> teams;
+  final MyTotals totals;
 
   factory MeInfo.fromJson(Map<String, dynamic> j) => MeInfo(
         email: (j['email'] as String?) ?? '',
@@ -76,6 +187,8 @@ class MeInfo {
         ],
         matches: [for (final m in (j['matches'] as List? ?? const [])) _item(m)],
         token: j['token'] as String?,
+        teams: [for (final t in (j['teams'] as List? ?? const [])) TeamSummary.fromJson(Map<String, dynamic>.from(t as Map))],
+        totals: MyTotals.fromJson(j['totals'] is Map ? Map<String, dynamic>.from(j['totals'] as Map) : null),
       );
 }
 
@@ -122,6 +235,9 @@ class HttpCloud implements CloudApi {
   bool get enabled => baseUrl.startsWith('https://');
 
   final HttpClient _http = HttpClient()..connectionTimeout = const Duration(seconds: 10);
+
+  /// Any call to the service (used by the community and ratings screens).
+  Future<Map<String, dynamic>> send(String method, String path, {Object? body, String? auth}) => _send(method, path, body: body, auth: auth);
 
   Future<Map<String, dynamic>> _send(String method, String path, {Object? body, String? auth}) async {
     if (!enabled) throw CloudError(0, 'online is off');

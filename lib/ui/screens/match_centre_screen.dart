@@ -11,6 +11,8 @@ import '../../scoring/predictor.dart';
 import '../../scoring/tournament.dart';
 import '../widgets/common.dart';
 import '../widgets/ground_map.dart';
+import '../widgets/online_cards.dart';
+import 'ratings_screens.dart';
 import 'certificates.dart';
 import 'help.dart';
 import 'player_screen.dart';
@@ -191,7 +193,7 @@ class _Hero extends StatelessWidget {
       case MatchStatus.paused:
         badge = Tag(context.tr('last_ball_ago', {'t': agoText(context, m.updatedAt)}), color: p.goldText, background: p.gold.withValues(alpha: 0.14));
       case MatchStatus.notStarted:
-        badge = Tag(context.tr('not_started'));
+        badge = Tag(m.scheduledAt == null ? context.tr('not_started') : whenText(context, m.scheduledAt!), color: p.goldText);
       case MatchStatus.finished:
         badge = Tag(context.tr('result'), color: p.win, background: p.win.withValues(alpha: 0.14));
     }
@@ -203,6 +205,8 @@ class _Hero extends StatelessWidget {
       statusText = context.tr('team_need_runs', {'team': team(inn.battingTeam)?.short ?? '', 'n': st.runsNeeded ?? 0, 'b': st.ballsLeft ?? 0});
     } else if (inn != null && inn.ended && st.innings.length == 1) {
       statusText = context.tr('innings_break_need', {'team': team(1 - inn.battingTeam)?.short ?? '', 'n': inn.runs + 1});
+    } else if (st.innings.isEmpty && m.scheduledAt != null && m.tossPending) {
+      statusText = context.tr('starts_at', {'t': whenText(context, m.scheduledAt!)}) + (m.venue.isEmpty ? '' : ' · ${m.venue}');
     } else if (st.innings.isEmpty) {
       statusText = m.tossText.isEmpty ? context.tr('match_not_started_body') : m.tossText;
     } else {
@@ -348,6 +352,7 @@ class _SummaryTab extends StatelessWidget {
         ),
         const SizedBox(height: Space.s),
       ],
+      if (st.finished) ...[RateTeamButton(matchId: m.id), const SizedBox(height: Space.s)],
       if (!inn.ended)
         AppCard(
           padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),

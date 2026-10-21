@@ -14,7 +14,8 @@ import 'tournament_screens.dart';
 import '../widgets/avatar.dart';
 
 class SeriesScreen extends StatefulWidget {
-  const SeriesScreen({super.key});
+  const SeriesScreen({super.key, this.pushed = false});
+  final bool pushed; // opened from the side menu (has a back button)
 
   @override
   State<SeriesScreen> createState() => _SeriesScreenState();
@@ -41,12 +42,16 @@ class _SeriesScreenState extends State<SeriesScreen> {
         final runs = topRunScorers(statMatches, limit: 5);
         final wkts = topWicketTakers(statMatches, limit: 5);
 
-        return SafeArea(
+        final page = SafeArea(
           bottom: false,
           child: ListView(padding: const EdgeInsets.only(bottom: Space.xl), children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(Space.edge, Space.m, Space.edge, Space.s),
               child: Row(children: [
+                if (widget.pushed) ...[
+                  IconBtn(icon: Icons.arrow_back_rounded, tooltip: context.tr('back'), onPressed: () => Navigator.maybePop(context)),
+                  const SizedBox(width: Space.m),
+                ],
                 Expanded(child: Semantics(header: true, child: Text(context.tr('nav_series'), style: Tx.title(p.text)))),
                 IconBtn(icon: Icons.help_outline_rounded, tooltip: context.tr('help'), onPressed: () => showHelp(context, 'series')),
               ]),
@@ -101,6 +106,7 @@ class _SeriesScreenState extends State<SeriesScreen> {
                 ),
           ]),
         );
+        return widget.pushed ? Scaffold(backgroundColor: p.bg, body: page) : page;
       },
     );
   }
