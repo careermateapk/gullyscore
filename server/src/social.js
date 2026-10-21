@@ -1,5 +1,6 @@
 // v0.5: all-matches feed, My Cricket, leaderboard, community posts,
 // ratings with comments, reactions and replies, reports, account deletion.
+import { deleteUserTeamData } from './team.js';
 import { HttpError, ID_RE, TOKEN_ALPHABET, auth, json, randomString, readJson, userAuth } from './util.js';
 
 const HOUR = 3600 * 1000;
@@ -109,6 +110,7 @@ async function oneUser(env, id) {
 
 /** Removes a user and everything they made (Settings → Delete my account). */
 export async function deleteUserEverywhere(env, userId) {
+  await deleteUserTeamData(env, userId);
   await env.DB.batch([
     env.DB.prepare('DELETE FROM sessions WHERE user_id = ?').bind(userId),
     env.DB.prepare('DELETE FROM claims WHERE user_id = ?').bind(userId),

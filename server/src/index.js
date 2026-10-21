@@ -10,6 +10,7 @@
 import { HttpError, ID_RE, TOKEN_ALPHABET, auth, esc, html, json, randomString, readJson, sha256, userAuth } from './util.js';
 import { myCricket, socialRoutes, deleteUserEverywhere } from './social.js';
 import { contentRoutes } from './pages.js';
+import { teamRoutes } from './team.js';
 
 export default {
   async fetch(request, env) {
@@ -110,6 +111,8 @@ async function route(request, env) {
 
   const social = await socialRoutes(p, method, url, request, env);
   if (social) return social;
+  const team = await teamRoutes(p, method, url, request, env);
+  if (team) return team;
   const page = contentRoutes(p, method, url);
   if (page) return page;
 
@@ -219,11 +222,11 @@ async function route(request, env) {
     const rows = [];
     for (const x of list) {
       if (!x || typeof x.id !== 'string' || !ID_RE.test(x.id)) continue;
+      // Players without a number are kept too (team squads), with no hash.
       const d = cleanPhone(x.phone);
-      if (!d) continue;
       rows.push({
         id: x.id,
-        h: await phoneHash(key, d),
+        h: d ? await phoneHash(key, d) : '',
         n: String(x.name ?? '').slice(0, 80),
         t: String(x.team ?? '').slice(0, 80),
         ti: String(x.teamId ?? '').slice(0, 80),

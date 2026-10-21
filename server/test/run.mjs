@@ -89,8 +89,9 @@ assert.ok(String(page.body).includes('Live score'));
 // Scorer 1 typed Ravi's number for p1; scorer 2 typed it for their own player q7.
 assert.equal((await call('POST', '/v1/players/phones', { players: [{ id: 'p1', name: 'Ravi', team: 'A', phone: '+91 98765-43210' }, { id: 'p2', phone: '12' }] }, tok)).status, 200);
 assert.equal((await call('POST', '/v1/players/phones', { players: [] })).status, 401, 'scorer must sign in');
-const stored = db.prepare('SELECT phone_hash FROM player_phones').all();
-assert.equal(stored.length, 1, 'short numbers are ignored');
+const stored = db.prepare("SELECT phone_hash FROM player_phones WHERE phone_hash != ''").all();
+assert.equal(stored.length, 1, 'short numbers are not matched');
+assert.equal(db.prepare('SELECT COUNT(*) AS n FROM player_phones').get().n, 2, 'players without a number stay in the squad');
 assert.ok(!JSON.stringify(stored).includes('9876543210'), 'numbers are not stored as numbers');
 
 assert.equal((await call('POST', '/v1/login', { idToken: 'fake' })).status, 401, 'bad google token');
@@ -344,6 +345,62 @@ assert.equal(big.status, 413);
   }
   assert.ok(String((await call('GET', '/privacy?lang=hi')).body).includes('प्राइवेसी'));
   assert.equal((await call('GET', '/blog/nope')).status, 404);
+}
+
+// ================= v0.6: who is coming, team khata =================
+{
+  const s9 = await call('POST', '/v1/register');
+  const sc = s9.body.scorerId + '.' + s9.body.token;
+  const S = s9.body.scorerId;
+  await call('POST', '/v1/players/phones', { players: [
+    { id: 'k1', name: 'Kapil', team: 'Kings', teamId: 'tK', phone: '9333333331' },
+    { id: 'k2', name: 'Kunal', team: 'Kings', teamId: 'tK', phone: '9333333332' },
+    { id: 'k3', name: 'Kamal', team: 'Kings', teamId: 'tK' },
+    { id: 'q1', name: 'Other', team: 'Queens', teamId: 'tQ', phone: '9333333339' },
+  ] }, sc);
+  const kapil = (await call('POST', '/v1/login', { idToken: 'good:kapil:kapil@x.com' })).body.token;
+  await call('PUT', '/v1/me/phone', { phone: '9333333331' }, kapil);
+  const kunal = (await call('POST', '/v1/login', { idToken: 'good:kunal:kunal@x.com' })).body.token;
+  await call('PUT', '/v1/me/phone', { phone: '9333333332' }, kunal);
+  const queen = (await call('POST', '/v1/login', { idToken: 'good:queen:q@x.com' })).body.token;
+  await call('PUT', '/v1/me/phone', { phone: '9333333339' }, queen);
+
+  // Who is coming?
+  const base = '/v1/teams/' + S + '/tK';
+  assert.equal((await call('POST', base + '/asks', { title: 'vs Sakri Kings' }, queen)).status, 403, 'other team');
+  const ask = (await call('POST', base + '/asks', { title: 'vs Sakri Kings', when: 'Sunday 7 AM', place: 'Gaziabad', need: 11 }, kapil)).body;
+  assert.equal(ask.players.length, 3, 'whole squad, even without a number');
+  assert.equal(ask.waiting, 3);
+  let a = (await call('POST', '/v1/asks/' + ask.id + '/answer', { answer: 'yes' }, kapil)).body;
+  assert.equal(a.myAnswer, 'yes');
+  a = (await call('POST', '/v1/asks/' + ask.id + '/answer', { answer: 'no' }, kunal)).body;
+  assert.equal(a.yes, 1);
+  assert.equal(a.no, 1);
+  assert.equal(a.waiting, 1);
+  a = (await call('POST', '/v1/asks/' + ask.id + '/answer', { answer: 'maybe' }, kunal)).body;
+  assert.equal(a.no, 0, 'changing an answer');
+  assert.equal((await call('POST', '/v1/asks/' + ask.id + '/answer', { answer: 'yes' }, queen)).status, 403);
+  assert.equal((await call('GET', base + '/asks', undefined, kunal)).body.asks.length, 1);
+  assert.equal((await call('DELETE', '/v1/asks/' + ask.id, undefined, kunal)).status, 403);
+
+  // Khata: 900 balls (Kapil), 1500 ground (Kunal); 3 players → share 800.
+  await call('POST', base + '/khata', { kind: 'expense', amount: 900, note: '2 balls', playerId: 'k1' }, kapil);
+  let k = (await call('POST', base + '/khata', { kind: 'expense', amount: 1500, note: 'Ground', playerId: 'k2' }, kunal)).body;
+  assert.equal(k.spent, 2400);
+  assert.equal(k.share, 800);
+  assert.equal(k.people.find((x) => x.playerId === 'k3').due, 800);
+  assert.equal(k.people.find((x) => x.playerId === 'k1').due, 0, 'spent more than share');
+  k = (await call('POST', base + '/khata', { kind: 'payment', amount: 300, playerId: 'k3' }, kapil)).body;
+  assert.equal(k.people.find((x) => x.playerId === 'k3').due, 500);
+  assert.equal(k.pending, 500);
+  assert.equal((await call('POST', base + '/khata', { kind: 'expense', amount: 10, playerId: 'q1' }, kapil)).status, 400, 'not our player');
+  assert.equal((await call('POST', base + '/khata', { kind: 'expense', amount: -5, playerId: 'k1' }, kapil)).status, 400);
+  assert.equal((await call('GET', base + '/khata', undefined, queen)).status, 403);
+  const pay = k.items.find((i) => i.kind === 'payment');
+  assert.equal((await call('DELETE', '/v1/khata/' + pay.id, undefined, kunal)).status, 403);
+  k = (await call('DELETE', '/v1/khata/' + pay.id, undefined, kapil)).body;
+  assert.equal(k.pending, 800);
+  assert.equal((await call('GET', base + '/khata?month=2020-01', undefined, kapil)).body.spent, 0);
 }
 
 console.log('server tests passed');
