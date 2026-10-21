@@ -161,7 +161,7 @@ class ScoreCardImage extends StatelessWidget {
             child: const Icon(Icons.bar_chart_rounded, size: 20, color: Color(0xFF070F1E)),
           ),
           const SizedBox(width: Space.s),
-          Text('GullyScore', style: Tx.score(20, p.text, w: FontWeight.w800)),
+          Flexible(child: Text('GullyScore', maxLines: 1, overflow: TextOverflow.clip, style: Tx.score(20, p.text, w: FontWeight.w800))),
           const Spacer(),
           if (m.title.isNotEmpty) Flexible(child: Text(m.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: Tx.label(p.text2))),
         ]),

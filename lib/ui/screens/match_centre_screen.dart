@@ -937,9 +937,9 @@ class _StatsTabState extends State<_StatsTab> {
       ),
       const SizedBox(height: Space.s),
       Row(children: [
-        Text(lh ? context.tr('off_side') : context.tr('leg_side'), style: Tx.label(p.text2)),
+        Flexible(child: Text(lh ? context.tr('off_side') : context.tr('leg_side'), style: Tx.label(p.text2))),
         const Spacer(),
-        Text(lh ? context.tr('leg_side') : context.tr('off_side'), style: Tx.label(p.text2)),
+        Flexible(child: Text(lh ? context.tr('leg_side') : context.tr('off_side'), style: Tx.label(p.text2))),
       ]),
       AspectRatio(
         aspectRatio: 1,

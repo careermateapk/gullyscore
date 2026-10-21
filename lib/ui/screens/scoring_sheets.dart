@@ -407,9 +407,9 @@ class _ShotSheetState extends State<_ShotSheet> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: Space.edge),
             child: Row(children: [
-              Text(widget.leftHanded ? context.tr('off_side') : context.tr('leg_side'), style: Tx.label(p.text2)),
+              Flexible(child: Text(widget.leftHanded ? context.tr('off_side') : context.tr('leg_side'), style: Tx.label(p.text2))),
               const Spacer(),
-              Text(widget.leftHanded ? context.tr('leg_side') : context.tr('off_side'), style: Tx.label(p.text2)),
+              Flexible(child: Text(widget.leftHanded ? context.tr('leg_side') : context.tr('off_side'), style: Tx.label(p.text2))),
             ]),
           ),
           Padding(

@@ -229,8 +229,7 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
                   ]),
                   const SizedBox(height: Space.s),
                   Row(children: [
-                    Text(context.tr('other_overs'), style: Tx.small(p.text2)),
-                    const Spacer(),
+                    Expanded(child: Text(context.tr('other_overs'), style: Tx.small(p.text2))),
                     IconBtn(icon: Icons.remove_rounded, tooltip: context.tr('fewer_overs'), onPressed: _overs > 1 ? () => setState(() => _overs--) : null),
                     SizedBox(width: 48, child: Text('$_overs', textAlign: TextAlign.center, style: Tx.score(24, p.text, w: FontWeight.w800))),
                     IconBtn(icon: Icons.add_rounded, tooltip: context.tr('more_overs'), onPressed: _overs < 50 ? () => setState(() => _overs++) : null),
