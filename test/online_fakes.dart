@@ -128,29 +128,73 @@ Future<Map<String, dynamic>> fakeSend(String method, String path, {Object? body,
       'comments': [_comment('c1', replies: [_comment('c2')]), _comment('c3')],
     };
   }
+  if (path.startsWith('/v1/places')) {
+    return {
+      'places': [
+        {'name': 'Darbhanga', 'detail': 'Darbhanga district, Bihar, India', 'lat': 26.15, 'lng': 85.9},
+      ],
+    };
+  }
   if (path.startsWith('/v1/grounds')) {
     final g = {
       'id': 'g1',
-      'name': 'Rajnagar Stadium cricket ground and sports complex',
-      'address': 'Near the old bus stand, Rajnagar, Madhubani district, Bihar',
+      'name': 'Rajnagar Stadium Cricket Ground and Sports Complex',
+      'address': 'Near the old bus stand, Rajnagar',
+      'city': 'Madhubani district',
       'lat': 26.4,
       'lng': 86.1,
-      'pitch': 'turf',
-      'fee': '₹1,500 / match',
+      'pitches': ['turf', 'matting'],
+      'facilities': ['lights', 'washrooms', 'water', 'nets', 'umpires', 'scorers', 'parking', 'pavilion', 'cafeteria', 'sightscreen', 'balls'],
+      'feeMin': 150000,
+      'feeMax': 250000,
+      'fee': 'per day, free on Sundays for school teams',
+      'boundaryMin': 55,
+      'boundaryMax': 70,
+      'timings': '6 AM – 10 PM, all days',
       'phone': '98765 43210',
-      'lights': true,
-      'toilet': true,
-      'km': 1.2,
+      'phone2': '91234 56789',
+      'km': 1234.5,
+      'rating': 4.4,
+      'reviews': 35,
+      'matches': 1204,
+      'photo': null,
+      'photoIds': <String>[],
+      'mine': true,
     };
-    if (path.contains('/search')) {
+    if (path.contains('/reviews')) {
       return {
-        'ours': [g],
-        'google': [
-          {'placeId': 'p1', 'name': 'Sakri High School playground', 'address': 'Sakri, Bihar 847239, India', 'lat': 26.3, 'lng': 86.05, 'km': 12.4},
+        'reviews': [
+          {'name': 'Suraj Kumar Thakur', 'stars': 5, 'body': 'Great turf, lights work well at night. Book early on Sundays!', 'created': _now},
         ],
       };
     }
-    return {'grounds': [g, {...g, 'id': 'g2', 'phone': '', 'pitch': '', 'lights': false}]};
+    if (path.contains('/matches')) {
+      return {
+        'matches': [match('r1', 'result'), match('u1', 'upcoming')],
+        'tournaments': [
+          {'title': 'Mithila Premier League Winter Edition 2026', 'matches': 24},
+        ],
+      };
+    }
+    if (path.contains('/insights')) {
+      return {
+        'matches': 1204,
+        'avgFirst': 142,
+        'highest': {'runs': 238, 'score': '238/4', 'team': 'Madhubani Super Strikers XI', 'overs': '20.0'},
+        'lowest': {'runs': 31, 'score': '31', 'team': 'Pandaul Tigers Cricket Club', 'overs': '7.2'},
+        'batFirstWinPct': 58,
+        'decided': 1100,
+        'days': [14, 10, 12, 9, 16, 40, 56],
+        'topRuns': [
+          {'name': 'Suraj Kumar Thakur', 'value': 1412},
+        ],
+        'topWickets': [
+          {'name': 'Amit Kumar Mishra', 'value': 64},
+        ],
+      };
+    }
+    if (path.startsWith('/v1/grounds/g')) return g;
+    return {'total': 128, 'grounds': [g, {...g, 'id': 'g2', 'phone': '', 'rating': null, 'reviews': 0, 'feeMin': 0, 'feeMax': 0, 'fee': ''}]};
   }
   if (path.endsWith('/asks')) {
     return {

@@ -170,6 +170,7 @@ class Repository extends ChangeNotifier {
     String? tournamentId,
     String? fixtureId,
     DateTime? scheduledAt,
+    String groundId = '',
   }) {
     final m = MatchRecord(
       id: newId(),
@@ -187,6 +188,7 @@ class Repository extends ChangeNotifier {
       fixtureId: fixtureId,
       scheduledAt: scheduledAt,
       tossPending: scheduledAt != null,
+      groundId: groundId,
     );
     matches[m.id] = m;
     if (tournamentId != null && fixtureId != null) {

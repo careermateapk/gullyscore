@@ -133,18 +133,58 @@ class Khata {
 class Ground {
   Ground(this.j);
   final Map<String, dynamic> j;
-  String? get id => j['id'] as String?; // null for a Google result not saved yet
+  String get id => (j['id'] as String?) ?? '';
   String get name => (j['name'] as String?) ?? '';
   String get address => (j['address'] as String?) ?? '';
+  String get city => (j['city'] as String?) ?? '';
   double get lat => (j['lat'] as num).toDouble();
   double get lng => (j['lng'] as num).toDouble();
-  String? get placeId => j['placeId'] as String?;
-  String get pitch => (j['pitch'] as String?) ?? '';
+  List<String> get pitches => [for (final x in (j['pitches'] as List? ?? const [])) '$x'];
+  List<String> get facilities => [for (final x in (j['facilities'] as List? ?? const [])) '$x'];
+  int get feeMin => (j['feeMin'] as num?)?.toInt() ?? 0;
+  int get feeMax => (j['feeMax'] as num?)?.toInt() ?? 0;
   String get fee => (j['fee'] as String?) ?? '';
+  int get boundaryMin => (j['boundaryMin'] as num?)?.toInt() ?? 0;
+  int get boundaryMax => (j['boundaryMax'] as num?)?.toInt() ?? 0;
+  String get timings => (j['timings'] as String?) ?? '';
   String get phone => (j['phone'] as String?) ?? '';
-  bool get lights => j['lights'] == true;
-  bool get toilet => j['toilet'] == true;
+  String get phone2 => (j['phone2'] as String?) ?? '';
+  bool get mine => j['mine'] == true;
   double? get km => (j['km'] as num?)?.toDouble();
+  double? get rating => (j['rating'] as num?)?.toDouble();
+  int get reviews => (j['reviews'] as num?)?.toInt() ?? 0;
+  int get matches => (j['matches'] as num?)?.toInt() ?? 0;
+  String? get photo => j['photo'] as String?;
+  List<String> get photoIds => [for (final x in (j['photoIds'] as List? ?? const [])) '$x'];
+  String get area => city.isNotEmpty ? city : address.split(',').first;
+}
+
+class Place {
+  Place(this.name, this.detail, this.lat, this.lng);
+  final String name, detail;
+  final double lat, lng;
+  Map<String, dynamic> toJson() => {'name': name, 'detail': detail, 'lat': lat, 'lng': lng};
+  factory Place.fromJson(Map<String, dynamic> j) => Place('${j['name']}', '${j['detail'] ?? ''}', (j['lat'] as num).toDouble(), (j['lng'] as num).toDouble());
+}
+
+class GroundReview {
+  GroundReview(this.name, this.stars, this.body, this.created);
+  final String name, body;
+  final int stars;
+  final DateTime created;
+}
+
+class GroundInsights {
+  GroundInsights(this.j);
+  final Map<String, dynamic> j;
+  int get matches => (j['matches'] as num?)?.toInt() ?? 0;
+  int? get avgFirst => (j['avgFirst'] as num?)?.toInt();
+  Map<String, dynamic>? get highest => j['highest'] as Map<String, dynamic>?;
+  Map<String, dynamic>? get lowest => j['lowest'] as Map<String, dynamic>?;
+  int? get batFirstWinPct => (j['batFirstWinPct'] as num?)?.toInt();
+  List<int> get days => [for (final d in (j['days'] as List? ?? const [0, 0, 0, 0, 0, 0, 0])) (d as num).toInt()];
+  List<(String, int)> get topRuns => [for (final x in (j['topRuns'] as List? ?? const [])) ('${x['name']}', (x['value'] as num).toInt())];
+  List<(String, int)> get topWickets => [for (final x in (j['topWickets'] as List? ?? const [])) ('${x['name']}', (x['value'] as num).toInt())];
 }
 
 const reactionEmojis = ['👍', '❤️', '😂', '🔥', '👏', '😮'];
@@ -255,24 +295,58 @@ class SocialApi {
   Future<Khata> deleteKhata(String id) async => Khata(await _send('DELETE', '/v1/khata/$id', auth: _need()));
 
   // ----- Grounds -----
-  String _ll(double? lat, double? lng) => lat == null || lng == null ? '' : 'lat=$lat&lng=$lng';
+  String photoUrl(String base, String groundId, String photoId) => '$base/v1/grounds/$groundId/photos/$photoId';
 
-  Future<List<Ground>> grounds({double? lat, double? lng}) async {
-    final q = _ll(lat, lng);
-    final j = await _send('GET', '/v1/grounds${q.isEmpty ? '' : '?$q'}');
-    return [for (final g in (j['grounds'] as List? ?? const [])) Ground(Map<String, dynamic>.from(g as Map))];
+  Future<List<Place>> places(String q) async {
+    final j = await _send('GET', '/v1/places?q=${Uri.encodeQueryComponent(q)}');
+    return [for (final p in (j['places'] as List? ?? const [])) Place.fromJson(Map<String, dynamic>.from(p as Map))];
   }
 
-  Future<({List<Ground> ours, List<Ground> google})> searchGrounds(String text, {double? lat, double? lng}) async {
-    final q = _ll(lat, lng);
-    final j = await _send('GET', '/v1/grounds/search?q=${Uri.encodeQueryComponent(text)}${q.isEmpty ? '' : '&$q'}');
+  Future<({int total, List<Ground> grounds})> grounds(
+      {double? lat, double? lng, int km = 15, String q = '', List<String> pitch = const [], List<String> fac = const [], int? feeMax, String sort = 'distance'}) async {
+    final params = [
+      if (lat != null && lng != null) 'lat=$lat&lng=$lng',
+      'km=$km',
+      if (q.isNotEmpty) 'q=${Uri.encodeQueryComponent(q)}',
+      if (pitch.isNotEmpty) 'pitch=${pitch.join(',')}',
+      if (fac.isNotEmpty) 'fac=${fac.join(',')}',
+      if (feeMax != null) 'feeMax=$feeMax',
+      'sort=$sort',
+    ].join('&');
+    final j = await _send('GET', '/v1/grounds?$params');
     return (
-      ours: [for (final g in (j['ours'] as List? ?? const [])) Ground(Map<String, dynamic>.from(g as Map))],
-      google: [for (final g in (j['google'] as List? ?? const [])) Ground(Map<String, dynamic>.from(g as Map))],
+      total: (j['total'] as num?)?.toInt() ?? 0,
+      grounds: [for (final g in (j['grounds'] as List? ?? const [])) Ground(Map<String, dynamic>.from(g as Map))],
     );
   }
 
+  Future<Ground> ground(String id, {double? lat, double? lng}) async =>
+      Ground(await _send('GET', '/v1/grounds/$id${lat == null ? '' : '?lat=$lat&lng=$lng'}', auth: _token()));
   Future<Ground> addGround(Map<String, dynamic> body) async => Ground(await _send('POST', '/v1/grounds', body: body, auth: _need()));
+  Future<Ground> editGround(String id, Map<String, dynamic> body) async => Ground(await _send('PUT', '/v1/grounds/$id', body: body, auth: _need()));
+  Future<String> addGroundPhoto(String id, String jpegBase64) async =>
+      '${(await _send('POST', '/v1/grounds/$id/photos', body: {'jpeg': jpegBase64}, auth: _need()))['id']}';
+  Future<void> deleteGroundPhoto(String id, String photoId) async => _send('DELETE', '/v1/grounds/$id/photos/$photoId', auth: _need());
+
+  Future<List<GroundReview>> groundReviews(String id) async {
+    final j = await _send('GET', '/v1/grounds/$id/reviews');
+    return [
+      for (final r in (j['reviews'] as List? ?? const []))
+        GroundReview('${r['name']}', (r['stars'] as num).toInt(), '${r['body'] ?? ''}', DateTime.fromMillisecondsSinceEpoch((r['created'] as num).toInt())),
+    ];
+  }
+
+  Future<void> reviewGround(String id, int stars, String body) async => _send('POST', '/v1/grounds/$id/reviews', body: {'stars': stars, 'body': body}, auth: _need());
+
+  Future<({List<MatchListItem> matches, List<(String, int)> tournaments})> groundMatches(String id) async {
+    final j = await _send('GET', '/v1/grounds/$id/matches');
+    return (
+      matches: [for (final m in (j['matches'] as List? ?? const [])) parseMatchItem(m)],
+      tournaments: [for (final t in (j['tournaments'] as List? ?? const [])) ('${t['title']}', (t['matches'] as num).toInt())],
+    );
+  }
+
+  Future<GroundInsights> groundInsights(String id) async => GroundInsights(await _send('GET', '/v1/grounds/$id/insights'));
 
   Future<void> deleteAccount() async => _send('DELETE', '/v1/me/account', auth: _need());
 }

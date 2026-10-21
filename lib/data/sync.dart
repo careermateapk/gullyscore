@@ -257,6 +257,7 @@ class SyncService extends ChangeNotifier {
       'status': matchStatusOnline(m, st),
       if (m.scheduledAt != null) 'scheduled': m.scheduledAt!.millisecondsSinceEpoch,
       'ground': m.venue,
+      if (m.groundId.isNotEmpty) 'groundId': m.groundId,
       'teamA': {'id': m.teamA, 'name': repo.teamName(m.teamA)},
       'teamB': {'id': m.teamB, 'name': repo.teamName(m.teamB)},
       'winner': r == null ? '' : (r.tie ? 'tie' : (r.winner == null ? '' : (r.winner == 0 ? m.teamA : m.teamB))),

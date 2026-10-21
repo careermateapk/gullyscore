@@ -1,7 +1,7 @@
 name: gullyscore
 description: GullyScore — ball-by-ball cricket scoring for local matches.
 publish_to: "none"
-version: 0.7.0+7
+version: 0.8.0+8
 
 environment:
   sdk: ^3.8.0
@@ -25,8 +25,7 @@ dependencies:
   image: any
   # Opening social media pages, the blog and WhatsApp
   url_launcher: any
-  # Grounds: Google map and the phone's location
-  google_maps_flutter: any
+  # Grounds near you: the phone's location
   geolocator: any
   # Notifications (Firebase Cloud Messaging)
   firebase_core: any

@@ -27,6 +27,10 @@ import 'package:gullyscore/ui/screens/app_drawer.dart';
 import 'package:gullyscore/ui/screens/badges_screen.dart';
 import 'package:gullyscore/ui/screens/team_tools.dart';
 import 'package:gullyscore/ui/screens/grounds_screen.dart';
+import 'package:gullyscore/ui/screens/ground_detail_screen.dart';
+import 'package:gullyscore/ui/screens/register_ground_screen.dart';
+import 'package:gullyscore/data/social.dart';
+import 'package:gullyscore/app/strings.dart';
 import 'package:gullyscore/ui/screens/notifications_screen.dart';
 import 'package:gullyscore/data/push.dart';
 import 'package:gullyscore/scoring/badges.dart';
@@ -469,10 +473,29 @@ void main() {
         await show(KhataScreen(team: team), 'khata $lang');
         await show(BadgesScreen(me: MeInfo.fromJson(meJson)), 'badges $lang');
         await show(const GroundsScreen(locate: false), 'grounds $lang');
-        await tester.enterText(find.byType(TextField).first, 'sakri');
+        await tester.tap(find.byIcon(Icons.tune_rounded));
+        await tester.pumpAndSettle();
+        check(tester, 'ground filters $lang');
+        await show(const GroundsScreen(locate: false), 'grounds again $lang');
+        await tester.tap(find.textContaining(hi ? 'बदलें' : 'change').first);
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextField).last, 'darbh');
         await tester.pump(const Duration(seconds: 1));
         await tester.pumpAndSettle();
-        check(tester, 'grounds search $lang');
+        check(tester, 'choose location $lang');
+        for (final tab in ['about', 'photos', 'reviews', 'matches', 'tournaments', 'insights']) {
+          await show(const GroundDetailScreen(groundId: 'g1'), 'ground $tab $lang');
+          await tester.tap(find.text(Strings.get('gtab_$tab', lang)).first);
+          await tester.pumpAndSettle();
+          check(tester, 'ground tab $tab $lang');
+        }
+        final g = Ground(Map<String, dynamic>.from(await fakeSend('GET', '/v1/grounds/g1')));
+        await show(RegisterGroundScreen(edit: g, locate: false), 'register ground $lang');
+        for (var step = 0; step < 2; step++) {
+          await tester.tap(find.text(Strings.get('next', lang)).first);
+          await tester.pumpAndSettle();
+          check(tester, 'register step ${step + 2} $lang');
+        }
         await show(const NotificationsScreen(), 'notifications $lang');
         await show(const NewMatchScreen(), 'new match $lang', taps: [hi ? 'बाद में खेलें' : 'Schedule for later']);
       }

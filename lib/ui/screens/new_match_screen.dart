@@ -5,6 +5,7 @@ import '../../app/scope.dart';
 import '../../app/theme.dart';
 import '../../data/models.dart';
 import '../widgets/common.dart';
+import 'ground_picker.dart';
 import 'help.dart';
 import 'match_centre_screen.dart';
 import '../widgets/online_cards.dart';
@@ -41,6 +42,7 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
   final _title = TextEditingController();
   String? _error;
   bool _later = false; // schedule for later instead of starting now
+  String _groundId = ''; // a registered ground (so the match shows on the ground's page)
   DateTime? _when;
 
   @override
@@ -185,6 +187,7 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
       tournamentId: widget.tournamentId,
       fixtureId: widget.fixtureId,
       scheduledAt: _later ? _when : null,
+      groundId: _groundId,
     );
     if (_later) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('match_scheduled', {'t': whenText(context, _when!)}))));
@@ -330,7 +333,29 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
                   const SizedBox(height: Space.s),
                   TextField(controller: _title, textCapitalization: TextCapitalization.sentences, decoration: InputDecoration(hintText: context.tr('match_title_hint'))),
                   const SizedBox(height: Space.s),
-                  TextField(controller: _venue, textCapitalization: TextCapitalization.words, decoration: InputDecoration(hintText: context.tr('ground_hint'))),
+                  TextField(
+                    controller: _venue,
+                    textCapitalization: TextCapitalization.words,
+                    onChanged: (_) => _groundId = '',
+                    decoration: InputDecoration(
+                      hintText: context.tr('ground_hint'),
+                      suffixIcon: context.sync.enabled
+                          ? IconButton(
+                              tooltip: context.tr('pick_ground'),
+                              icon: Icon(_groundId.isEmpty ? Icons.stadium_outlined : Icons.check_circle_rounded, color: _groundId.isEmpty ? p.text2 : p.win),
+                              onPressed: () async {
+                                final g = await pickGround(context);
+                                if (g != null && mounted) {
+                                  setState(() {
+                                    _groundId = g.id;
+                                    _venue.text = g.name;
+                                  });
+                                }
+                              },
+                            )
+                          : null,
+                    ),
+                  ),
                   if (_error != null) ...[
                     const SizedBox(height: Space.m),
                     Text(_error!, style: Tx.small(p.liveText, w: FontWeight.w700)),

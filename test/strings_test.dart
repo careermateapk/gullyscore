@@ -29,7 +29,13 @@ void main() {
     used.addAll(['khata_expense_sub', 'khata_payment_sub', 'who_spent', 'who_paid', 'all_paid', 'coming', 'not_coming', 'no_reply', 'maybe']);
     used.addAll(['title', 'six', 'potm', 'other'].map((k) => 'sponsor_$k'));
     used.addAll(['turf', 'matting', 'cement', 'mud'].map((k) => 'pitch_$k'));
-    used.addAll(['all', 'free', 'turf', 'lights'].map((k) => 'gf_$k'));
+    used.addAll(['all', 'turf', 'lights', 'cheap'].map((k) => 'gq_$k'));
+    used.addAll(['distance', 'rating', 'matches', 'fee', 'name'].map((k) => 'gsort_$k'));
+    used.addAll(['about', 'photos', 'reviews', 'matches', 'tournaments', 'insights'].map((k) => 'gtab_$k'));
+    used.addAll(['lights', 'washrooms', 'water', 'nets', 'umpires', 'scorers', 'parking', 'pavilion', 'cafeteria', 'sightscreen', 'balls'].map((k) => 'fac_$k'));
+    used.addAll(['pitch_astroturf', 'sort_by', 'pitch_type', 'facilities', 'max_fee', 'address', 'timings', 'other_number', 'ground_location']);
+    used.addAll(['photos_up_to', 'boundary_m', 'fee_per_match', 'contact', 'reg_step_place', 'reg_step_photos', 'reg_step_fees']);
+    used.addAll(['register_ground', 'edit_ground', 'saved', 'use_my_location_here', 'location_saved', 'next']);
     used.addAll(['notifications_sub', 'notifications_off', 'no_grounds_near', 'no_grounds_found']);
     for (final k in ['s', 'w', 'b', 'f', 'a', 'c']) {
       used.addAll(['push_$k', 'push_${k}_sub']);
