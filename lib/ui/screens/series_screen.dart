@@ -10,6 +10,7 @@ import '../widgets/common.dart';
 import 'help.dart';
 import 'player_screen.dart';
 import 'team_screen.dart';
+import 'tournament_screens.dart';
 import '../widgets/avatar.dart';
 
 class SeriesScreen extends StatefulWidget {
@@ -50,6 +51,8 @@ class _SeriesScreenState extends State<SeriesScreen> {
                 IconBtn(icon: Icons.help_outline_rounded, tooltip: context.tr('help'), onPressed: () => showHelp(context, 'series')),
               ]),
             ),
+            const TournamentsSection(),
+            SectionHeader(context.tr('all_match_stats')),
             SizedBox(
               height: 48,
               child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.fromLTRB(Space.edge, Space.xs, Space.edge, 0), children: [
@@ -79,7 +82,7 @@ class _SeriesScreenState extends State<SeriesScreen> {
                   padding: const EdgeInsets.fromLTRB(14, 12, 14, 4),
                   child: table.isEmpty || finished.isEmpty
                       ? Padding(padding: const EdgeInsets.only(bottom: 8), child: Text(context.tr('table_after_first_result'), style: Tx.small(p.text2)))
-                      : _PointsTable(rows: table),
+                      : PointsTableView(rows: table),
                 ),
               ),
             ],
@@ -134,8 +137,8 @@ class _TeamRow extends StatelessWidget {
   }
 }
 
-class _PointsTable extends StatelessWidget {
-  const _PointsTable({required this.rows});
+class PointsTableView extends StatelessWidget {
+  const PointsTableView({required this.rows});
   final List<PointsRow> rows;
 
   @override

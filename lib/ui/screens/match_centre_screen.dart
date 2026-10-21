@@ -8,8 +8,10 @@ import '../../scoring/commentary.dart';
 import '../../scoring/engine.dart';
 import '../../scoring/format.dart';
 import '../../scoring/predictor.dart';
+import '../../scoring/tournament.dart';
 import '../widgets/common.dart';
 import '../widgets/ground_map.dart';
+import 'certificates.dart';
 import 'help.dart';
 import 'player_screen.dart';
 import 'scoring_screen.dart';
@@ -325,7 +327,26 @@ class _SummaryTab extends StatelessWidget {
     final chaseTeam = chance == null ? '' : (context.repo.teams[chance.chasingTeam == 0 ? m.teamA : m.teamB]?.short ?? '');
     final defendTeam = chance == null ? '' : (context.repo.teams[chance.chasingTeam == 0 ? m.teamB : m.teamA]?.short ?? '');
 
+    final mom = playerOfMatch(st);
     return ListView(padding: const EdgeInsets.fromLTRB(Space.edge, Space.m, Space.edge, 96), children: [
+      if (mom != null) ...[
+        HeroCard(
+          padding: const EdgeInsets.all(14),
+          child: Row(children: [
+            PlayerAvatar(playerId: mom, size: 48, ring: p.gold),
+            const SizedBox(width: Space.m),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(context.tr('player_of_match'), style: Tx.label(p.goldText, w: FontWeight.w800)),
+                Text(name(mom), maxLines: 1, overflow: TextOverflow.ellipsis, style: Tx.body(p.text, w: FontWeight.w800).copyWith(fontSize: 17)),
+                Text(context.tr('mvp_points', {'n': mvpPoints(mom, st).round()}), style: Tx.label(p.text2)),
+              ]),
+            ),
+            IconBtn(icon: Icons.workspace_premium_rounded, tooltip: context.tr('mom_certificate'), onPressed: () => shareMomCertificate(context, m)),
+          ]),
+        ),
+        const SizedBox(height: Space.s),
+      ],
       if (!inn.ended)
         AppCard(
           padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),

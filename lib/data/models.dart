@@ -69,6 +69,8 @@ class MatchRecord {
     this.venue = '',
     this.title = '',
     this.tossText = '',
+    this.tournamentId,
+    this.fixtureId,
     List<Map<String, dynamic>>? events,
     DateTime? updatedAt,
     Set<String>? celebrated,
@@ -87,6 +89,8 @@ class MatchRecord {
   final String venue;
   final String title; // e.g. "Friendly" or tournament name
   final String tossText;
+  final String? tournamentId;
+  final String? fixtureId;
   List<Map<String, dynamic>> events;
   DateTime updatedAt;
 
@@ -111,6 +115,8 @@ class MatchRecord {
         'venue': venue,
         'title': title,
         'toss': tossText,
+        if (tournamentId != null) 'tid': tournamentId,
+        if (fixtureId != null) 'fid': fixtureId,
         'events': events,
         'celebrated': celebrated.toList(),
       };
@@ -128,6 +134,8 @@ class MatchRecord {
         venue: (j['venue'] as String?) ?? '',
         title: (j['title'] as String?) ?? '',
         tossText: (j['toss'] as String?) ?? '',
+        tournamentId: j['tid'] as String?,
+        fixtureId: j['fid'] as String?,
         events: [for (final e in (j['events'] as List? ?? const [])) Map<String, dynamic>.from(e as Map)],
         celebrated: {for (final c in (j['celebrated'] as List? ?? const [])) c as String},
       );

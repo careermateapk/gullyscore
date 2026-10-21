@@ -10,6 +10,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../scoring/engine.dart';
+import '../scoring/tournament.dart';
 import 'models.dart';
 import 'photos.dart';
 
@@ -20,6 +22,7 @@ class Repository extends ChangeNotifier {
   final Map<String, Player> players = {};
   final Map<String, Team> teams = {};
   final Map<String, MatchRecord> matches = {};
+  final Map<String, Tournament> tournaments = {};
 
   bool loaded = false;
   Object? loadError;
@@ -41,6 +44,10 @@ class Repository extends ChangeNotifier {
           final mr = MatchRecord.fromJson(Map<String, dynamic>.from(m as Map));
           matches[mr.id] = mr;
         }
+        for (final t in (data['tournaments'] as List? ?? const [])) {
+          final tr = Tournament.fromJson(Map<String, dynamic>.from(t as Map));
+          tournaments[tr.id] = tr;
+        }
       }
       loadError = null;
     } catch (e) {
@@ -55,6 +62,7 @@ class Repository extends ChangeNotifier {
         'players': [for (final p in players.values) p.toJson()],
         'teams': [for (final t in teams.values) t.toJson()],
         'matches': [for (final m in matches.values) m.toJson()],
+        'tournaments': [for (final t in tournaments.values) t.toJson()],
       };
 
   /// Saves soon (several quick changes are written once).
@@ -135,6 +143,8 @@ class Repository extends ChangeNotifier {
     String venue = '',
     String title = '',
     String tossText = '',
+    String? tournamentId,
+    String? fixtureId,
   }) {
     final m = MatchRecord(
       id: newId(),
@@ -148,8 +158,18 @@ class Repository extends ChangeNotifier {
       venue: venue,
       title: title,
       tossText: tossText,
+      tournamentId: tournamentId,
+      fixtureId: fixtureId,
     );
     matches[m.id] = m;
+    if (tournamentId != null && fixtureId != null) {
+      final f = tournaments[tournamentId]?.fixture(fixtureId);
+      if (f != null) {
+        f.matchId = m.id;
+        f.teamA ??= a.id;
+        f.teamB ??= b.id;
+      }
+    }
     _changed();
     return m;
   }
@@ -172,7 +192,65 @@ class Repository extends ChangeNotifier {
 
   void deleteMatch(String id) {
     matches.remove(id);
+    for (final t in tournaments.values) {
+      for (final f in t.fixtures) {
+        if (f.matchId == id) f.matchId = null;
+      }
+    }
     _changed();
+  }
+
+  // ---------- tournaments ----------
+
+  List<Tournament> get tournamentList => tournaments.values.toList()..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+  Tournament addTournament({
+    required String name,
+    required String format,
+    required int overs,
+    required List<String> teamIds,
+    int groupCount = 2,
+    int qualifiers = 2,
+    String category = 'open',
+    String venue = '',
+  }) {
+    final t = createTournament(
+      id: newId(),
+      name: name.trim(),
+      format: format,
+      overs: overs,
+      teamIds: teamIds,
+      groupCount: groupCount,
+      qualifiers: qualifiers,
+      category: category,
+      venue: venue.trim(),
+    );
+    tournaments[t.id] = t;
+    _changed();
+    return t;
+  }
+
+  void pickWinner(Tournament t, Fixture f, String teamId) {
+    f.winnerOverride = teamId;
+    _changed();
+  }
+
+  /// Removes the tournament. Its matches stay as ordinary matches.
+  void deleteTournament(String id) {
+    tournaments.remove(id);
+    _changed();
+  }
+
+  TournamentView viewOf(Tournament t) {
+    final states = <String, MatchState>{};
+    final teams = <String, List<String>>{};
+    for (final f in t.fixtures) {
+      final m = f.matchId == null ? null : matches[f.matchId];
+      if (m == null) continue;
+      states[m.id] = m.state;
+      teams[m.id] = [m.teamA, m.teamB];
+    }
+    return TournamentView(t, states, teams);
   }
 
   /// Removes everything saved on this phone.
@@ -180,6 +258,7 @@ class Repository extends ChangeNotifier {
     players.clear();
     teams.clear();
     matches.clear();
+    tournaments.clear();
     notifyListeners();
     await saveNow();
     await PhotoStore.deleteAll();

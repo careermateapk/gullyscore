@@ -35,7 +35,10 @@ const faqs = <Faq>[
   Faq('win_chance', 'other', {'match_centre'}),
   Faq('commentary', 'other', {'match_centre'}),
   Faq('reports', 'other', {'news'}),
-  Faq('tournaments', 'other', {'series'}),
+  Faq('tournaments', 'other', {'series', 'tournament'}),
+  Faq('tournament_formats', 'other', {'tournament'}),
+  Faq('knockout_tie', 'other', {'tournament'}),
+  Faq('mvp', 'other', {'tournament', 'match_centre'}),
   Faq('stats', 'other', {'series'}),
 ];
 

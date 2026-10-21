@@ -11,7 +11,18 @@ import 'scoring_sheets.dart';
 import 'team_screen.dart';
 
 class NewMatchScreen extends StatefulWidget {
-  const NewMatchScreen({super.key});
+  const NewMatchScreen({super.key, this.tournamentId, this.fixtureId, this.teamA, this.teamB, this.overs, this.title, this.venue});
+
+  /// Set when starting a tournament fixture: teams and overs are then fixed.
+  final String? tournamentId;
+  final String? fixtureId;
+  final String? teamA;
+  final String? teamB;
+  final int? overs;
+  final String? title;
+  final String? venue;
+
+  bool get fromFixture => fixtureId != null;
 
   @override
   State<NewMatchScreen> createState() => _NewMatchScreenState();
@@ -27,6 +38,16 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
   final _venue = TextEditingController();
   final _title = TextEditingController();
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _a = widget.teamA;
+    _b = widget.teamB;
+    if (widget.overs != null) _overs = widget.overs!;
+    _title.text = widget.title ?? '';
+    _venue.text = widget.venue ?? '';
+  }
 
   @override
   void dispose() {
@@ -153,6 +174,8 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
       venue: _venue.text.trim(),
       title: _title.text.trim(),
       tossText: toss,
+      tournamentId: widget.tournamentId,
+      fixtureId: widget.fixtureId,
     );
     Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => ScoringScreen(matchId: m.id)));
   }
@@ -169,7 +192,7 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
 
         Widget teamSlot(Team? t, bool first) {
           return AppCard(
-            onTap: () => _pickTeam(first),
+            onTap: widget.fromFixture ? null : () => _pickTeam(first),
             padding: const EdgeInsets.all(14),
             child: Row(children: [
               if (t == null)
@@ -221,6 +244,15 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
                   ),
                   teamSlot(b, false),
                   const SizedBox(height: Space.xl),
+                  if (widget.fromFixture)
+                    AppCard(
+                      child: Row(children: [
+                        Icon(Icons.emoji_events_rounded, color: p.goldText),
+                        const SizedBox(width: Space.m),
+                        Expanded(child: Text(context.tr('fixture_settings', {'n': _overs}), style: Tx.small(p.text, w: FontWeight.w700))),
+                      ]),
+                    )
+                  else ...[
                   Text(context.tr('overs_per_side'), style: Tx.section(p.text).copyWith(fontSize: 15)),
                   const SizedBox(height: Space.s),
                   Wrap(spacing: Space.s, runSpacing: Space.s, children: [
@@ -234,6 +266,7 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
                     SizedBox(width: 48, child: Text('$_overs', textAlign: TextAlign.center, style: Tx.score(24, p.text, w: FontWeight.w800))),
                     IconBtn(icon: Icons.add_rounded, tooltip: context.tr('more_overs'), onPressed: _overs < 50 ? () => setState(() => _overs++) : null),
                   ]),
+                  ],
                   if (a != null && b != null) ...[
                     const SizedBox(height: Space.xl),
                     Text(context.tr('toss'), style: Tx.section(p.text).copyWith(fontSize: 15)),

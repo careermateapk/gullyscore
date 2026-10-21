@@ -7,6 +7,7 @@ import 'package:gullyscore/data/models.dart';
 import 'package:gullyscore/data/repository.dart';
 import 'package:gullyscore/main.dart';
 import 'package:gullyscore/scoring/engine.dart';
+import 'package:gullyscore/scoring/tournament.dart';
 import 'package:gullyscore/ui/screens/help.dart';
 import 'package:gullyscore/ui/screens/match_centre_screen.dart';
 import 'package:gullyscore/ui/screens/new_match_screen.dart';
@@ -15,6 +16,7 @@ import 'package:gullyscore/ui/screens/onboarding_screen.dart';
 import 'package:gullyscore/ui/screens/player_screen.dart';
 import 'package:gullyscore/ui/screens/search_screen.dart';
 import 'package:gullyscore/ui/screens/team_screen.dart';
+import 'package:gullyscore/ui/screens/tournament_screens.dart';
 import 'package:gullyscore/ui/screens/scoring_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -183,6 +185,11 @@ void main() {
       r.addEvent(m, {'t': Ev.start, 'striker': m.playersA[0], 'nonStriker': m.playersA[1], 'bowler': m.playersB[0]});
       r.addEvent(m, {'t': Ev.ball, 'kind': BallKind.normal, 'runs': 4});
       final done = seedFinished(r);
+      final tour = r.addTournament(
+          name: 'Mithila Premier League Winter Edition', format: TFormat.groups, overs: 6, teamIds: [for (final t in r.teamList) t.id], groupCount: 2, qualifiers: 1);
+      final ko = r.addTournament(name: 'KO Cup', format: TFormat.knockout, overs: 6, teamIds: [m.teamA, m.teamB]);
+      final f0 = ko.fixtures.single;
+      r.createMatch(a: r.teams[m.teamA]!, b: r.teams[m.teamB]!, playersA: m.playersA, playersB: m.playersB, overs: 6, firstBatting: 0, tournamentId: ko.id, fixtureId: f0.id);
       Widget scaled(Widget child) => MediaQuery(
             data: const MediaQueryData(size: Size(320, 640), textScaler: TextScaler.linear(1.3)),
             child: child,
@@ -200,6 +207,9 @@ void main() {
         const FaqScreen(),
         ArticleScreen(matchId: done),
         OnboardingScreen(onDone: () {}),
+        const CreateTournamentScreen(),
+        TournamentScreen(tournamentId: tour.id),
+        TournamentScreen(tournamentId: ko.id),
       ];
       for (final screen in screens) {
         await tester.pumpWidget(scaled(wrap(s, r, screen, mode: mode)));
@@ -254,6 +264,41 @@ void main() {
     expect(find.text('Take a photo'), findsOneWidget);
     expect(find.text('Choose from gallery'), findsOneWidget);
     expect(find.text('Remove photo'), findsNothing);
+    await tester.pump(const Duration(seconds: 1));
+  });
+
+  testWidgets('tournament fixtures link to matches and all tabs open', (tester) async {
+    final (s, r) = await setUpApp();
+    final a = r.addTeam('Alpha', playerNames: ['A1', 'A2', 'A3']);
+    final b = r.addTeam('Bravo', playerNames: ['B1', 'B2', 'B3']);
+    final c = r.addTeam('Charlie', playerNames: ['C1', 'C2', 'C3']);
+    final t = r.addTournament(name: 'Village Cup', format: TFormat.league, overs: 1, teamIds: [a.id, b.id, c.id], qualifiers: 2);
+    expect(t.fixtures.length, 4); // 3 league + final
+    final f = t.fixtures.first;
+    final ta = r.teams[f.teamA]!;
+    final tb = r.teams[f.teamB]!;
+    final m = r.createMatch(a: ta, b: tb, playersA: ta.playerIds, playersB: tb.playerIds, overs: 1, firstBatting: 0, tournamentId: t.id, fixtureId: f.id);
+    expect(f.matchId, m.id);
+    r.addEvent(m, {'t': Ev.start, 'striker': ta.playerIds[0], 'nonStriker': ta.playerIds[1], 'bowler': tb.playerIds[0]});
+    for (var i = 0; i < 6; i++) {
+      r.addEvent(m, {'t': Ev.ball, 'kind': BallKind.normal, 'runs': 4});
+    }
+    r.addEvent(m, {'t': Ev.start, 'striker': tb.playerIds[0], 'nonStriker': tb.playerIds[1], 'bowler': ta.playerIds[0]});
+    for (var i = 0; i < 6; i++) {
+      r.addEvent(m, {'t': Ev.ball, 'kind': BallKind.normal, 'runs': 1});
+    }
+    expect(r.viewOf(t).played, 1);
+    expect(r.viewOf(t).table().first.teamId, ta.id);
+
+    await tester.pumpWidget(wrap(s, r, TournamentScreen(tournamentId: t.id)));
+    await tester.pumpAndSettle();
+    expect(find.text('Village Cup'), findsWidgets);
+    expect(find.text('Start this match'), findsWidgets);
+    for (final tab in ['Points table', 'Stats', 'Teams', 'Fixtures']) {
+      await tester.tap(find.text(tab).first);
+      await tester.pumpAndSettle();
+    }
+    expect(find.text('Player of the Match'), findsNothing); // only shown in match centre
     await tester.pump(const Duration(seconds: 1));
   });
 }

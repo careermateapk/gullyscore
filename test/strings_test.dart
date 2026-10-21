@@ -20,6 +20,11 @@ void main() {
     used.addAll(['all', 'teams', 'players', 'matches'].map((k) => 'search_$k'));
     used.addAll(['all', 'boundaries', 'wickets', 'overs'].map((k) => 'filter_$k'));
     used.addAll(['scoring', 'sharing', 'data', 'other'].map((k) => 'faq_cat_$k'));
+    used.addAll(['open', 'women', 'u17', 'u14'].map((k) => 'cat_$k'));
+    for (final f in ['league', 'groups', 'knockout']) {
+      used.addAll(['fmt_$f', 'fmt_${f}_body']);
+    }
+    used.add('bracket');
     for (final f in faqs) {
       used.add('faq_${f.id}_q');
       used.add('faq_${f.id}_a');

@@ -14,13 +14,30 @@ import '../../scoring/engine.dart';
 import '../widgets/common.dart';
 import 'scoring_sheets.dart';
 
+/// Share sheet for any picture: shows [child] and shares it as a PNG.
+Future<void> sharePicture(BuildContext context, {required String title, required Widget child, required String text, required String fileName}) {
+  return showAppSheet<void>(context, (ctx) => _ShareSheet(title: title, text: text, fileName: fileName, child: child));
+}
+
 Future<void> shareMatchCard(BuildContext context, MatchRecord m) {
-  return showAppSheet<void>(context, (ctx) => _ShareSheet(m: m));
+  final repo = context.repo;
+  final st = m.state;
+  final lines = <String>['${repo.teamName(m.teamA)} vs ${repo.teamName(m.teamB)}'];
+  for (final inn in st.innings) {
+    final t = inn.battingTeam == 0 ? m.teamA : m.teamB;
+    lines.add('${repo.teamName(t)} ${inn.runs}/${inn.wickets} (${inn.overs})');
+  }
+  if (st.finished) lines.add(st.resultText(repo.teamName(m.teamA), repo.teamName(m.teamB)));
+  lines.add(context.tr('scored_with'));
+  return sharePicture(context, title: context.tr('share_score'), text: lines.join('\n'), fileName: 'gullyscore-${m.id}', child: ScoreCardImage(m: m));
 }
 
 class _ShareSheet extends StatefulWidget {
-  const _ShareSheet({required this.m});
-  final MatchRecord m;
+  const _ShareSheet({required this.title, required this.text, required this.fileName, required this.child});
+  final String title;
+  final String text;
+  final String fileName;
+  final Widget child;
 
   @override
   State<_ShareSheet> createState() => _ShareSheetState();
@@ -31,25 +48,11 @@ class _ShareSheetState extends State<_ShareSheet> {
   bool _working = false;
   String? _error;
 
-  String _text(BuildContext context) {
-    final repo = context.repo;
-    final st = widget.m.state;
-    final lines = <String>['${repo.teamName(widget.m.teamA)} vs ${repo.teamName(widget.m.teamB)}'];
-    for (final inn in st.innings) {
-      final t = inn.battingTeam == 0 ? widget.m.teamA : widget.m.teamB;
-      lines.add('${repo.teamName(t)} ${inn.runs}/${inn.wickets} (${inn.overs})');
-    }
-    if (st.finished) lines.add(st.resultText(repo.teamName(widget.m.teamA), repo.teamName(widget.m.teamB)));
-    lines.add(context.tr('scored_with'));
-    return lines.join('\n');
-  }
-
   Future<void> _share() async {
     setState(() {
       _working = true;
       _error = null;
     });
-    final text = _text(context);
     final failed = context.tr('share_failed');
     try {
       final obj = _boundary.currentContext?.findRenderObject();
@@ -58,9 +61,9 @@ class _ShareSheetState extends State<_ShareSheet> {
       final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
       if (bytes == null) throw StateError('no bytes');
       final dir = await getTemporaryDirectory();
-      final file = File('${dir.path}/gullyscore-${widget.m.id}.png');
+      final file = File('${dir.path}/${widget.fileName}.png');
       await file.writeAsBytes(bytes.buffer.asUint8List(), flush: true);
-      await SharePlus.instance.share(ShareParams(files: [XFile(file.path, mimeType: 'image/png')], text: text));
+      await SharePlus.instance.share(ShareParams(files: [XFile(file.path, mimeType: 'image/png')], text: widget.text));
       if (mounted) Navigator.pop(context);
     } catch (_) {
       if (mounted) setState(() => _error = failed);
@@ -75,9 +78,9 @@ class _ShareSheetState extends State<_ShareSheet> {
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(Space.edge, 0, Space.edge, Space.l),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Text(context.tr('share_score'), style: Tx.section(p.text).copyWith(fontSize: 19)),
+        Text(widget.title, style: Tx.section(p.text).copyWith(fontSize: 19)),
         const SizedBox(height: Space.m),
-        RepaintBoundary(key: _boundary, child: ScoreCardImage(m: widget.m)),
+        RepaintBoundary(key: _boundary, child: widget.child),
         if (_error != null) ...[
           const SizedBox(height: Space.s),
           Text(_error!, style: Tx.small(p.liveText)),
