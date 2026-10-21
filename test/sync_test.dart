@@ -253,7 +253,7 @@ void main() {
     final scorer = SyncService(r, cloud, google: FakeGoogle());
     await scorer.start(timers: false);
     await scorer.tick();
-    expect(cloud.phoneUploads, 0, 'nothing to send without numbers');
+    expect(cloud.phoneUploads, 0, reason: 'nothing to send without numbers');
 
     final ravi = r.players.values.firstWhere((p) => p.name == 'Ravi');
     r.updatePlayer(ravi, phone: '+91 98765-43210');
@@ -261,8 +261,8 @@ void main() {
     await scorer.tick();
     expect(cloud.phoneUploads, 1);
     await scorer.tick();
-    expect(cloud.phoneUploads, 1, 'unchanged numbers are not sent again');
-    expect(cloud.matches.toString().contains('9876543210'), false, 'number is not inside match data');
+    expect(cloud.phoneUploads, 1, reason: 'unchanged numbers are not sent again');
+    expect(cloud.matches.toString().contains('9876543210'), false, reason: 'number is not inside match data');
 
     // Ravi's own phone.
     SharedPreferences.setMockInitialValues({});
