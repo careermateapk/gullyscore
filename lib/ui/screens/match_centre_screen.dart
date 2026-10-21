@@ -14,6 +14,7 @@ import 'help.dart';
 import 'player_screen.dart';
 import 'scoring_screen.dart';
 import 'share_card.dart';
+import '../widgets/avatar.dart';
 
 /// How a match should be labelled right now. Only a match being scored on
 /// this phone in the last 30 minutes is called live.
@@ -331,7 +332,7 @@ class _SummaryTab extends StatelessWidget {
           child: Column(children: [
             _BatHeader(label: context.tr('batter')),
             for (final id in [inn.striker, inn.nonStriker])
-              if (id != null && inn.batters[id] != null) _BatRow(card: inn.batters[id]!, name: name(id), strike: id == inn.striker, showHowOut: false),
+              if (id != null && inn.batters[id] != null) _BatRow(card: inn.batters[id]!, name: name(id), strike: id == inn.striker, showHowOut: false, photo: true),
             if (inn.bowler != null && inn.bowlers[inn.bowler] != null)
               Container(
                 padding: const EdgeInsets.symmetric(vertical: 9),
@@ -473,7 +474,8 @@ class _BatHeader extends StatelessWidget {
 }
 
 class _BatRow extends StatelessWidget {
-  const _BatRow({required this.card, required this.name, required this.strike, required this.showHowOut, this.howOut = ''});
+  const _BatRow({required this.card, required this.name, required this.strike, required this.showHowOut, this.howOut = '', this.photo = false});
+  final bool photo;
   final BatterCard card;
   final String name;
   final bool strike;
@@ -488,6 +490,7 @@ class _BatRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(border: Border(top: BorderSide(color: p.line))),
       child: Row(children: [
+        if (photo) ...[PlayerAvatar(playerId: card.id, size: 28), const SizedBox(width: Space.s)],
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text.rich(
@@ -872,6 +875,8 @@ class _SquadsTab extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => PlayerScreen(playerId: id))),
               child: Row(children: [
+                PlayerAvatar(playerId: id, size: 32, color: Palette.team(t?.colorIndex ?? 0)),
+                const SizedBox(width: Space.m),
                 Expanded(child: Text(repo.playerName(id), style: Tx.small(p.text, w: FontWeight.w700).copyWith(fontSize: 14))),
                 if (repo.players[id]?.leftHanded ?? false) Tag(context.tr('lhb')),
                 const SizedBox(width: 6),

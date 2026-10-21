@@ -8,7 +8,7 @@ import '../../scoring/stats.dart';
 import '../widgets/common.dart';
 import '../widgets/ground_map.dart';
 import 'match_centre_screen.dart';
-import 'scoring_sheets.dart';
+import '../widgets/avatar.dart';
 
 class PlayerScreen extends StatefulWidget {
   const PlayerScreen({super.key, required this.playerId});
@@ -98,17 +98,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
               HeroCard(
                 glow: Palette.team(team?.colorIndex ?? 0),
                 child: Row(children: [
-                  Container(
-                    width: 72,
-                    height: 72,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Palette.team(team?.colorIndex ?? 0),
-                      border: Border.all(color: p.gold, width: 2),
-                    ),
-                    child: Text(initialsOf(pl.name), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 24)),
-                  ),
+                  EditableAvatar(playerId: pl.id, size: 72, color: Palette.team(team?.colorIndex ?? 0)),
                   const SizedBox(width: Space.l),
                   Expanded(
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

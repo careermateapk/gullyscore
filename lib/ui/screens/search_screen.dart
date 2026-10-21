@@ -6,8 +6,8 @@ import '../../app/theme.dart';
 import '../widgets/common.dart';
 import 'match_centre_screen.dart';
 import 'player_screen.dart';
-import 'scoring_sheets.dart';
 import 'team_screen.dart';
+import '../widgets/avatar.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -127,7 +127,7 @@ class _SearchScreenState extends State<SearchScreen> {
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => PlayerScreen(playerId: pl.id))),
                             child: Row(children: [
-                              CircleAvatar(radius: 18, backgroundColor: p.raised, child: Text(initialsOf(pl.name), style: Tx.label(p.text, w: FontWeight.w800))),
+                              PlayerAvatar(playerId: pl.id, size: 36),
                               const SizedBox(width: Space.m),
                               Expanded(
                                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

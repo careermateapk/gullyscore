@@ -6,6 +6,7 @@ import '../../app/theme.dart';
 import '../../data/models.dart';
 import '../widgets/common.dart';
 import 'player_screen.dart';
+import '../widgets/avatar.dart';
 
 /// Opens the team editor. Returns the team id when a new team was created.
 Future<String?> openTeamEditor(BuildContext context, {String? teamId}) {
@@ -126,6 +127,17 @@ class _TeamScreenState extends State<TeamScreen> {
                         child: AppCard(
                           padding: const EdgeInsets.only(left: 12, right: 4),
                           child: Row(children: [
+                            Semantics(
+                              button: true,
+                              label: context.tr('change_photo'),
+                              child: GestureDetector(
+                                onTap: () => editPlayerPhoto(context, id),
+                                child: Padding(
+                                  padding: const EdgeInsets.only(right: 10),
+                                  child: PlayerAvatar(playerId: id, size: 34, color: Palette.team(team.colorIndex)),
+                                ),
+                              ),
+                            ),
                             Expanded(
                               child: InkWell(
                                 onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => PlayerScreen(playerId: id))),

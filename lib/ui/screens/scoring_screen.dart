@@ -12,6 +12,7 @@ import 'help.dart';
 import 'match_centre_screen.dart';
 import 'scoring_sheets.dart';
 import 'share_card.dart';
+import '../widgets/avatar.dart';
 
 class ScoringScreen extends StatefulWidget {
   const ScoringScreen({super.key, required this.matchId});
@@ -541,8 +542,11 @@ class _PlayersRow extends StatelessWidget {
         child: AppCard(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           borderColor: strike ? p.gold : null,
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(strike ? context.tr('on_strike') : context.tr('non_striker'), style: Tx.label(p.text2)),
+          child: Row(children: [
+            if (id != null) ...[PlayerAvatar(playerId: id, size: 32), const SizedBox(width: Space.s)],
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(strike ? context.tr('on_strike') : context.tr('non_striker'), maxLines: 1, overflow: TextOverflow.ellipsis, style: Tx.label(p.text2)),
             const SizedBox(height: 2),
             Text(id == null ? '—' : name(id), maxLines: 1, overflow: TextOverflow.ellipsis, style: Tx.body(p.text, w: FontWeight.w800).copyWith(fontSize: 14)),
             if (c != null)
@@ -551,6 +555,8 @@ class _PlayersRow extends StatelessWidget {
                 alignment: Alignment.centerLeft,
                 child: Text('${c.runs} (${c.balls})', style: Tx.score(20, p.text, w: FontWeight.w800)),
               ),
+              ]),
+            ),
           ]),
         ),
       );

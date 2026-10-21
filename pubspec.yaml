@@ -16,6 +16,8 @@ dependencies:
   path_provider: ^2.1.6
   # Share scorecard images to WhatsApp and other apps
   share_plus: any
+  # Player photos from camera or gallery (kept on the phone only)
+  image_picker: any
 
 dev_dependencies:
   flutter_test:

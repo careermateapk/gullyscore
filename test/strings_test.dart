@@ -15,7 +15,7 @@ void main() {
     }
     // Keys built at run time.
     used.addAll(['toss_bat', 'toss_bowl', 'balls_n', 'runs_n']);
-    used.addAll([for (var i = 1; i <= 4; i++) 'privacy_$i']);
+    used.addAll([for (var i = 1; i <= 5; i++) 'privacy_$i']);
     used.addAll(['bowled', 'caught', 'lbw', 'run_out', 'stumped', 'hit_wicket', 'retired'].map((k) => 'out_$k'));
     used.addAll(['all', 'teams', 'players', 'matches'].map((k) => 'search_$k'));
     used.addAll(['all', 'boundaries', 'wickets', 'overs'].map((k) => 'filter_$k'));

@@ -7,6 +7,7 @@ import '../../scoring/commentary.dart';
 import '../../scoring/engine.dart';
 import '../widgets/common.dart';
 import '../widgets/ground_map.dart';
+import '../widgets/avatar.dart';
 
 Future<T?> showAppSheet<T>(BuildContext context, Widget Function(BuildContext) builder) {
   return showModalBottomSheet<T>(
@@ -117,11 +118,7 @@ class _PlayerPickerState extends State<_PlayerPicker> {
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                     onTap: widget.disabled.contains(id) ? null : () => Navigator.pop(context, id),
                     child: Row(children: [
-                      CircleAvatar(
-                        radius: 18,
-                        backgroundColor: p.raised,
-                        child: Text(initialsOf(widget.name(id)), style: Tx.label(p.text, w: FontWeight.w800)),
-                      ),
+                      PlayerAvatar(playerId: id, size: 36),
                       const SizedBox(width: Space.m),
                       Expanded(child: Text(widget.name(id), style: Tx.body(p.text, w: FontWeight.w700))),
                       if (widget.disabled.contains(id) && widget.disabledReason != null)

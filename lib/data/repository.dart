@@ -11,6 +11,7 @@ import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'models.dart';
+import 'photos.dart';
 
 class Repository extends ChangeNotifier {
   Repository({Store? store}) : _store = store ?? FileStore();
@@ -106,6 +107,14 @@ class Repository extends ChangeNotifier {
     _changed();
   }
 
+  /// Sets or clears (null) a player's photo. The old picture file is removed.
+  Future<void> setPlayerPhoto(Player p, String? fileName) async {
+    final old = p.photo;
+    p.photo = fileName;
+    _changed();
+    if (old != null && old != fileName) await PhotoStore.delete(old);
+  }
+
   void renameTeam(Team t, String name) {
     if (name.trim().isEmpty) return;
     t.name = name.trim();
@@ -173,6 +182,7 @@ class Repository extends ChangeNotifier {
     matches.clear();
     notifyListeners();
     await saveNow();
+    await PhotoStore.deleteAll();
   }
 }
 

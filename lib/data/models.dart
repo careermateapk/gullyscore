@@ -7,19 +7,21 @@ String newId() {
 }
 
 class Player {
-  Player({required this.id, required this.name, this.leftHanded = false, this.role = ''});
+  Player({required this.id, required this.name, this.leftHanded = false, this.role = '', this.photo});
   final String id;
   String name;
   bool leftHanded;
   String role; // free text, e.g. "Batter", "Off spin"
+  String? photo; // file name inside the app's photo folder on this phone
 
-  Map<String, dynamic> toJson() => {'id': id, 'name': name, 'lh': leftHanded, 'role': role};
+  Map<String, dynamic> toJson() => {'id': id, 'name': name, 'lh': leftHanded, 'role': role, if (photo != null) 'photo': photo};
 
   factory Player.fromJson(Map<String, dynamic> j) => Player(
         id: j['id'] as String,
         name: (j['name'] as String?) ?? '',
         leftHanded: (j['lh'] as bool?) ?? false,
         role: (j['role'] as String?) ?? '',
+        photo: j['photo'] as String?,
       );
 }
 

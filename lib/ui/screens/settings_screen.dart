@@ -38,7 +38,7 @@ class SettingsScreen extends StatelessWidget {
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(ctx.tr('privacy_title'), style: Tx.section(p.text).copyWith(fontSize: 19)),
           const SizedBox(height: Space.m),
-          for (final k in const ['privacy_1', 'privacy_2', 'privacy_3', 'privacy_4'])
+          for (final k in const ['privacy_1', 'privacy_5', 'privacy_2', 'privacy_3', 'privacy_4'])
             Padding(
               padding: const EdgeInsets.only(bottom: Space.m),
               child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [

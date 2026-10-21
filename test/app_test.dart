@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gullyscore/app/scope.dart';
 import 'package:gullyscore/app/settings.dart';
 import 'package:gullyscore/app/theme.dart';
+import 'package:gullyscore/data/models.dart';
 import 'package:gullyscore/data/repository.dart';
 import 'package:gullyscore/main.dart';
 import 'package:gullyscore/scoring/engine.dart';
@@ -231,6 +232,28 @@ void main() {
     await tester.pumpWidget(wrap(s, r, ArticleScreen(matchId: id)));
     await tester.pumpAndSettle();
     expect(find.textContaining('won by'), findsWidgets);
+    await tester.pump(const Duration(seconds: 1));
+  });
+
+  test('player photo name is saved and read back', () {
+    final pl = Player(id: 'p1', name: 'Sanjay Jha', photo: 'p1_1.jpg');
+    final back = Player.fromJson(pl.toJson());
+    expect(back.photo, 'p1_1.jpg');
+    expect(Player.fromJson(Player(id: 'p2', name: 'X').toJson()).photo, isNull);
+  });
+
+  testWidgets('profile picture opens photo choices and shows initials without a photo', (tester) async {
+    final (s, r) = await setUpApp();
+    final id = seedMatch(r);
+    final pid = r.matches[id]!.playersA.first;
+    await tester.pumpWidget(wrap(s, r, PlayerScreen(playerId: pid)));
+    await tester.pumpAndSettle();
+    expect(find.text('R'), findsWidgets); // "Ravi" has no photo yet
+    await tester.tap(find.bySemanticsLabel('Change photo'));
+    await tester.pumpAndSettle();
+    expect(find.text('Take a photo'), findsOneWidget);
+    expect(find.text('Choose from gallery'), findsOneWidget);
+    expect(find.text('Remove photo'), findsNothing);
     await tester.pump(const Duration(seconds: 1));
   });
 }

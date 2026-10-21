@@ -10,6 +10,7 @@ import '../widgets/common.dart';
 import 'help.dart';
 import 'player_screen.dart';
 import 'team_screen.dart';
+import '../widgets/avatar.dart';
 
 class SeriesScreen extends StatefulWidget {
   const SeriesScreen({super.key});
@@ -208,6 +209,8 @@ class _Leaders extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 child: Row(children: [
                   SizedBox(width: 22, child: Text('${i + 1}', style: Tx.label(p.text2))),
+                  PlayerAvatar(playerId: leaders[i].playerId, size: 32),
+                  const SizedBox(width: Space.m),
                   Expanded(
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Text(repo.playerName(leaders[i].playerId), maxLines: 1, overflow: TextOverflow.ellipsis, style: Tx.small(p.text, w: FontWeight.w800).copyWith(fontSize: 14)),
