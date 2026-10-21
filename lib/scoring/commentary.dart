@@ -184,6 +184,22 @@ String _howOut(BallLog b, String Function(String) name, String lang) {
   return hi ? 'आउट' : 'out';
 }
 
+/// The line a scorer will see before saving a ball (no wicket).
+CommItem previewCommentary({
+  required String bowler,
+  required String striker,
+  required String kind,
+  required int runs,
+  String? zone,
+  String? shot,
+  String lang = 'en',
+}) {
+  final b = BallLog('', true, 0, striker: 's', bowler: 'b', kind: kind, runs: runs, zone: zone, shot: shot);
+  final names = {'s': striker, 'b': bowler};
+  final inn = Innings(0, 0)..balls.add(b);
+  return buildCommentary(inn, (id) => names[id] ?? id, lang: lang).last;
+}
+
 /// Commentary for one innings, newest first.
 List<CommItem> buildCommentary(Innings inn, String Function(String id) name, {String lang = 'en'}) {
   final hi = lang == 'hi';

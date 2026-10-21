@@ -100,7 +100,9 @@ void main() {
   test('win chance rises as the chase gets easier', () {
     final base = <Map<String, dynamic>>[
       {'t': Ev.start, 'striker': 'a1', 'nonStriker': 'a2', 'bowler': 'b1'},
-      for (var i = 0; i < 12; i++) ball(1),
+      for (var i = 0; i < 6; i++) ball(1),
+      {'t': Ev.bowler, 'player': 'b2'},
+      for (var i = 0; i < 6; i++) ball(1),
       {'t': Ev.start, 'striker': 'b1', 'nonStriker': 'b2', 'bowler': 'a1'},
     ];
     final early = winChance(replay(setup, base))!;

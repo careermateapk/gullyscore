@@ -171,7 +171,7 @@ class Leader {
   Leader(this.playerId, this.value, this.detail);
   final String playerId;
   final int value;
-  final String detail;
+  final String detail; // balls faced (runs list) or runs given (wickets list)
 }
 
 List<Leader> topRunScorers(Iterable<StatMatch> matches, {int limit = 10}) {
@@ -187,7 +187,7 @@ List<Leader> topRunScorers(Iterable<StatMatch> matches, {int limit = 10}) {
   }
   final list = runs.entries
       .where((e) => e.value > 0)
-      .map((e) => Leader(e.key, e.value, '${balls[e.key]} balls'))
+      .map((e) => Leader(e.key, e.value, '${balls[e.key]}'))
       .toList()
     ..sort((a, b) => b.value.compareTo(a.value));
   return list.take(limit).toList();
@@ -206,7 +206,7 @@ List<Leader> topWicketTakers(Iterable<StatMatch> matches, {int limit = 10}) {
   }
   final list = wkts.entries
       .where((e) => e.value > 0)
-      .map((e) => Leader(e.key, e.value, '${runs[e.key]} runs'))
+      .map((e) => Leader(e.key, e.value, '${runs[e.key]}'))
       .toList()
     ..sort((a, b) => b.value.compareTo(a.value));
   return list.take(limit).toList();

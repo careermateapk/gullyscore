@@ -4,13 +4,17 @@ import 'app/scope.dart';
 import 'app/settings.dart';
 import 'app/theme.dart';
 import 'data/repository.dart';
+import 'ui/screens/onboarding_screen.dart';
+import 'ui/screens/shell.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final settings = Settings();
   final repo = Repository();
-  await Future.wait([settings.load(), repo.load()]);
+  await settings.load();
   runApp(GullyScoreApp(settings: settings, repo: repo));
+  // Matches load in the background; Home shows a skeleton until they arrive.
+  repo.load();
 }
 
 class GullyScoreApp extends StatelessWidget {
@@ -32,8 +36,8 @@ class GullyScoreApp extends StatelessWidget {
           themeMode: settings.themeMode,
           theme: buildTheme(Palette.lightP),
           darkTheme: buildTheme(Palette.darkP),
-          themeAnimationDuration: Motion.page,
-          home: const Scaffold(body: Center(child: Text('GullyScore'))),
+          themeAnimationDuration: settings.reduceMotion ? Duration.zero : Motion.page,
+          home: settings.onboarded ? const Shell() : OnboardingScreen(onDone: () {}),
         ),
       ),
     );

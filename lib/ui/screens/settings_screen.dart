@@ -1,0 +1,183 @@
+// Profile tab: appearance, scoring options, teams, help and your data.
+import 'package:flutter/material.dart';
+
+import '../../app/scope.dart';
+import '../../app/theme.dart';
+import '../widgets/common.dart';
+import 'help.dart';
+import 'scoring_sheets.dart';
+
+class SettingsScreen extends StatelessWidget {
+  const SettingsScreen({super.key});
+
+  Future<void> _deleteAll(BuildContext context) async {
+    final repo = context.repo;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(ctx.tr('delete_all_q')),
+        content: Text(ctx.tr('delete_all_body')),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(ctx.tr('cancel'))),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text(ctx.tr('delete_everything'), style: TextStyle(color: Palette.of(ctx).liveText))),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    await repo.deleteAll();
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('all_deleted'))));
+    }
+  }
+
+  void _privacy(BuildContext context) {
+    showAppSheet<void>(context, (ctx) {
+      final p = Palette.of(ctx);
+      return SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(Space.edge, 0, Space.edge, Space.xl),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(ctx.tr('privacy_title'), style: Tx.section(p.text).copyWith(fontSize: 19)),
+          const SizedBox(height: Space.m),
+          for (final k in const ['privacy_1', 'privacy_2', 'privacy_3', 'privacy_4'])
+            Padding(
+              padding: const EdgeInsets.only(bottom: Space.m),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Padding(padding: const EdgeInsets.only(top: 3), child: Icon(Icons.check_circle_rounded, size: 18, color: p.win)),
+                const SizedBox(width: Space.m),
+                Expanded(child: Text(ctx.tr(k), style: Tx.body(p.text))),
+              ]),
+            ),
+        ]),
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = Palette.of(context);
+    final s = AppScope.of(context).settings;
+    final repo = context.repo;
+
+    Widget group(String title, List<Widget> children) => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(Space.edge, Space.l, Space.edge, Space.s),
+            child: Semantics(header: true, child: Text(title.toUpperCase(), style: Tx.label(p.text2, w: FontWeight.w800).copyWith(letterSpacing: 0.4))),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: Space.edge),
+            child: AppCard(
+              padding: EdgeInsets.zero,
+              child: Column(children: [
+                for (var i = 0; i < children.length; i++) ...[
+                  if (i > 0) Divider(height: 1, color: p.line),
+                  children[i],
+                ],
+              ]),
+            ),
+          ),
+        ]);
+
+    Widget icon(IconData i, Color c) => Container(
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(color: p.raised, borderRadius: BorderRadius.circular(10)),
+          child: Icon(i, size: 18, color: c),
+        );
+
+    Widget toggle(IconData i, Color c, String title, String? sub, bool value, ValueChanged<bool> on) => SwitchListTile(
+          value: value,
+          onChanged: on,
+          secondary: icon(i, c),
+          title: Text(title, style: Tx.body(p.text, w: FontWeight.w600)),
+          subtitle: sub == null ? null : Text(sub, style: Tx.label(p.text2, w: FontWeight.w500)),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 14),
+        );
+
+    Widget link(IconData i, Color c, String title, VoidCallback onTap, {Color? textColor, String? trailing}) => ListTile(
+          leading: icon(i, c),
+          title: Text(title, style: Tx.body(textColor ?? p.text, w: FontWeight.w600)),
+          trailing: trailing != null ? Text(trailing, style: Tx.small(p.text2)) : Icon(Icons.chevron_right_rounded, color: p.text2),
+          onTap: onTap,
+          minTileHeight: 56,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 14),
+        );
+
+    return SafeArea(
+      bottom: false,
+      child: ListView(padding: const EdgeInsets.only(bottom: Space.xl), children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(Space.edge, Space.m, Space.edge, 0),
+          child: Semantics(header: true, child: Text(context.tr('nav_profile'), style: Tx.title(p.text))),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(Space.edge, Space.m, Space.edge, 0),
+          child: AppCard(
+            child: Row(children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(color: p.gold.withValues(alpha: 0.14), shape: BoxShape.circle),
+                child: Icon(Icons.sports_cricket_rounded, color: p.goldText),
+              ),
+              const SizedBox(width: Space.m),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(context.tr('scorer'), style: Tx.body(p.text, w: FontWeight.w800)),
+                  Text(context.tr('scored_summary', {'m': repo.matches.length, 't': repo.teams.length}), style: Tx.label(p.text2, w: FontWeight.w600)),
+                ]),
+              ),
+            ]),
+          ),
+        ),
+        group(context.tr('appearance'), [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+            child: Row(children: [
+              icon(Icons.dark_mode_outlined, p.goldText),
+              const SizedBox(width: Space.m),
+              Expanded(child: Text(context.tr('theme'), style: Tx.body(p.text, w: FontWeight.w600))),
+              SizedBox(
+                width: 196,
+                child: Segmented<ThemeMode>(
+                  values: const [ThemeMode.light, ThemeMode.dark, ThemeMode.system],
+                  labels: [context.tr('light'), context.tr('dark'), context.tr('auto')],
+                  selected: s.themeMode,
+                  onChanged: s.setTheme,
+                ),
+              ),
+            ]),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+            child: Row(children: [
+              icon(Icons.translate_rounded, const Color(0xFF5B9BFF)),
+              const SizedBox(width: Space.m),
+              Expanded(child: Text(context.tr('language'), style: Tx.body(p.text, w: FontWeight.w600))),
+              SizedBox(
+                width: 160,
+                child: Segmented<String>(values: const ['en', 'hi'], labels: const ['English', 'हिंदी'], selected: s.lang, onChanged: s.setLang),
+              ),
+            ]),
+          ),
+          toggle(Icons.motion_photos_off_outlined, p.win, context.tr('reduce_motion'), context.tr('reduce_motion_sub'), s.reduceMotion, s.setReduceMotion),
+        ]),
+        group(context.tr('scoring'), [
+          toggle(Icons.my_location_rounded, p.goldText, context.tr('ask_direction'), context.tr('ask_direction_sub'), s.askShotDirection, s.setAskShot),
+          toggle(Icons.vibration_rounded, p.six, context.tr('vibration'), context.tr('vibration_sub'), s.haptics, s.setHaptics),
+        ]),
+        group(context.tr('help'), [
+          link(Icons.help_outline_rounded, const Color(0xFF5B9BFF), context.tr('help_and_faq'), () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FaqScreen()))),
+          link(Icons.lock_outline_rounded, p.win, context.tr('privacy_title'), () => _privacy(context)),
+        ]),
+        group(context.tr('your_data'), [
+          link(Icons.phone_android_rounded, p.text2, context.tr('saved_on_phone'), () => showHelp(context, 'settings'), trailing: context.tr('matches_n', {'n': repo.matches.length})),
+          link(Icons.delete_outline_rounded, p.liveText, context.tr('delete_all_data'), () => _deleteAll(context), textColor: p.liveText),
+        ]),
+        Padding(
+          padding: const EdgeInsets.all(Space.l),
+          child: Text('GullyScore 0.1', textAlign: TextAlign.center, style: Tx.label(p.text2, w: FontWeight.w600)),
+        ),
+      ]),
+    );
+  }
+}
