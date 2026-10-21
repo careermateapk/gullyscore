@@ -1,0 +1,59 @@
+name: gullyscore
+description: GullyScore — ball-by-ball cricket scoring for local matches.
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.8.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Settings saved on the phone (theme, language, favourites)
+  shared_preferences: ^2.5.6
+  # Folder on the phone where matches are saved
+  path_provider: ^2.1.6
+  # Share scorecard images to WhatsApp and other apps
+  share_plus: any
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  fonts:
+    - family: Hanken
+      fonts:
+        - asset: assets/fonts/HankenGrotesk-400.ttf
+          weight: 400
+        - asset: assets/fonts/HankenGrotesk-500.ttf
+          weight: 500
+        - asset: assets/fonts/HankenGrotesk-600.ttf
+          weight: 600
+        - asset: assets/fonts/HankenGrotesk-700.ttf
+          weight: 700
+        - asset: assets/fonts/HankenGrotesk-800.ttf
+          weight: 800
+    - family: Saira
+      fonts:
+        - asset: assets/fonts/SairaCondensed-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/SairaCondensed-ExtraBold.ttf
+          weight: 800
+        - asset: assets/fonts/SairaCondensed-Black.ttf
+          weight: 900
+    - family: NotoDeva
+      fonts:
+        - asset: assets/fonts/NotoSansDevanagari-400.ttf
+          weight: 400
+        - asset: assets/fonts/NotoSansDevanagari-600.ttf
+          weight: 600
+        - asset: assets/fonts/NotoSansDevanagari-700.ttf
+          weight: 700
+
+# 2.5.0 (Pigeon JNI) crashes at start in release builds: NoSuchMethodError on getAll.
+dependency_overrides:
+  shared_preferences_android: 2.4.28
