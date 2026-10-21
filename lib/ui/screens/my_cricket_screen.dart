@@ -294,8 +294,10 @@ class TeamSummaryCard extends StatelessWidget {
                 ),
                 child: Text(f, style: Tx.small(f == 'W' ? p.win : f == 'L' ? Colors.white : p.text2, w: FontWeight.w800)),
               ),
-            const Spacer(),
-            Text(context.tr('last_n', {'n': team.form.length}), style: Tx.label(p.text2)),
+            Expanded(
+              child: Text(context.tr('last_n', {'n': team.form.length}),
+                  textAlign: TextAlign.right, maxLines: 1, overflow: TextOverflow.ellipsis, style: Tx.label(p.text2)),
+            ),
           ]),
         ],
         if (next != null) ...[
