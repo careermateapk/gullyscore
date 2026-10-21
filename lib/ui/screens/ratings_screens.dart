@@ -437,21 +437,20 @@ class _TeamRatingsScreenState extends State<TeamRatingsScreen> {
                           ? Text(context.tr('no_ratings_body'), style: Tx.body(p.text2))
                           : Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                               Row(children: [
-                                Column(children: [
-                                  Text(d.overall!.toStringAsFixed(1), style: Tx.score(52, p.text, w: FontWeight.w900)),
-                                  Stars(value: d.overall!, size: 14),
-                                  const SizedBox(height: 4),
-                                  Text(context.tr('ratings_n', {'n': d.count}), style: Tx.label(p.text2)),
-                                ]),
-                                const SizedBox(width: Space.l),
+                                Text(d.overall!.toStringAsFixed(1), style: Tx.score(52, p.text, w: FontWeight.w900)),
+                                const SizedBox(width: Space.m),
                                 Expanded(
-                                  child: Column(children: [
-                                    _Bar(label: context.tr('fair_play'), v: d.fair ?? 0),
-                                    _Bar(label: context.tr('behaviour'), v: d.behaviour ?? 0),
-                                    _Bar(label: context.tr('on_time'), v: d.ontime ?? 0),
+                                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                    Stars(value: d.overall!, size: 16),
+                                    const SizedBox(height: 4),
+                                    Text(context.tr('ratings_n', {'n': d.count}), style: Tx.label(p.text2)),
                                   ]),
                                 ),
                               ]),
+                              const SizedBox(height: Space.s),
+                              _Bar(label: context.tr('fair_play'), v: d.fair ?? 0),
+                              _Bar(label: context.tr('behaviour'), v: d.behaviour ?? 0),
+                              _Bar(label: context.tr('on_time'), v: d.ontime ?? 0),
                               if (d.tags.values.any((n) => n > 0)) ...[
                                 const SizedBox(height: Space.m),
                                 Wrap(spacing: 6, runSpacing: 6, children: [
@@ -588,8 +587,9 @@ class _Bar extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(children: [
-        SizedBox(width: 84, child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: Tx.label(p.text2, w: FontWeight.w700))),
+        Expanded(flex: 2, child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: Tx.label(p.text2, w: FontWeight.w700))),
         Expanded(
+          flex: 3,
           child: ClipRRect(
             borderRadius: BorderRadius.circular(9),
             child: LinearProgressIndicator(value: v / 5, minHeight: 6, backgroundColor: p.raised, color: p.gold),
