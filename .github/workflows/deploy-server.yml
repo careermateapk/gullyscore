@@ -7,6 +7,7 @@ on:
     branches: [main]
     paths:
       - "server/**"
+      - "google-client-id.txt"
       - ".github/workflows/deploy-server.yml"
   workflow_dispatch:
 
@@ -85,7 +86,15 @@ jobs:
 
       - name: Deploy
         if: steps.secrets.outputs.ready == 'yes'
-        run: npx --yes wrangler@4 deploy
+        run: |
+          # Google login is switched on once ../google-client-id.txt has the web client ID.
+          cid=$(tr -d '[:space:]' < ../google-client-id.txt 2>/dev/null || true)
+          if [ -n "$cid" ]; then
+            npx --yes wrangler@4 deploy --var "GOOGLE_CLIENT_ID:$cid"
+          else
+            echo "::warning::Google login is off (google-client-id.txt is empty)."
+            npx --yes wrangler@4 deploy
+          fi
 
       - name: Check it is online
         if: steps.secrets.outputs.ready == 'yes'

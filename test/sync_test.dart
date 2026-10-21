@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gullyscore/data/cloud.dart';
+import 'package:gullyscore/data/google_auth.dart';
+import 'package:gullyscore/data/models.dart';
 import 'package:gullyscore/data/repository.dart';
 import 'package:gullyscore/data/sync.dart';
 import 'package:gullyscore/scoring/engine.dart';
@@ -9,7 +11,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 class FakeCloud implements CloudApi {
   final matches = <String, Map<String, dynamic>>{};
   final owner = <String, String>{};
-  final invites = <String, Invite>{};
+  final phones = <String, List<Map<String, String>>>{}; // scorer auth → list
+  final userPhone = <String, String>{}; // user token → phone
+  final status = <String, String>{}; // 'token|auth|player' → pending/ok/no
+  var phoneUploads = 0;
   var clock = 1000;
   var offline = false;
   var registered = 0;
@@ -69,21 +74,90 @@ class FakeCloud implements CloudApi {
     ];
   }
 
-  @override
-  Future<String> createInvite(String auth, {required String playerId, required String name, required String team}) async {
-    _check();
-    final code = 'CODE${invites.length + 1}';
-    invites[code] = Invite(playerId: playerId, name: name, team: team);
-    return code;
+  void _makeClaims() {
+    for (final u in userPhone.entries) {
+      for (final e in phones.entries) {
+        for (final pl in e.value) {
+          if (pl['phone'] == u.value) status.putIfAbsent('${u.key}|${e.key}|${pl['id']}', () => 'pending');
+        }
+      }
+    }
   }
 
   @override
-  Future<Invite> getInvite(String code) async {
+  Future<void> putPlayerPhones(String auth, List<Map<String, String>> players) async {
     _check();
-    final i = invites[code.toUpperCase()];
-    if (i == null) throw CloudError(404, 'none');
-    return i;
+    phoneUploads++;
+    phones[auth] = players;
+    _makeClaims();
   }
+
+  @override
+  Future<List<Claim>> claims(String auth) async {
+    _check();
+    return [
+      for (final e in status.entries)
+        if (e.value == 'pending' && e.key.split('|')[1] == auth)
+          Claim(userId: e.key.split('|')[0], playerId: e.key.split('|')[2], email: 'ravi@gmail.com', name: 'Ravi K'),
+    ];
+  }
+
+  @override
+  Future<void> answerClaim(String auth, Claim c, bool yes) async {
+    _check();
+    status['${c.userId}|$auth|${c.playerId}'] = yes ? 'ok' : 'no';
+  }
+
+  MeInfo _me(String token) {
+    final mine = status.entries.where((e) => e.key.startsWith('$token|')).toList();
+    final okPlayers = mine.where((e) => e.value == 'ok').map((e) => e.key.split('|')[2]).toSet();
+    return MeInfo(
+      email: 'ravi@gmail.com',
+      name: 'Ravi K',
+      hasPhone: userPhone.containsKey(token),
+      profiles: [for (final e in mine) MyProfile(name: 'Ravi', team: '', status: e.value)],
+      matches: [
+        for (final e in matches.entries)
+          if ((e.value['players'] as List).any(okPlayers.contains))
+            MatchListItem(id: e.key, updated: e.value['updated'] as int, finished: e.value['finished'] as bool, title: '', summary: Map<String, dynamic>.from(e.value['summary'] as Map)),
+      ],
+      token: token,
+    );
+  }
+
+  @override
+  Future<MeInfo> login(String idToken) async {
+    _check();
+    if (idToken != 'google-ok') throw CloudError(401, 'bad');
+    return _me('Uravi');
+  }
+
+  @override
+  Future<MeInfo> me(String userToken) async {
+    _check();
+    return _me(userToken);
+  }
+
+  @override
+  Future<MeInfo> setMyPhone(String userToken, String phone, {String? scorerAuth}) async {
+    _check();
+    userPhone[userToken] = phone;
+    _makeClaims();
+    return _me(userToken);
+  }
+
+  @override
+  Future<void> logout(String userToken) async {}
+}
+
+class FakeGoogle implements GoogleAuth {
+  var signedOut = false;
+  @override
+  bool get available => true;
+  @override
+  Future<String> idToken() async => 'google-ok';
+  @override
+  Future<void> signOut() async => signedOut = true;
 }
 
 Future<Repository> repoWithMatch() async {
@@ -173,25 +247,60 @@ void main() {
     await r.saveNow();
   });
 
-  test('invite code links a player phone to their matches', () async {
+  test('player logs in with Google + mobile and sees matches after the scorer says yes', () async {
     final cloud = FakeCloud();
     final r = await repoWithMatch();
-    final sync = SyncService(r, cloud);
-    await sync.start(timers: false);
-    final ravi = r.players.values.firstWhere((p) => p.name == 'Ravi');
-    final inv = await sync.invite(ravi);
-    expect(inv.link, 'https://gs.test/p/${inv.code}');
+    final scorer = SyncService(r, cloud, google: FakeGoogle());
+    await scorer.start(timers: false);
+    await scorer.tick();
+    expect(cloud.phoneUploads, 0, 'nothing to send without numbers');
 
+    final ravi = r.players.values.firstWhere((p) => p.name == 'Ravi');
+    r.updatePlayer(ravi, phone: '+91 98765-43210');
+    expect(ravi.phone, '9876543210');
+    await scorer.tick();
+    expect(cloud.phoneUploads, 1);
+    await scorer.tick();
+    expect(cloud.phoneUploads, 1, 'unchanged numbers are not sent again');
+    expect(cloud.matches.toString().contains('9876543210'), false, 'number is not inside match data');
+
+    // Ravi's own phone.
     SharedPreferences.setMockInitialValues({});
     final phone = Repository(store: MemoryStore());
     await phone.load();
-    final mine = SyncService(phone, cloud);
+    final google = FakeGoogle();
+    final mine = SyncService(phone, cloud, google: google);
     await mine.start(timers: false);
-    await mine.linkProfile(inv.code.toLowerCase());
-    expect(mine.linkedName, 'Ravi');
-    final list = await mine.myMatches();
-    expect(list.length, 1);
+    expect(mine.loggedIn, false);
+    await mine.login();
+    expect(mine.loggedIn, true);
+    expect(mine.me!.hasPhone, false);
+    await expectLater(mine.setMyPhone('12345'), throwsA(isA<CloudError>()));
+    await mine.setMyPhone('09876543210');
+    expect(mine.me!.profiles.single.waiting, true);
+    expect(mine.me!.matches, isEmpty);
+
+    // The scorer is asked once.
+    await scorer.checkClaims();
+    expect(scorer.claims.length, 1);
+    await scorer.answerClaim(scorer.claims.single, true);
+    expect(scorer.claims, isEmpty);
+
+    final info = await mine.refreshMe();
+    expect(info!.matches.length, 1);
+    expect(info.profiles.single.approved, true);
+
+    await mine.logout();
+    expect(mine.loggedIn, false);
+    expect(google.signedOut, true);
     await r.saveNow();
+  });
+
+  test('mobile numbers are cleaned', () {
+    expect(cleanPhone('+91 98765 43210'), '9876543210');
+    expect(cleanPhone('098765-43210'), '9876543210');
+    expect(cleanPhone('12345'), '');
+    expect(cleanPhone(''), '');
   });
 
   test('links and ids are recognised', () {

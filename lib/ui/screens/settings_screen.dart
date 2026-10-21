@@ -180,10 +180,12 @@ class SettingsScreen extends StatelessWidget {
               return group(context.tr('online'), [
                 toggle(Icons.public_rounded, p.win, context.tr('share_online'), context.tr('share_online_sub'), sync.shareOnline, sync.setShareOnline),
                 Padding(padding: const EdgeInsets.fromLTRB(14, 10, 14, 12), child: const SyncStatusLine()),
-                if (sync.linkedPlayerId == null)
-                  link(Icons.badge_outlined, p.goldText, context.tr('this_is_me'), () => linkMyProfile(context))
-                else
-                  link(Icons.badge_rounded, p.goldText, context.tr('linked_as', {'name': sync.linkedName ?? ''}), () => sync.unlinkProfile(), trailing: context.tr('unlink')),
+                if (sync.loggedIn) ...[
+                  link(Icons.account_circle_rounded, p.goldText, sync.me?.email ?? context.tr('logged_in'), () => logoutPlayer(context), trailing: context.tr('logout')),
+                  link(Icons.phone_android_rounded, p.goldText, sync.myPhone.isEmpty ? context.tr('add_my_mobile') : context.tr('my_mobile_n', {'n': sync.myPhone}),
+                      () => askMyPhone(context)),
+                ] else if (sync.loginAvailable)
+                  link(Icons.login_rounded, p.goldText, context.tr('login_google'), () => loginAsPlayer(context)),
                 link(Icons.link_rounded, const Color(0xFF5B9BFF), context.tr('follow_a_match'), () => followMatchByLink(context)),
               ]);
             },
@@ -207,7 +209,7 @@ class SettingsScreen extends StatelessWidget {
         ]),
         Padding(
           padding: const EdgeInsets.all(Space.l),
-          child: Text('GullyScore 0.3', textAlign: TextAlign.center, style: Tx.label(p.text2, w: FontWeight.w600)),
+          child: Text('GullyScore 0.4', textAlign: TextAlign.center, style: Tx.label(p.text2, w: FontWeight.w600)),
         ),
       ]),
     );

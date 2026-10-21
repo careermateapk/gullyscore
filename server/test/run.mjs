@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import worker from '../src/index.js';
 
 const db = new DatabaseSync(':memory:');
-db.exec(readFileSync(new URL('../migrations/0001_init.sql', import.meta.url), 'utf8'));
+for (const f of ['0001_init.sql', '0002_login.sql']) db.exec(readFileSync(new URL('../migrations/' + f, import.meta.url), 'utf8'));
 
 // Minimal D1 look-alike.
 function stmt(sql) {
@@ -23,6 +23,12 @@ function stmt(sql) {
   return s;
 }
 const env = {
+  // Pretend Google: "good:<sub>:<email>" is a real sign-in, anything else is not.
+  VERIFY_GOOGLE: async (t) => {
+    const m = /^good:(\w+):(\S+)$/.exec(t);
+    if (!m) throw Object.assign(new Error('bad'), { status: 401 });
+    return { sub: m[1], email: m[2], name: m[1] };
+  },
   DB: {
     prepare: stmt,
     batch: async (list) => {
@@ -76,22 +82,82 @@ const pm = await call('GET', '/v1/players/p1/matches');
 assert.equal(pm.body.matches.length, 1);
 assert.equal((await call('GET', '/v1/players/bad id!/matches')).body.matches?.length ?? 0, 0);
 
-const inv = await call('POST', '/v1/invites', { playerId: 'p1', name: 'Ravi', team: 'A' }, tok);
-assert.equal(inv.status, 200);
-assert.match(inv.body.code, /^[A-Z2-9]{8}$/);
-const inv2 = await call('POST', '/v1/invites', { playerId: 'p1', name: 'Ravi' }, tok);
-assert.equal(inv2.body.code, inv.body.code, 'same code for same player');
-const look = await call('GET', '/v1/invites/' + inv.body.code.toLowerCase());
-assert.equal(look.body.playerId, 'p1');
-assert.equal((await call('GET', '/v1/invites/ZZZZZZZZ')).status, 404);
-
 const page = await call('GET', '/m/m_123');
 assert.ok(String(page.body).includes('Live score'));
-const ipage = await call('GET', '/p/' + inv.body.code);
-assert.ok(String(ipage.body).includes('Ravi'));
-const xss = await call('POST', '/v1/invites', { playerId: 'p9', name: '<script>alert(1)</script>' }, tok);
-const xpage = await call('GET', '/p/' + xss.body.code);
-assert.ok(!String(xpage.body).includes('<script>alert'), 'names are escaped');
+
+// ---- Player login ----
+// Scorer 1 typed Ravi's number for p1; scorer 2 typed it for their own player q7.
+assert.equal((await call('POST', '/v1/players/phones', { players: [{ id: 'p1', name: 'Ravi', team: 'A', phone: '+91 98765-43210' }, { id: 'p2', phone: '12' }] }, tok)).status, 200);
+assert.equal((await call('POST', '/v1/players/phones', { players: [] })).status, 401, 'scorer must sign in');
+const stored = db.prepare('SELECT phone_hash FROM player_phones').all();
+assert.equal(stored.length, 1, 'short numbers are ignored');
+assert.ok(!JSON.stringify(stored).includes('9876543210'), 'numbers are not stored as numbers');
+
+assert.equal((await call('POST', '/v1/login', { idToken: 'fake' })).status, 401, 'bad google token');
+const login = await call('POST', '/v1/login', { idToken: 'good:111:ravi@gmail.com' });
+assert.equal(login.status, 200);
+const ut = login.body.token;
+assert.match(ut, /^U[A-Za-z0-9]+$/);
+assert.equal(login.body.hasPhone, false);
+assert.equal((await call('GET', '/v1/me')).status, 401);
+assert.equal((await call('PUT', '/v1/me/phone', { phone: '123' }, ut)).status, 400);
+
+let me = await call('PUT', '/v1/me/phone', { phone: '9876543210' }, ut);
+assert.equal(me.status, 200);
+assert.equal(me.body.hasPhone, true);
+assert.deepEqual(me.body.profiles.map((x) => [x.name, x.status]), [['Ravi', 'pending']]);
+assert.equal(me.body.matches.length, 0, 'nothing shown before the scorer says yes');
+
+// Scorer 2 adds the same number later: a question appears for them too.
+await call('POST', '/v1/players/phones', { players: [{ id: 'q7', name: 'Ravi K', phone: '09876543210' }] }, tok2);
+assert.equal((await call('GET', '/v1/claims', undefined, tok2)).body.claims.length, 1);
+
+const claims = await call('GET', '/v1/claims', undefined, tok);
+assert.equal(claims.body.claims.length, 1);
+assert.equal(claims.body.claims[0].email, 'ravi@gmail.com');
+assert.equal(claims.body.claims[0].playerId, 'p1');
+// Another scorer cannot answer for this one.
+await call('POST', '/v1/claims', { userId: claims.body.claims[0].userId, playerId: 'p1', ok: true }, tok2);
+assert.equal((await call('GET', '/v1/me', undefined, ut)).body.matches.length, 0);
+await call('POST', '/v1/claims', { userId: claims.body.claims[0].userId, playerId: 'p1', ok: true }, tok);
+me = await call('GET', '/v1/me', undefined, ut);
+assert.equal(me.body.matches.length, 1);
+assert.equal(me.body.matches[0].id, 'm_123');
+assert.equal((await call('GET', '/v1/claims', undefined, tok)).body.claims.length, 0);
+
+// Re-sending the same list keeps the "yes".
+await call('POST', '/v1/players/phones', { players: [{ id: 'p1', name: 'Ravi', phone: '9876543210' }] }, tok);
+assert.equal((await call('GET', '/v1/me', undefined, ut)).body.matches.length, 1);
+// Same number typed again by the player keeps it too.
+await call('PUT', '/v1/me/phone', { phone: '98765 43210' }, ut);
+assert.equal((await call('GET', '/v1/me', undefined, ut)).body.matches.length, 1);
+
+// Someone else logs in with Ravi's number: they only get a question, which the scorer can refuse.
+const sneaky = (await call('POST', '/v1/login', { idToken: 'good:222:other@gmail.com' })).body.token;
+await call('PUT', '/v1/me/phone', { phone: '9876543210' }, sneaky);
+const q = (await call('GET', '/v1/claims', undefined, tok)).body.claims;
+assert.equal(q.length, 1);
+assert.equal(q[0].email, 'other@gmail.com');
+await call('POST', '/v1/claims', { userId: q[0].userId, playerId: 'p1', ok: false }, tok);
+assert.equal((await call('GET', '/v1/me', undefined, sneaky)).body.matches.length, 0);
+
+// Scorer changes the player's number: the old link goes away.
+await call('POST', '/v1/players/phones', { players: [{ id: 'p1', name: 'Ravi', phone: '9000000000' }] }, tok);
+assert.equal((await call('GET', '/v1/me', undefined, ut)).body.matches.length, 0);
+assert.equal((await call('GET', '/v1/me', undefined, ut)).body.profiles.length, 1, 'scorer 2 question is still there');
+
+// On the scorer's own phone, their own players need no question.
+await call('POST', '/v1/players/phones', { players: [{ id: 'p1', name: 'Ravi', phone: '9876543210' }] }, tok);
+const own = (await call('POST', '/v1/login', { idToken: 'good:333:scorer@gmail.com' })).body.token;
+me = await call('PUT', '/v1/me/phone', { phone: '9876543210', scorer: tok }, own);
+assert.equal(me.body.matches.length, 1, 'own player auto-approved');
+await call('PUT', '/v1/me/phone', { phone: '9876543210', scorer: reg.body.scorerId + '.wrong' }, sneaky);
+
+// Logging out ends that phone's session only.
+assert.equal((await call('DELETE', '/v1/me', undefined, own)).status, 200);
+assert.equal((await call('GET', '/v1/me', undefined, own)).status, 401);
+assert.equal((await call('GET', '/v1/me', undefined, ut)).status, 200);
+assert.equal((await call('GET', '/v1/health')).body.login, false);
 
 assert.equal((await call('DELETE', '/v1/matches/m_123', undefined, tok2)).status, 403);
 assert.equal((await call('DELETE', '/v1/matches/m_123', undefined, tok)).status, 200);

@@ -114,8 +114,9 @@ class Repository extends ChangeNotifier {
     return p;
   }
 
-  void updatePlayer(Player p, {String? name, bool? leftHanded, String? role}) {
+  void updatePlayer(Player p, {String? name, bool? leftHanded, String? role, String? phone}) {
     if (name != null && name.trim().isNotEmpty) p.name = name.trim();
+    if (phone != null) p.phone = cleanPhone(phone);
     if (leftHanded != null) p.leftHanded = leftHanded;
     if (role != null) p.role = role;
     _changed();

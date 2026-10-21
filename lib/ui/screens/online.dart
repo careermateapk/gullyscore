@@ -1,18 +1,21 @@
-// Online pieces: follow a match by link, invite a player, "This is me",
-// and the "My matches" list for a linked player.
+// Online pieces: follow a match by link, player login (Google + mobile
+// number), the "My matches" list, and the scorer's yes/no questions.
 import 'package:flutter/material.dart';
-import 'package:share_plus/share_plus.dart';
+import 'package:flutter/services.dart';
 
 import '../../app/scope.dart';
 import '../../app/theme.dart';
 import '../../data/cloud.dart';
+import '../../data/google_auth.dart';
 import '../../data/models.dart';
 import '../../data/sync.dart';
+import '../widgets/avatar.dart';
 import '../widgets/common.dart';
 import 'match_centre_screen.dart';
 
-Future<String?> _askText(BuildContext context, {required String title, required String hint, String? body, bool caps = false}) {
-  final ctrl = TextEditingController();
+Future<String?> _askText(BuildContext context,
+    {required String title, required String hint, String? body, bool caps = false, bool phone = false, String initial = '', String? okLabel}) {
+  final ctrl = TextEditingController(text: initial);
   return showDialog<String>(
     context: context,
     builder: (ctx) => AlertDialog(
@@ -23,13 +26,15 @@ Future<String?> _askText(BuildContext context, {required String title, required 
           controller: ctrl,
           autofocus: true,
           textCapitalization: caps ? TextCapitalization.characters : TextCapitalization.none,
-          decoration: InputDecoration(hintText: hint),
+          keyboardType: phone ? TextInputType.phone : null,
+          inputFormatters: phone ? [FilteringTextInputFormatter.allow(RegExp(r'[0-9+ \-]'))] : null,
+          decoration: InputDecoration(hintText: hint, prefixIcon: phone ? const Icon(Icons.phone_android_rounded) : null),
           onSubmitted: (v) => Navigator.pop(ctx, v),
         ),
       ]),
       actions: [
         TextButton(onPressed: () => Navigator.pop(ctx), child: Text(ctx.tr('cancel'))),
-        TextButton(onPressed: () => Navigator.pop(ctx, ctrl.text), child: Text(ctx.tr('ok'))),
+        TextButton(onPressed: () => Navigator.pop(ctx, ctrl.text), child: Text(okLabel ?? ctx.tr('ok'))),
       ],
     ),
   ).whenComplete(ctrl.dispose);
@@ -38,6 +43,9 @@ Future<String?> _askText(BuildContext context, {required String title, required 
 String _cloudMessage(BuildContext context, Object e) {
   if (e is CloudError && e.offline) return context.tr('needs_internet');
   if (e is CloudError && e.status == 404) return context.tr('not_found_online');
+  if (e is CloudError && e.status == 503) return context.tr('login_not_ready');
+  if (e is CloudError && e.status == 400) return context.tr('phone_invalid');
+  if (e is GoogleLoginError) return context.tr('login_failed');
   return context.tr('online_failed');
 }
 
@@ -60,35 +68,90 @@ Future<void> openFollowed(BuildContext context, String linkOrId) async {
   }
 }
 
-/// Makes an invite code for a player and opens the share sheet.
-Future<void> invitePlayer(BuildContext context, Player p) async {
+void _snack(ScaffoldMessengerState m, String text) => m.showSnackBar(SnackBar(content: Text(text)));
+
+/// Scorer types (or removes) a player's mobile number.
+Future<void> editPlayerPhone(BuildContext context, Player pl) async {
+  final text = await _askText(
+    context,
+    title: context.tr('player_mobile_title', {'name': pl.name}),
+    hint: '98765 43210',
+    body: context.tr('player_mobile_body'),
+    phone: true,
+    initial: pl.phone,
+    okLabel: context.tr('save'),
+  );
+  if (text == null || !context.mounted) return;
+  final clean = cleanPhone(text);
+  if (text.trim().isNotEmpty && clean.isEmpty) {
+    _snack(ScaffoldMessenger.of(context), context.tr('phone_invalid'));
+    return;
+  }
+  context.repo.updatePlayer(pl, phone: clean);
+}
+
+/// "Login with Google", then the player's own mobile number.
+Future<void> loginAsPlayer(BuildContext context) async {
   final sync = context.sync;
   final messenger = ScaffoldMessenger.of(context);
+  if (!sync.loginAvailable) {
+    _snack(messenger, context.tr('login_not_ready'));
+    return;
+  }
   try {
-    final r = await sync.invite(p);
-    if (!context.mounted) return;
-    final text = context.tr('invite_text', {'name': p.name, 'link': r.link, 'code': r.code});
-    await SharePlus.instance.share(ShareParams(text: text));
+    await sync.login();
+  } on GoogleLoginError catch (e) {
+    if (!e.cancelled && context.mounted) _snack(messenger, _cloudMessage(context, e));
+    return;
   } catch (e) {
-    if (context.mounted) messenger.showSnackBar(SnackBar(content: Text(_cloudMessage(context, e))));
+    if (context.mounted) _snack(messenger, _cloudMessage(context, e));
+    return;
+  }
+  if (!context.mounted) return;
+  _snack(messenger, context.tr('logged_in_as', {'email': sync.me?.email ?? ''}));
+  if (sync.me?.hasPhone != true) await askMyPhone(context);
+}
+
+Future<void> askMyPhone(BuildContext context) async {
+  final sync = context.sync;
+  final text = await _askText(
+    context,
+    title: context.tr('my_mobile_title'),
+    hint: '98765 43210',
+    body: context.tr('my_mobile_body'),
+    phone: true,
+    initial: sync.myPhone,
+    okLabel: context.tr('save'),
+  );
+  if (text == null || text.trim().isEmpty || !context.mounted) return;
+  final messenger = ScaffoldMessenger.of(context);
+  if (cleanPhone(text).isEmpty) {
+    _snack(messenger, context.tr('phone_invalid'));
+    return;
+  }
+  try {
+    await sync.setMyPhone(text);
+  } catch (e) {
+    if (context.mounted) _snack(messenger, _cloudMessage(context, e));
   }
 }
 
-/// "This is me": link this phone to a player profile.
-Future<void> linkMyProfile(BuildContext context) async {
-  final code = await _askText(context, title: context.tr('this_is_me'), hint: 'ABCD2345', body: context.tr('this_is_me_body'), caps: true);
-  if (code == null || code.trim().isEmpty || !context.mounted) return;
-  final sync = context.sync;
-  final messenger = ScaffoldMessenger.of(context);
-  try {
-    final inv = await sync.linkProfile(code);
-    if (context.mounted) messenger.showSnackBar(SnackBar(content: Text(context.tr('linked_as', {'name': inv.name}))));
-  } catch (e) {
-    if (context.mounted) messenger.showSnackBar(SnackBar(content: Text(_cloudMessage(context, e))));
-  }
+Future<void> logoutPlayer(BuildContext context) async {
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: Text(ctx.tr('logout_q')),
+      content: Text(ctx.tr('logout_body')),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(ctx.tr('cancel'))),
+        TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text(ctx.tr('logout'))),
+      ],
+    ),
+  );
+  if (ok == true && context.mounted) await context.sync.logout();
 }
 
-/// List of the linked player's matches (on Home).
+/// "Are you a player?" card, or the logged-in player's matches (on Home).
 class MyMatchesSection extends StatefulWidget {
   const MyMatchesSection({super.key});
 
@@ -97,8 +160,43 @@ class MyMatchesSection extends StatefulWidget {
 }
 
 class _MyMatchesSectionState extends State<MyMatchesSection> {
-  Future<List<MatchListItem>>? _future;
-  String? _for;
+  Future<MeInfo?>? _future;
+  bool _busy = false;
+
+  void _reload() => setState(() => _future = context.sync.refreshMe());
+
+  Future<void> _run(Future<void> Function() f) async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      await f();
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Widget _pad(Widget child) => Padding(padding: const EdgeInsets.fromLTRB(Space.edge, 0, Space.edge, Space.s), child: child);
+
+  Widget _promptCard(BuildContext context, {required IconData icon, required String title, required String body, required String button, required VoidCallback onTap}) {
+    final p = Palette.of(context);
+    return _pad(AppCard(
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Icon(icon, color: p.goldText),
+          const SizedBox(width: Space.m),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(title, style: Tx.body(p.text, w: FontWeight.w800)),
+              const SizedBox(height: 2),
+              Text(body, style: Tx.small(p.text2)),
+            ]),
+          ),
+        ]),
+        const SizedBox(height: Space.m),
+        OutlineBtn(label: button, icon: icon, height: 44, onPressed: _busy ? null : onTap),
+      ]),
+    ));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -107,65 +205,177 @@ class _MyMatchesSectionState extends State<MyMatchesSection> {
     return ListenableBuilder(
       listenable: sync,
       builder: (context, _) {
-        final me = sync.linkedPlayerId;
-        if (!sync.enabled || me == null) return const SizedBox.shrink();
-        if (_for != me) {
-          _for = me;
-          _future = sync.myMatches();
+        if (!sync.enabled) return const SizedBox.shrink();
+        if (!sync.loggedIn) {
+          if (!sync.loginAvailable) return const SizedBox.shrink();
+          return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            SectionHeader(context.tr('my_matches')),
+            _promptCard(context,
+                icon: Icons.login_rounded,
+                title: context.tr('are_you_player'),
+                body: context.tr('are_you_player_body'),
+                button: context.tr('login_google'),
+                onTap: () => _run(() => loginAsPlayer(context))),
+          ]);
         }
+        final me = sync.me;
+        if (me == null || !me.hasPhone) {
+          return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            SectionHeader(context.tr('my_matches')),
+            _promptCard(context,
+                icon: Icons.phone_android_rounded,
+                title: context.tr('add_my_mobile'),
+                body: context.tr('add_my_mobile_body'),
+                button: context.tr('add_my_mobile'),
+                onTap: () => _run(() => askMyPhone(context))),
+          ]);
+        }
+        _future ??= sync.refreshMe();
         return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          SectionHeader(context.tr('my_matches_name', {'name': sync.linkedName ?? ''}), action: context.tr('refresh'), onAction: () => setState(() => _future = sync.myMatches())),
-          FutureBuilder<List<MatchListItem>>(
+          SectionHeader(context.tr('my_matches'), action: context.tr('refresh'), onAction: _reload),
+          FutureBuilder<MeInfo?>(
             future: _future,
             builder: (context, snap) {
-              if (snap.connectionState != ConnectionState.done) {
-                return const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: Space.edge),
-                  child: Shimmer(child: SkeletonBox(height: 72, radius: Corners.card)),
-                );
+              final info = sync.me ?? me;
+              if (snap.connectionState != ConnectionState.done && info.profiles.isEmpty && info.matches.isEmpty) {
+                return _pad(const Shimmer(child: SkeletonBox(height: 72, radius: Corners.card)));
               }
-              if (snap.hasError) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: Space.edge),
-                  child: AppCard(
-                    onTap: () => setState(() => _future = sync.myMatches()),
-                    child: Row(children: [
-                      Icon(Icons.cloud_off_rounded, color: p.text2),
-                      const SizedBox(width: Space.m),
-                      Expanded(child: Text(_cloudMessage(context, snap.error!), style: Tx.small(p.text2))),
-                      Text(context.tr('try_again'), style: Tx.small(p.goldText, w: FontWeight.w800)),
-                    ]),
-                  ),
-                );
+              final children = <Widget>[];
+              if (snap.hasError && info.matches.isEmpty) {
+                children.add(_pad(AppCard(
+                  onTap: _reload,
+                  child: Row(children: [
+                    Icon(Icons.cloud_off_rounded, color: p.text2),
+                    const SizedBox(width: Space.m),
+                    Expanded(child: Text(_cloudMessage(context, snap.error!), style: Tx.small(p.text2))),
+                    Text(context.tr('try_again'), style: Tx.small(p.goldText, w: FontWeight.w800)),
+                  ]),
+                )));
               }
-              final list = snap.data ?? const [];
-              if (list.isEmpty) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: Space.edge),
-                  child: AppCard(child: Text(context.tr('no_my_matches'), style: Tx.small(p.text2))),
-                );
+              final waiting = info.profiles.where((x) => x.waiting).toList();
+              if (info.profiles.isEmpty && !snap.hasError) {
+                children.add(_pad(AppCard(child: Text(context.tr('no_profile_for_number'), style: Tx.small(p.text2)))));
               }
-              return Column(children: [
-                for (final m in list.take(5))
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(Space.edge, 0, Space.edge, Space.s),
-                    child: AppCard(
-                      onTap: () => openFollowed(context, m.id),
-                      child: Row(children: [
-                        if (!m.finished) ...[LiveBadge(label: context.tr('live')), const SizedBox(width: Space.m)],
-                        Expanded(
-                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            Text('${m.summary['title'] ?? ''}', maxLines: 1, overflow: TextOverflow.ellipsis, style: Tx.body(p.text, w: FontWeight.w800)),
-                            Text('${m.summary['status'] ?? ''}', maxLines: 2, overflow: TextOverflow.ellipsis, style: Tx.small(m.finished ? p.win : p.goldText, w: FontWeight.w700)),
-                          ]),
-                        ),
-                        Icon(Icons.chevron_right_rounded, color: p.text2),
+              for (final w in waiting) {
+                children.add(_pad(AppCard(
+                  child: Row(children: [
+                    Icon(Icons.hourglass_top_rounded, color: p.goldText, size: 20),
+                    const SizedBox(width: Space.m),
+                    Expanded(
+                      child: Text(context.tr('waiting_for_scorer', {'name': w.team.isEmpty ? w.name : '${w.name} · ${w.team}'}),
+                          style: Tx.small(p.text2, w: FontWeight.w600)),
+                    ),
+                  ]),
+                )));
+              }
+              if (info.profiles.any((x) => x.approved) && info.matches.isEmpty) {
+                children.add(_pad(AppCard(child: Text(context.tr('no_my_matches'), style: Tx.small(p.text2)))));
+              }
+              for (final m in info.matches.take(5)) {
+                children.add(_pad(AppCard(
+                  onTap: () => openFollowed(context, m.id),
+                  child: Row(children: [
+                    if (!m.finished) ...[LiveBadge(label: context.tr('live')), const SizedBox(width: Space.m)],
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text('${m.summary['title'] ?? ''}', maxLines: 1, overflow: TextOverflow.ellipsis, style: Tx.body(p.text, w: FontWeight.w800)),
+                        Text('${m.summary['status'] ?? ''}',
+                            maxLines: 2, overflow: TextOverflow.ellipsis, style: Tx.small(m.finished ? p.win : p.goldText, w: FontWeight.w700)),
                       ]),
                     ),
-                  ),
-              ]);
+                    Icon(Icons.chevron_right_rounded, color: p.text2),
+                  ]),
+                )));
+              }
+              return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children);
             },
           ),
+        ]);
+      },
+    );
+  }
+}
+
+/// Scorer's questions: "Ravi (ravi@gmail.com) says he is your player Ravi. Yes / No".
+class ClaimsCard extends StatefulWidget {
+  const ClaimsCard({super.key});
+
+  @override
+  State<ClaimsCard> createState() => _ClaimsCardState();
+}
+
+class _ClaimsCardState extends State<ClaimsCard> {
+  final Set<String> _busy = {};
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.sync.checkClaims();
+    });
+  }
+
+  Future<void> _answer(Claim c, bool yes) async {
+    final key = '${c.userId}/${c.playerId}';
+    final messenger = ScaffoldMessenger.of(context);
+    final msg = context.tr('online_failed');
+    setState(() => _busy.add(key));
+    try {
+      await context.sync.answerClaim(c, yes);
+    } catch (_) {
+      _snack(messenger, msg);
+    } finally {
+      if (mounted) setState(() => _busy.remove(key));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = Palette.of(context);
+    final sync = context.sync;
+    return ListenableBuilder(
+      listenable: sync,
+      builder: (context, _) {
+        if (!sync.enabled || sync.claims.isEmpty) return const SizedBox.shrink();
+        final repo = context.repo;
+        return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          SectionHeader(context.tr('login_requests')),
+          for (final c in sync.claims)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(Space.edge, 0, Space.edge, Space.s),
+              child: AppCard(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                  Row(children: [
+                    PlayerAvatar(playerId: c.playerId, size: 36, color: p.gold),
+                    const SizedBox(width: Space.m),
+                    Expanded(
+                      child: Text(
+                        context.tr('claim_question', {'who': c.name.isEmpty ? c.email : '${c.name} (${c.email})', 'player': repo.playerName(c.playerId)}),
+                        style: Tx.small(p.text, w: FontWeight.w600),
+                      ),
+                    ),
+                  ]),
+                  const SizedBox(height: Space.m),
+                  Row(children: [
+                    Expanded(
+                      child: OutlineBtn(
+                        label: context.tr('claim_no'),
+                        height: 44,
+                        onPressed: _busy.contains('${c.userId}/${c.playerId}') ? null : () => _answer(c, false),
+                      ),
+                    ),
+                    const SizedBox(width: Space.s),
+                    Expanded(
+                      child: GoldButton(
+                        label: context.tr('claim_yes'),
+                        height: 44,
+                        onPressed: _busy.contains('${c.userId}/${c.playerId}') ? null : () => _answer(c, true),
+                      ),
+                    ),
+                  ]),
+                ]),
+              ),
+            ),
         ]);
       },
     );

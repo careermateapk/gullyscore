@@ -94,6 +94,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                     ),
                   ),
+                const ClaimsCard(),
                 const MyMatchesSection(),
                 if (all.isEmpty)
                   const _FirstRun()

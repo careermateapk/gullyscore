@@ -124,13 +124,22 @@ class _PlayerScreenState extends State<PlayerScreen> {
                   ),
                 ]),
               ),
-              if (context.sync.enabled && !pl.remote) ...[
+              if (!pl.remote) ...[
                 const SizedBox(height: Space.m),
-                OutlineBtn(
-                  label: context.tr('invite_player', {'name': pl.name}),
-                  icon: Icons.send_to_mobile_rounded,
-                  height: 48,
-                  onPressed: () => invitePlayer(context, pl),
+                AppCard(
+                  onTap: () => editPlayerPhone(context, pl),
+                  child: Row(children: [
+                    Icon(Icons.phone_android_rounded, color: p.goldText),
+                    const SizedBox(width: Space.m),
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text(pl.phone.isEmpty ? context.tr('add_player_mobile') : '+91 ${pl.phone.substring(0, 5)} ${pl.phone.substring(5)}',
+                            style: Tx.body(p.text, w: FontWeight.w800)),
+                        Text(context.tr('player_mobile_hint'), style: Tx.small(p.text2)),
+                      ]),
+                    ),
+                    Icon(pl.phone.isEmpty ? Icons.add_rounded : Icons.edit_outlined, color: p.text2),
+                  ]),
                 ),
               ],
               const SizedBox(height: Space.m),

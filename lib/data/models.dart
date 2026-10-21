@@ -7,17 +7,19 @@ String newId() {
 }
 
 class Player {
-  Player({required this.id, required this.name, this.leftHanded = false, this.role = '', this.photo, this.remote = false});
+  Player({required this.id, required this.name, this.leftHanded = false, this.role = '', this.photo, this.remote = false, this.phone = ''});
   final String id;
   String name;
   bool leftHanded;
   String role; // free text, e.g. "Batter", "Off spin"
   String? photo; // file name inside the app's photo folder on this phone
   bool remote; // came from someone else's match that this phone follows
+  String phone; // mobile number typed by the scorer, so the player can log in and see their matches
 
-  Map<String, dynamic> toJson() => {'id': id, 'name': name, 'lh': leftHanded, 'role': role, if (photo != null) 'photo': photo, if (remote) 'remote': true};
+  Map<String, dynamic> toJson() =>
+      {'id': id, 'name': name, 'lh': leftHanded, 'role': role, if (photo != null) 'photo': photo, if (remote) 'remote': true, if (phone.isNotEmpty) 'phone': phone};
 
-  /// What goes online: never the photo.
+  /// What goes inside online match data: never the photo or the mobile number.
   Map<String, dynamic> toCloud() => {'id': id, 'name': name, 'lh': leftHanded, 'role': role};
 
   factory Player.fromJson(Map<String, dynamic> j) => Player(
@@ -27,7 +29,15 @@ class Player {
         role: (j['role'] as String?) ?? '',
         photo: j['photo'] as String?,
         remote: (j['remote'] as bool?) ?? false,
+        phone: (j['phone'] as String?) ?? '',
       );
+}
+
+/// Keeps only digits and the last 10 of them ("+91 98765-43210" → "9876543210").
+/// Empty when it is not a mobile number.
+String cleanPhone(String raw) {
+  final d = raw.replaceAll(RegExp(r'\D'), '');
+  return d.length >= 10 && d.length <= 15 ? d.substring(d.length - 10) : '';
 }
 
 class Team {

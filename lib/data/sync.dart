@@ -1,5 +1,6 @@
 // Keeps this phone's matches online (for live links and players' phones),
-// follows other people's matches, and links this phone to a player profile.
+// follows other people's matches, and logs a player in (Google + their
+// mobile number) so they see every match they played in.
 // Scoring never waits for the internet: uploads happen in the background and
 // are retried until they succeed.
 import 'dart:async';
@@ -9,16 +10,18 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../scoring/format.dart';
 import 'cloud.dart';
+import 'google_auth.dart';
 import 'models.dart';
 import 'repository.dart';
 
 enum SyncState { off, idle, working, offline, error }
 
 class SyncService extends ChangeNotifier {
-  SyncService(this.repo, this.cloud);
+  SyncService(this.repo, this.cloud, {GoogleAuth? google}) : google = google ?? PluginGoogleAuth();
 
   final Repository repo;
   final CloudApi cloud;
+  final GoogleAuth google;
 
   String? _scorerId;
   String? _token;
@@ -26,9 +29,16 @@ class SyncService extends ChangeNotifier {
   final Map<String, int> _uploaded = {}; // match id → local updatedAt (ms) that is online
   final Set<String> following = {};
   final Map<String, int> _since = {}; // match id → server "updated" last seen
-  String? linkedPlayerId;
-  String? linkedName;
-  String? linkedTeam;
+
+  // Player login (this phone's owner as a player).
+  String? _userToken;
+  MeInfo? me;
+  String myPhone = '';
+
+  // Scorer side: mobile numbers sent, and "is this your player?" questions.
+  String _phonesSig = '';
+  List<Claim> claims = const [];
+  DateTime? _claimsAt;
 
   SyncState state = SyncState.off;
   DateTime? lastOk;
@@ -51,9 +61,13 @@ class SyncService extends ChangeNotifier {
         final i = e.lastIndexOf('=');
         if (i > 0) _uploaded[e.substring(0, i)] = int.tryParse(e.substring(i + 1)) ?? 0;
       }
-      linkedPlayerId = p.getString('cloud.me');
-      linkedName = p.getString('cloud.meName');
-      linkedTeam = p.getString('cloud.meTeam');
+      _userToken = p.getString('cloud.user');
+      myPhone = p.getString('cloud.myPhone') ?? '';
+      _phonesSig = p.getString('cloud.phonesSig') ?? '';
+      final email = p.getString('cloud.userEmail');
+      if (_userToken != null && email != null) {
+        me = MeInfo(email: email, name: p.getString('cloud.userName') ?? '', hasPhone: myPhone.isNotEmpty, profiles: const [], matches: const []);
+      }
     } catch (_) {}
     state = enabled ? SyncState.idle : SyncState.off;
     notifyListeners();
@@ -132,6 +146,7 @@ class SyncService extends ChangeNotifier {
             changed = true;
           }
         }
+        await _sendPhones();
         // Matches deleted on this phone come down online too.
         final gone = repo.loaded ? _uploaded.keys.where((id) => !repo.matches.containsKey(id)).toList() : const <String>[];
         if (gone.isNotEmpty) {
@@ -144,6 +159,7 @@ class SyncService extends ChangeNotifier {
         }
       }
       await _refreshFollowing();
+      await _refreshClaims();
       state = SyncState.idle;
       lastOk = DateTime.now();
     } on CloudError catch (e) {
@@ -224,49 +240,127 @@ class SyncService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Invite code (and web link) for one of this phone's players.
-  Future<({String code, String link})> invite(Player p) async {
-    final auth = await _ensureIdentity();
-    // Their matches need to be online for them to see.
-    for (final m in repo.matches.values) {
-      if (!m.remote && (m.playersA.contains(p.id) || m.playersB.contains(p.id)) && !isOnline(m.id)) {
-        await cloud.putMatch(auth, m.id, _body(m));
-        _uploaded[m.id] = m.updatedAt.millisecondsSinceEpoch;
-      }
+  // ---------- Scorer: players' mobile numbers ----------
+
+  List<Map<String, String>> _phoneList() {
+    final list = <Map<String, String>>[];
+    for (final p in repo.players.values) {
+      if (p.remote || p.phone.isEmpty) continue;
+      final team = repo.teams.values.where((t) => t.playerIds.contains(p.id)).map((t) => t.name).firstOrNull ?? '';
+      list.add({'id': p.id, 'name': p.name, 'team': team, 'phone': p.phone});
     }
-    _savePrefs();
-    final team = repo.teams.values.where((t) => t.playerIds.contains(p.id)).map((t) => t.name).firstOrNull ?? '';
-    final code = await cloud.createInvite(auth, playerId: p.id, name: p.name, team: team);
-    return (code: code, link: '${cloud.baseUrl}/p/$code');
+    list.sort((a, b) => a['id']!.compareTo(b['id']!));
+    return list;
   }
 
-  /// "This is me": links this phone to a player profile with an invite code.
-  Future<Invite> linkProfile(String code) async {
-    final inv = await cloud.getInvite(code);
-    linkedPlayerId = inv.playerId;
-    linkedName = inv.name;
-    linkedTeam = inv.team;
-    await _prefs?.setString('cloud.me', inv.playerId);
-    await _prefs?.setString('cloud.meName', inv.name);
-    await _prefs?.setString('cloud.meTeam', inv.team);
+  Future<void> _sendPhones() async {
+    if (!repo.loaded) return;
+    final list = _phoneList();
+    final sig = list.map((e) => '${e['id']}|${e['phone']}|${e['name']}|${e['team']}').join(';');
+    if (sig == _phonesSig) return;
+    final auth = await _ensureIdentity();
+    await cloud.putPlayerPhones(auth, list);
+    _phonesSig = sig;
+    _claimsAt = null; // ask for new questions right away
+    await _prefs?.setString('cloud.phonesSig', sig);
+  }
+
+  Future<void> _refreshClaims({bool force = false}) async {
+    final auth = _auth;
+    if (auth == null || _phonesSig.isEmpty) {
+      if (claims.isNotEmpty) claims = const [];
+      return;
+    }
+    final at = _claimsAt;
+    if (!force && at != null && DateTime.now().difference(at) < const Duration(seconds: 30)) return;
+    _claimsAt = DateTime.now();
+    claims = await cloud.claims(auth);
+  }
+
+  /// Asks the server for new questions now (Home calls this when it opens).
+  Future<void> checkClaims() async {
+    if (!enabled) return;
+    try {
+      await _refreshClaims(force: true);
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  /// The scorer says yes (it is my player) or no to a login request.
+  Future<void> answerClaim(Claim c, bool yes) async {
+    final auth = await _ensureIdentity();
+    await cloud.answerClaim(auth, c, yes);
+    claims = [for (final x in claims) if (x.userId != c.userId || x.playerId != c.playerId) x];
     notifyListeners();
-    return inv;
   }
 
-  Future<void> unlinkProfile() async {
-    linkedPlayerId = null;
-    linkedName = null;
-    linkedTeam = null;
-    await _prefs?.remove('cloud.me');
-    await _prefs?.remove('cloud.meName');
-    await _prefs?.remove('cloud.meTeam');
+  // ---------- Player login ----------
+
+  bool get loginAvailable => enabled && google.available;
+  bool get loggedIn => _userToken != null;
+
+  Future<void> _saveMe(MeInfo info) async {
+    me = info;
+    await _prefs?.setString('cloud.userEmail', info.email);
+    await _prefs?.setString('cloud.userName', info.name);
     notifyListeners();
   }
 
-  /// Matches of the linked player, newest first.
-  Future<List<MatchListItem>> myMatches() async {
-    final id = linkedPlayerId;
-    if (id == null) return const [];
-    return cloud.playerMatches(id);
+  /// Google account picker, then our server. Throws [GoogleLoginError] or [CloudError].
+  Future<void> login() async {
+    final idToken = await google.idToken();
+    final info = await cloud.login(idToken);
+    _userToken = info.token;
+    await _prefs?.setString('cloud.user', info.token ?? '');
+    await _saveMe(info);
+    // Same person reinstalled the app: send their number again.
+    if (myPhone.isNotEmpty && !info.hasPhone) await setMyPhone(myPhone);
+  }
+
+  /// The player's own mobile number: links every profile scorers made with it.
+  Future<void> setMyPhone(String phone) async {
+    final t = _userToken;
+    if (t == null) throw CloudError(401, 'not logged in');
+    final clean = cleanPhone(phone);
+    if (clean.isEmpty) throw CloudError(400, 'bad phone');
+    // If this phone also scores, the player's own profiles need no question.
+    if (_phoneList().isNotEmpty) await _sendPhones();
+    final info = await cloud.setMyPhone(t, clean, scorerAuth: _auth);
+    myPhone = clean;
+    await _prefs?.setString('cloud.myPhone', clean);
+    await _saveMe(info);
+  }
+
+  Future<MeInfo?> refreshMe() async {
+    final t = _userToken;
+    if (t == null) return null;
+    try {
+      final info = await cloud.me(t);
+      await _saveMe(info);
+      return info;
+    } on CloudError catch (e) {
+      if (e.status == 401) await _forgetUser();
+      rethrow;
+    }
+  }
+
+  Future<void> logout() async {
+    final t = _userToken;
+    await _forgetUser();
+    await google.signOut();
+    if (t != null) {
+      try {
+        await cloud.logout(t);
+      } catch (_) {}
+    }
+  }
+
+  Future<void> _forgetUser() async {
+    _userToken = null;
+    me = null;
+    await _prefs?.remove('cloud.user');
+    await _prefs?.remove('cloud.userEmail');
+    await _prefs?.remove('cloud.userName');
+    notifyListeners();
   }
 }

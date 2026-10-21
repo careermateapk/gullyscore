@@ -1,13 +1,14 @@
 // GullyScore online service (Cloudflare Worker + D1).
 //
 // Phones that score upload their matches here. Anyone with a match link can
-// watch it live, in the app or in a browser. Players can link their own
-// phone to their profile with an invite code and see all their matches.
+// watch it live, in the app or in a browser. Players log in with Google,
+// type their mobile number, and (after the scorer says yes once) see all
+// their matches. Mobile numbers are kept only as keyed hashes.
 // Photos never come here: they stay on the phones.
 
 const MAX_BODY = 600 * 1024; // a long match is ~50 KB; this leaves room
 const ID_RE = /^[A-Za-z0-9_\-]{1,80}$/;
-const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O, 1/I
+const TOKEN_ALPHABET = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 
 export default {
   async fetch(request, env) {
@@ -74,6 +75,98 @@ async function auth(request, env) {
   return m[1];
 }
 
+/** Checks "Authorization: Bearer U<token>" (a logged-in player) and returns the user row. */
+async function userAuth(request, env) {
+  const h = request.headers.get('authorization') || '';
+  const m = /^Bearer U([A-Za-z0-9]+)$/.exec(h);
+  if (!m) throw new HttpError(401, 'not logged in');
+  const row = await env.DB.prepare('SELECT u.id, u.email, u.name, u.phone_hash FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ?')
+    .bind(await sha256(m[1]))
+    .first();
+  if (!row) throw new HttpError(401, 'not logged in');
+  return row;
+}
+
+/** Scorer id from a "<id>.<token>" string, or null when it does not check out. */
+async function scorerFrom(text, env) {
+  const m = /^([A-Za-z0-9_\-]+)\.([A-Za-z0-9_\-]+)$/.exec(typeof text === 'string' ? text : '');
+  if (!m) return null;
+  const row = await env.DB.prepare('SELECT token_hash FROM scorers WHERE id = ?').bind(m[1]).first();
+  return row && row.token_hash === (await sha256(m[2])) ? m[1] : null;
+}
+
+/** The random key used to hash mobile numbers (made once, kept in the database). */
+async function phoneKey(env) {
+  let row = await env.DB.prepare("SELECT v FROM config WHERE k = 'phone_key'").first();
+  if (!row) {
+    await env.DB.prepare("INSERT OR IGNORE INTO config (k, v) VALUES ('phone_key', ?)").bind(randomString(48, TOKEN_ALPHABET)).run();
+    row = await env.DB.prepare("SELECT v FROM config WHERE k = 'phone_key'").first();
+  }
+  return row.v;
+}
+
+/** Last 10 digits of a mobile number, or null if it is not one. */
+function cleanPhone(raw) {
+  const d = String(raw ?? '').replace(/\D/g, '');
+  return d.length >= 10 && d.length <= 15 ? d.slice(-10) : null;
+}
+
+async function phoneHash(key, digits) {
+  const k = await crypto.subtle.importKey('raw', new TextEncoder().encode(key), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const sig = await crypto.subtle.sign('HMAC', k, new TextEncoder().encode(digits));
+  return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+/** Asks Google whether a sign-in token is real and meant for this app. */
+async function verifyGoogle(idToken, env) {
+  if (env.VERIFY_GOOGLE) {
+    // tests
+    try {
+      return await env.VERIFY_GOOGLE(idToken);
+    } catch {
+      throw new HttpError(401, 'google login failed');
+    }
+  }
+  const clientId = String(env.GOOGLE_CLIENT_ID || '').trim();
+  if (!clientId) throw new HttpError(503, 'login not set up');
+  let r;
+  try {
+    r = await fetch('https://oauth2.googleapis.com/tokeninfo?id_token=' + encodeURIComponent(idToken));
+  } catch {
+    throw new HttpError(502, 'google did not answer');
+  }
+  if (!r.ok) throw new HttpError(401, 'google login failed');
+  const t = await r.json();
+  const okIssuer = t.iss === 'accounts.google.com' || t.iss === 'https://accounts.google.com';
+  const verified = t.email_verified === true || t.email_verified === 'true';
+  if (t.aud !== clientId || !okIssuer || !verified || Number(t.exp) * 1000 < Date.now() || !t.sub) {
+    throw new HttpError(401, 'google login failed');
+  }
+  return { sub: String(t.sub), email: String(t.email || ''), name: String(t.name || '') };
+}
+
+/** Everything a logged-in player sees: their profiles and their matches. */
+async function meInfo(user, env) {
+  const profiles = await env.DB.prepare(
+    `SELECT c.status, pp.name, pp.team FROM claims c
+     LEFT JOIN player_phones pp ON pp.scorer_id = c.scorer_id AND pp.player_id = c.player_id
+     WHERE c.user_id = ? ORDER BY c.created`,
+  ).bind(user.id).all();
+  const matches = await env.DB.prepare(
+    `SELECT DISTINCT m.id, m.updated, m.finished, m.title, m.summary FROM claims c
+     JOIN match_players mp ON mp.player_id = c.player_id
+     JOIN matches m ON m.id = mp.match_id AND m.scorer_id = c.scorer_id
+     WHERE c.user_id = ? AND c.status = 'ok' ORDER BY m.updated DESC LIMIT 100`,
+  ).bind(user.id).all();
+  return {
+    email: user.email,
+    name: user.name,
+    hasPhone: !!user.phone_hash,
+    profiles: (profiles.results || []).map((r) => ({ status: r.status, name: r.name || '', team: r.team || '' })),
+    matches: (matches.results || []).map((r) => ({ id: r.id, updated: r.updated, finished: !!r.finished, title: r.title, summary: JSON.parse(r.summary) })),
+  };
+}
+
 async function route(request, env) {
   const url = new URL(request.url);
   const p = url.pathname.replace(/\/+$/, '') || '/';
@@ -89,7 +182,7 @@ async function route(request, env) {
     });
   }
 
-  if (p === '/' || p === '/v1/health') return json({ ok: true, service: 'gullyscore' });
+  if (p === '/' || p === '/v1/health') return json({ ok: true, service: 'gullyscore', login: !!String(env.GOOGLE_CLIENT_ID || '').trim() });
 
   // A phone asks for its own identity once.
   if (p === '/v1/register' && method === 'POST') {
@@ -160,37 +253,118 @@ async function route(request, env) {
     });
   }
 
-  // Scorer makes an invite code for one of their players.
-  if (p === '/v1/invites' && method === 'POST') {
+  // A scorer sends the mobile numbers they typed for their players.
+  // The list replaces what was there before. Numbers are hashed at once.
+  if (p === '/v1/players/phones' && method === 'POST') {
     const scorer = await auth(request, env);
     const body = await readJson(request);
-    if (!body || typeof body.playerId !== 'string' || !ID_RE.test(body.playerId) || typeof body.name !== 'string') {
-      throw new HttpError(400, 'missing player');
+    const list = Array.isArray(body && body.players) ? body.players.slice(0, 3000) : [];
+    const key = await phoneKey(env);
+    const rows = [];
+    for (const x of list) {
+      if (!x || typeof x.id !== 'string' || !ID_RE.test(x.id)) continue;
+      const d = cleanPhone(x.phone);
+      if (!d) continue;
+      rows.push({ id: x.id, h: await phoneHash(key, d), n: String(x.name ?? '').slice(0, 80), t: String(x.team ?? '').slice(0, 80) });
     }
-    const old = await env.DB.prepare('SELECT code FROM invites WHERE player_id = ? AND scorer_id = ?').bind(body.playerId, scorer).first();
-    if (old) return json({ code: old.code });
-    for (let i = 0; i < 5; i++) {
-      const code = randomString(8, CODE_ALPHABET);
-      const r = await env.DB.prepare('INSERT OR IGNORE INTO invites (code, player_id, name, team, scorer_id, created) VALUES (?, ?, ?, ?, ?, ?)')
-        .bind(code, body.playerId, body.name.slice(0, 80), typeof body.team === 'string' ? body.team.slice(0, 80) : '', scorer, Date.now())
-        .run();
-      if (r.meta && r.meta.changes) return json({ code });
-    }
-    throw new HttpError(500, 'could not make a code');
+    const now = Date.now();
+    await env.DB.batch([
+      env.DB.prepare('DELETE FROM player_phones WHERE scorer_id = ?').bind(scorer),
+      env.DB.prepare(
+        `INSERT OR REPLACE INTO player_phones (scorer_id, player_id, phone_hash, name, team)
+         SELECT ?, json_extract(value, '$.id'), json_extract(value, '$.h'), json_extract(value, '$.n'), json_extract(value, '$.t') FROM json_each(?)`,
+      ).bind(scorer, JSON.stringify(rows)),
+      // A profile whose number changed no longer belongs to the old person.
+      env.DB.prepare(
+        `DELETE FROM claims WHERE scorer_id = ? AND NOT EXISTS (
+           SELECT 1 FROM player_phones pp JOIN users u ON u.id = claims.user_id
+           WHERE pp.scorer_id = claims.scorer_id AND pp.player_id = claims.player_id AND pp.phone_hash = u.phone_hash)`,
+      ).bind(scorer),
+      // People already logged in with one of these numbers ask to be linked.
+      env.DB.prepare(
+        `INSERT OR IGNORE INTO claims (user_id, scorer_id, player_id, status, created)
+         SELECT u.id, pp.scorer_id, pp.player_id, 'pending', ? FROM player_phones pp JOIN users u ON u.phone_hash = pp.phone_hash
+         WHERE pp.scorer_id = ?`,
+      ).bind(now, scorer),
+    ]);
+    return json({ ok: true, count: rows.length });
   }
 
-  if ((m = /^\/v1\/invites\/([A-Za-z0-9]+)$/.exec(p)) && method === 'GET') {
-    const row = await env.DB.prepare('SELECT player_id, name, team FROM invites WHERE code = ?').bind(m[1].toUpperCase()).first();
-    if (!row) throw new HttpError(404, 'no such code');
-    return json({ playerId: row.player_id, name: row.name, team: row.team });
+  // A player logs in with Google. Answers a token for this phone.
+  if (p === '/v1/login' && method === 'POST') {
+    const body = await readJson(request);
+    if (!body || typeof body.idToken !== 'string' || body.idToken.length > 8000) throw new HttpError(400, 'missing token');
+    const g = await verifyGoogle(body.idToken, env);
+    const id = 'g' + g.sub.replace(/[^A-Za-z0-9]/g, '').slice(0, 60);
+    await env.DB.prepare(
+      `INSERT INTO users (id, email, name, created) VALUES (?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET email = excluded.email, name = excluded.name`,
+    ).bind(id, g.email.slice(0, 120), g.name.slice(0, 80), Date.now()).run();
+    const token = randomString(40, TOKEN_ALPHABET);
+    await env.DB.prepare('INSERT INTO sessions (token_hash, user_id, created) VALUES (?, ?, ?)').bind(await sha256(token), id, Date.now()).run();
+    const user = await env.DB.prepare('SELECT id, email, name, phone_hash FROM users WHERE id = ?').bind(id).first();
+    return json({ token: 'U' + token, ...(await meInfo(user, env)) });
+  }
+
+  if (p === '/v1/me' && method === 'GET') {
+    const user = await userAuth(request, env);
+    return json(await meInfo(user, env));
+  }
+
+  if (p === '/v1/me' && method === 'DELETE') {
+    const h = request.headers.get('authorization') || '';
+    const m2 = /^Bearer U([A-Za-z0-9]+)$/.exec(h);
+    if (m2) await env.DB.prepare('DELETE FROM sessions WHERE token_hash = ?').bind(await sha256(m2[1])).run();
+    return json({ ok: true });
+  }
+
+  // A player types their own mobile number. Every scorer who used that
+  // number for a player gets a "is this them?" question.
+  if (p === '/v1/me/phone' && method === 'PUT') {
+    const user = await userAuth(request, env);
+    const body = await readJson(request);
+    const d = cleanPhone(body && body.phone);
+    if (!d) throw new HttpError(400, 'bad phone');
+    const h = await phoneHash(await phoneKey(env), d);
+    const now = Date.now();
+    const stmts = [];
+    if (user.phone_hash !== h) stmts.push(env.DB.prepare('DELETE FROM claims WHERE user_id = ?').bind(user.id));
+    stmts.push(env.DB.prepare('UPDATE users SET phone_hash = ? WHERE id = ?').bind(h, user.id));
+    stmts.push(
+      env.DB.prepare(
+        `INSERT OR IGNORE INTO claims (user_id, scorer_id, player_id, status, created)
+         SELECT ?, scorer_id, player_id, 'pending', ? FROM player_phones WHERE phone_hash = ?`,
+      ).bind(user.id, now, h),
+    );
+    // Logging in on the scorer's own phone: their own players need no question.
+    const own = await scorerFrom(body.scorer, env);
+    if (own) stmts.push(env.DB.prepare("UPDATE claims SET status = 'ok' WHERE user_id = ? AND scorer_id = ?").bind(user.id, own));
+    await env.DB.batch(stmts);
+    return json(await meInfo({ ...user, phone_hash: h }, env));
+  }
+
+  // Questions waiting for this scorer: "X says this player is them".
+  if (p === '/v1/claims' && method === 'GET') {
+    const scorer = await auth(request, env);
+    const rows = await env.DB.prepare(
+      `SELECT c.user_id, c.player_id, u.email, u.name FROM claims c JOIN users u ON u.id = c.user_id
+       WHERE c.scorer_id = ? AND c.status = 'pending' ORDER BY c.created LIMIT 50`,
+    ).bind(scorer).all();
+    return json({ claims: (rows.results || []).map((r) => ({ userId: r.user_id, playerId: r.player_id, email: r.email, name: r.name })) });
+  }
+
+  if (p === '/v1/claims' && method === 'POST') {
+    const scorer = await auth(request, env);
+    const body = await readJson(request);
+    if (!body || typeof body.userId !== 'string' || typeof body.playerId !== 'string') throw new HttpError(400, 'missing');
+    await env.DB.prepare('UPDATE claims SET status = ? WHERE scorer_id = ? AND user_id = ? AND player_id = ?')
+      .bind(body.ok ? 'ok' : 'no', scorer, body.userId, body.playerId)
+      .run();
+    return json({ ok: true });
   }
 
   // Web pages for people without the app.
   if ((m = /^\/m\/([^/]+)$/.exec(p)) && method === 'GET') return html(matchPage(m[1]));
-  if ((m = /^\/p\/([A-Za-z0-9]+)$/.exec(p)) && method === 'GET') {
-    const row = await env.DB.prepare('SELECT player_id, name, team FROM invites WHERE code = ?').bind(m[1].toUpperCase()).first();
-    return html(invitePage(m[1].toUpperCase(), row));
-  }
 
   throw new HttpError(404, 'not found');
 }
@@ -218,7 +392,6 @@ th:first-child,td:first-child{text-align:left}td{text-align:right;padding:7px 0;
 .balls span{display:inline-flex;width:28px;height:28px;border-radius:99px;background:var(--s2);align-items:center;justify-content:center;font-size:12px;font-weight:800;margin-right:4px}
 .foot{color:var(--t2);font-size:12px;text-align:center;margin:20px 0}
 .status{background:rgba(255,201,74,.10);color:var(--gd);border-radius:12px;padding:10px 12px;font-weight:800;margin-top:12px}
-.code{font-size:34px;letter-spacing:6px;font-weight:800;color:var(--gd);text-align:center;margin:12px 0}
 `;
 
 function matchPage(id) {
@@ -247,22 +420,4 @@ if(r.status===404){document.getElementById('app').innerHTML='<div class="card">T
 const d=await r.json();if(!d.unchanged){since=d.updated;last=d;draw(d);}if(last&&last.finished)return;}catch(_){}
 setTimeout(tick,5000);}tick();
 </script></body></html>`;
-}
-
-function invitePage(code, row) {
-  const name = row ? esc(row.name) : '';
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Your GullyScore profile</title><style>${STYLE}</style></head><body><main>
-<div class="t2" style="font-weight:800">GullyScore</div>
-${
-  row
-    ? `<div class="hero" style="margin-top:12px"><div class="t2">Profile for</div><div style="font-size:26px;font-weight:800">${name}</div>${
-        row.team ? `<div class="t2">${esc(row.team)}</div>` : ''
-      }</div>
-<div class="card"><b>See all your matches on your phone</b><ol class="t2" style="padding-left:18px">
-<li>Install and open the GullyScore app.</li><li>Go to <b>Profile → This is me</b>.</li><li>Enter this code:</li></ol>
-<div class="code">${esc(code)}</div></div>`
-    : `<div class="card">This invite code is not valid.</div>`
-}
-</main></body></html>`;
 }

@@ -6,6 +6,9 @@ import 'dart:io';
 
 const cloudUrl = String.fromEnvironment('CLOUD_URL');
 
+/// Google "Web application" client ID used for player login (empty = login off).
+const googleClientId = String.fromEnvironment('GOOGLE_CLIENT_ID');
+
 class CloudError implements Exception {
   CloudError(this.status, this.message);
   final int status; // 0 = no internet / no answer
@@ -34,11 +37,55 @@ class MatchListItem {
   final Map<String, dynamic> summary;
 }
 
-class Invite {
-  Invite({required this.playerId, required this.name, required this.team});
-  final String playerId;
+MatchListItem _item(dynamic m) => MatchListItem(
+      id: m['id'] as String,
+      updated: (m['updated'] as num).toInt(),
+      finished: m['finished'] == true,
+      title: (m['title'] as String?) ?? '',
+      summary: Map<String, dynamic>.from(m['summary'] as Map),
+    );
+
+/// A player profile some scorer made with this person's mobile number.
+class MyProfile {
+  MyProfile({required this.name, required this.team, required this.status});
   final String name;
   final String team;
+  final String status; // pending, ok, no
+
+  bool get approved => status == 'ok';
+  bool get waiting => status == 'pending';
+}
+
+/// What a logged-in player sees.
+class MeInfo {
+  MeInfo({required this.email, required this.name, required this.hasPhone, required this.profiles, required this.matches, this.token});
+  final String email;
+  final String name;
+  final bool hasPhone;
+  final List<MyProfile> profiles;
+  final List<MatchListItem> matches;
+  final String? token; // only after logging in
+
+  factory MeInfo.fromJson(Map<String, dynamic> j) => MeInfo(
+        email: (j['email'] as String?) ?? '',
+        name: (j['name'] as String?) ?? '',
+        hasPhone: j['hasPhone'] == true,
+        profiles: [
+          for (final p in (j['profiles'] as List? ?? const []))
+            MyProfile(name: (p['name'] as String?) ?? '', team: (p['team'] as String?) ?? '', status: (p['status'] as String?) ?? 'pending'),
+        ],
+        matches: [for (final m in (j['matches'] as List? ?? const [])) _item(m)],
+        token: j['token'] as String?,
+      );
+}
+
+/// "This person says they are your player": waiting for the scorer's yes/no.
+class Claim {
+  Claim({required this.userId, required this.playerId, required this.email, required this.name});
+  final String userId;
+  final String playerId;
+  final String email;
+  final String name;
 }
 
 /// Everything the app asks of the online service (a fake is used in tests).
@@ -52,8 +99,17 @@ abstract class CloudApi {
   /// Null when nothing changed since [since].
   Future<RemoteMatch?> getMatch(String id, {int since = 0});
   Future<List<MatchListItem>> playerMatches(String playerId);
-  Future<String> createInvite(String auth, {required String playerId, required String name, required String team});
-  Future<Invite> getInvite(String code);
+
+  /// Scorer: the mobile numbers typed for this phone's players (replaces the old list).
+  Future<void> putPlayerPhones(String auth, List<Map<String, String>> players);
+  Future<List<Claim>> claims(String auth);
+  Future<void> answerClaim(String auth, Claim c, bool yes);
+
+  /// Player login with a Google sign-in token.
+  Future<MeInfo> login(String idToken);
+  Future<MeInfo> me(String userToken);
+  Future<MeInfo> setMyPhone(String userToken, String phone, {String? scorerAuth});
+  Future<void> logout(String userToken);
 }
 
 class HttpCloud implements CloudApi {
@@ -134,27 +190,40 @@ class HttpCloud implements CloudApi {
   @override
   Future<List<MatchListItem>> playerMatches(String playerId) async {
     final j = await _send('GET', '/v1/players/${Uri.encodeComponent(playerId)}/matches');
+    return [for (final m in (j['matches'] as List? ?? const [])) _item(m)];
+  }
+
+  @override
+  Future<void> putPlayerPhones(String auth, List<Map<String, String>> players) async {
+    await _send('POST', '/v1/players/phones', body: {'players': players}, auth: auth);
+  }
+
+  @override
+  Future<List<Claim>> claims(String auth) async {
+    final j = await _send('GET', '/v1/claims', auth: auth);
     return [
-      for (final m in (j['matches'] as List? ?? const []))
-        MatchListItem(
-          id: m['id'] as String,
-          updated: (m['updated'] as num).toInt(),
-          finished: m['finished'] == true,
-          title: (m['title'] as String?) ?? '',
-          summary: Map<String, dynamic>.from(m['summary'] as Map),
-        ),
+      for (final c in (j['claims'] as List? ?? const []))
+        Claim(userId: c['userId'] as String, playerId: c['playerId'] as String, email: (c['email'] as String?) ?? '', name: (c['name'] as String?) ?? ''),
     ];
   }
 
   @override
-  Future<String> createInvite(String auth, {required String playerId, required String name, required String team}) async {
-    final j = await _send('POST', '/v1/invites', body: {'playerId': playerId, 'name': name, 'team': team}, auth: auth);
-    return j['code'] as String;
+  Future<void> answerClaim(String auth, Claim c, bool yes) async {
+    await _send('POST', '/v1/claims', body: {'userId': c.userId, 'playerId': c.playerId, 'ok': yes}, auth: auth);
   }
 
   @override
-  Future<Invite> getInvite(String code) async {
-    final j = await _send('GET', '/v1/invites/${Uri.encodeComponent(code.trim().toUpperCase())}');
-    return Invite(playerId: j['playerId'] as String, name: j['name'] as String, team: (j['team'] as String?) ?? '');
+  Future<MeInfo> login(String idToken) async => MeInfo.fromJson(await _send('POST', '/v1/login', body: {'idToken': idToken}));
+
+  @override
+  Future<MeInfo> me(String userToken) async => MeInfo.fromJson(await _send('GET', '/v1/me', auth: userToken));
+
+  @override
+  Future<MeInfo> setMyPhone(String userToken, String phone, {String? scorerAuth}) async =>
+      MeInfo.fromJson(await _send('PUT', '/v1/me/phone', body: {'phone': phone, if (scorerAuth != null) 'scorer': scorerAuth}, auth: userToken));
+
+  @override
+  Future<void> logout(String userToken) async {
+    await _send('DELETE', '/v1/me', auth: userToken);
   }
 }
