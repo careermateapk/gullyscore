@@ -65,12 +65,14 @@ String seedFinished(Repository r) {
 }
 
 final _errors = <FlutterErrorDetails>[];
+FlutterExceptionHandler? _savedOnError;
 
 /// Fails with the full error (including which widget) if anything went wrong.
 void check(WidgetTester tester, String where) {
   if (_errors.isNotEmpty) {
     final msg = _errors.map((d) => d.toString()).join('\n');
     _errors.clear();
+    FlutterError.onError = _savedOnError; // must be restored before failing
     fail('$where\n$msg');
   }
 }
@@ -183,7 +185,7 @@ void main() {
       tester.view.physicalSize = const Size(320 * 3, 640 * 3);
       tester.view.devicePixelRatio = 3;
       addTearDown(tester.view.reset);
-      final oldOnError = FlutterError.onError;
+      _savedOnError = FlutterError.onError;
       FlutterError.onError = _errors.add;
       final (s, r) = await setUpApp();
       s.setTheme(mode);
@@ -239,7 +241,7 @@ void main() {
         check(tester, 'hindi tab $i');
       }
       await tester.pump(const Duration(seconds: 1));
-      FlutterError.onError = oldOnError;
+      FlutterError.onError = _savedOnError;
     });
   }
 
