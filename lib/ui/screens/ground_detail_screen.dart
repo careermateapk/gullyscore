@@ -221,7 +221,7 @@ class _GroundDetailScreenState extends State<GroundDetailScreen> {
           const SizedBox(height: Space.m),
           SizedBox(
             height: 46,
-            child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: Space.edge), children: [
+            child: SingleChildScrollView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: Space.edge), child: Row(children: [
               for (final t in _tabs)
                 InkWell(
                   onTap: () => _openTab(t),
@@ -233,7 +233,7 @@ class _GroundDetailScreenState extends State<GroundDetailScreen> {
                     child: Text(context.tr('gtab_$t'), style: Tx.body(_tab == t ? p.text : p.text2, w: FontWeight.w700)),
                   ),
                 ),
-            ]),
+            ])),
           ),
           Divider(height: 1, color: p.line),
           Padding(padding: const EdgeInsets.fromLTRB(Space.edge, Space.m, Space.edge, 0), child: _body(context, g)),

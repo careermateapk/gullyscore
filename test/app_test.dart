@@ -485,14 +485,20 @@ void main() {
         check(tester, 'choose location $lang');
         for (final tab in ['about', 'photos', 'reviews', 'matches', 'tournaments', 'insights']) {
           await show(const GroundDetailScreen(groundId: 'g1'), 'ground $tab $lang');
-          await tester.tap(find.text(Strings.get('gtab_$tab', lang)).first);
+          final tabText = find.text(Strings.get('gtab_$tab', lang)).first;
+          await tester.ensureVisible(tabText);
+          await tester.pumpAndSettle();
+          await tester.tap(tabText);
           await tester.pumpAndSettle();
           check(tester, 'ground tab $tab $lang');
         }
         final g = Ground(Map<String, dynamic>.from(await fakeSend('GET', '/v1/grounds/g1')));
         await show(RegisterGroundScreen(edit: g, locate: false), 'register ground $lang');
         for (var step = 0; step < 2; step++) {
-          await tester.tap(find.text(Strings.get('next', lang)).first);
+          final next = find.text(Strings.get('next', lang)).first;
+          await tester.ensureVisible(next);
+          await tester.pumpAndSettle();
+          await tester.tap(next);
           await tester.pumpAndSettle();
           check(tester, 'register step ${step + 2} $lang');
         }
