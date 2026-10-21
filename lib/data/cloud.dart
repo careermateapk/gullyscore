@@ -159,6 +159,7 @@ class MyProfile {
 /// What a logged-in player sees.
 class MeInfo {
   MeInfo({
+    this.id,
     required this.email,
     required this.name,
     required this.hasPhone,
@@ -168,6 +169,7 @@ class MeInfo {
     this.teams = const [],
     this.totals = const MyTotals(),
   });
+  final String? id; // used for this person's notifications
   final String email;
   final String name;
   final bool hasPhone;
@@ -178,6 +180,7 @@ class MeInfo {
   final MyTotals totals;
 
   factory MeInfo.fromJson(Map<String, dynamic> j) => MeInfo(
+        id: j['id'] as String?,
         email: (j['email'] as String?) ?? '',
         name: (j['name'] as String?) ?? '',
         hasPhone: j['hasPhone'] == true,

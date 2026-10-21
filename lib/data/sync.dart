@@ -12,6 +12,7 @@ import '../scoring/engine.dart';
 import '../scoring/format.dart';
 import 'cloud.dart';
 import 'google_auth.dart';
+import 'push.dart';
 import 'social.dart';
 import 'models.dart';
 import 'repository.dart';
@@ -286,6 +287,7 @@ class SyncService extends ChangeNotifier {
     following.add(id);
     _savePrefs();
     notifyListeners();
+    unawaited(updatePush());
     return id;
   }
 
@@ -293,6 +295,7 @@ class SyncService extends ChangeNotifier {
     following.remove(id);
     _savePrefs();
     notifyListeners();
+    unawaited(updatePush());
   }
 
   static String? matchIdFrom(String text) {
@@ -392,6 +395,20 @@ class SyncService extends ChangeNotifier {
     () => _userToken,
   );
 
+  // ---------- Notifications ----------
+
+  final PushService push = PushService();
+
+  /// Topics this phone should be in right now.
+  Set<String> get pushTopics => wantedTopics(
+        on: push.on,
+        teams: [for (final t in me?.teams ?? const <TeamSummary>[]) (t.scorerId, t.id)],
+        followed: following,
+        userId: me?.id,
+      );
+
+  Future<void> updatePush() => push.apply(pushTopics);
+
   /// Settings → Delete my account: removes the login and everything posted.
   Future<void> deleteAccount() async {
     await social.deleteAccount();
@@ -402,6 +419,7 @@ class SyncService extends ChangeNotifier {
 
   Future<void> _saveMe(MeInfo info) async {
     me = info;
+    unawaited(updatePush());
     await _prefs?.setString('cloud.userEmail', info.email);
     await _prefs?.setString('cloud.userName', info.name);
     notifyListeners();
@@ -463,5 +481,6 @@ class SyncService extends ChangeNotifier {
     await _prefs?.remove('cloud.userEmail');
     await _prefs?.remove('cloud.userName');
     notifyListeners();
+    unawaited(updatePush());
   }
 }

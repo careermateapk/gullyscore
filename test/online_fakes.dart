@@ -128,6 +128,30 @@ Future<Map<String, dynamic>> fakeSend(String method, String path, {Object? body,
       'comments': [_comment('c1', replies: [_comment('c2')]), _comment('c3')],
     };
   }
+  if (path.startsWith('/v1/grounds')) {
+    final g = {
+      'id': 'g1',
+      'name': 'Rajnagar Stadium cricket ground and sports complex',
+      'address': 'Near the old bus stand, Rajnagar, Madhubani district, Bihar',
+      'lat': 26.4,
+      'lng': 86.1,
+      'pitch': 'turf',
+      'fee': '₹1,500 / match',
+      'phone': '98765 43210',
+      'lights': true,
+      'toilet': true,
+      'km': 1.2,
+    };
+    if (path.contains('/search')) {
+      return {
+        'ours': [g],
+        'google': [
+          {'placeId': 'p1', 'name': 'Sakri High School playground', 'address': 'Sakri, Bihar 847239, India', 'lat': 26.3, 'lng': 86.05, 'km': 12.4},
+        ],
+      };
+    }
+    return {'grounds': [g, {...g, 'id': 'g2', 'phone': '', 'pitch': '', 'lights': false}]};
+  }
   if (path.endsWith('/asks')) {
     return {
       'asks': [

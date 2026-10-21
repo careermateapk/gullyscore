@@ -26,6 +26,9 @@ import 'package:gullyscore/ui/screens/scoring_screen.dart';
 import 'package:gullyscore/ui/screens/app_drawer.dart';
 import 'package:gullyscore/ui/screens/badges_screen.dart';
 import 'package:gullyscore/ui/screens/team_tools.dart';
+import 'package:gullyscore/ui/screens/grounds_screen.dart';
+import 'package:gullyscore/ui/screens/notifications_screen.dart';
+import 'package:gullyscore/data/push.dart';
 import 'package:gullyscore/scoring/badges.dart';
 import 'package:gullyscore/ui/screens/community_screen.dart';
 import 'package:gullyscore/ui/screens/info_screens.dart';
@@ -465,6 +468,12 @@ void main() {
         check(tester, 'who is coming squad $lang');
         await show(KhataScreen(team: team), 'khata $lang');
         await show(BadgesScreen(me: MeInfo.fromJson(meJson)), 'badges $lang');
+        await show(const GroundsScreen(locate: false), 'grounds $lang');
+        await tester.enterText(find.byType(TextField).first, 'sakri');
+        await tester.pump(const Duration(seconds: 1));
+        await tester.pumpAndSettle();
+        check(tester, 'grounds search $lang');
+        await show(const NotificationsScreen(), 'notifications $lang');
         await show(const NewMatchScreen(), 'new match $lang', taps: [hi ? 'बाद में खेलें' : 'Schedule for later']);
       }
       await tester.pump(const Duration(seconds: 1));
@@ -530,5 +539,14 @@ void main() {
     final copy = MatchRecord.fromJson({...Map<String, dynamic>.from(data['match'] as Map), 'remote': true});
     expect(r.sponsorsOf(copy).single.phone, '98765');
     await r.saveNow();
+  });
+
+  test('notification topics follow the switches', () {
+    final on = {'s': true, 'w': true, 'b': false, 'f': true, 'a': true, 'c': true};
+    final t = wantedTopics(on: on, teams: [('s1', 'tA')], followed: ['m 1'], userId: 'g42');
+    expect(t, containsAll(['t.s1.tA.s', 't.s1.tA.w', 't.s1.tA.a', 'm.m_1.s', 'u.g42']));
+    expect(t.contains('t.s1.tA.b'), false);
+    final none = wantedTopics(on: {for (final k in on.keys) k: false}, teams: [('s1', 'tA')], followed: ['x'], userId: 'g42');
+    expect(none, isEmpty);
   });
 }

@@ -28,6 +28,12 @@ void main() {
     used.add('bracket');
     used.addAll(['khata_expense_sub', 'khata_payment_sub', 'who_spent', 'who_paid', 'all_paid', 'coming', 'not_coming', 'no_reply', 'maybe']);
     used.addAll(['title', 'six', 'potm', 'other'].map((k) => 'sponsor_$k'));
+    used.addAll(['turf', 'matting', 'cement', 'mud'].map((k) => 'pitch_$k'));
+    used.addAll(['all', 'free', 'turf', 'lights'].map((k) => 'gf_$k'));
+    used.addAll(['notifications_sub', 'notifications_off', 'no_grounds_near', 'no_grounds_found']);
+    for (final k in ['s', 'w', 'b', 'f', 'a', 'c']) {
+      used.addAll(['push_$k', 'push_${k}_sub']);
+    }
     for (final b in badgeDefs) {
       used.addAll(['badge_${b.id}', 'badge_${b.id}_how']);
     }

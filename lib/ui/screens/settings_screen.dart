@@ -7,6 +7,7 @@ import '../widgets/common.dart';
 import 'backup_ui.dart';
 import 'help.dart';
 import 'info_screens.dart';
+import 'notifications_screen.dart';
 import 'match_centre_screen.dart';
 import 'online.dart';
 
@@ -192,6 +193,8 @@ class SettingsScreen extends StatelessWidget {
                 ] else if (sync.loginAvailable)
                   link(Icons.login_rounded, p.goldText, context.tr('login_google'), () => loginAsPlayer(context)),
                 link(Icons.link_rounded, const Color(0xFF5B9BFF), context.tr('follow_a_match'), () => followMatchByLink(context)),
+                link(Icons.notifications_none_rounded, p.goldText, context.tr('notifications'),
+                    () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen()))),
               ]);
             },
           )
@@ -214,7 +217,7 @@ class SettingsScreen extends StatelessWidget {
         ]),
         Padding(
           padding: const EdgeInsets.all(Space.l),
-          child: Text('GullyScore 0.6', textAlign: TextAlign.center, style: Tx.label(p.text2, w: FontWeight.w600)),
+          child: Text('GullyScore 0.7', textAlign: TextAlign.center, style: Tx.label(p.text2, w: FontWeight.w600)),
         ),
       ]),
     );

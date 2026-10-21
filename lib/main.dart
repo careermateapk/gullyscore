@@ -7,6 +7,7 @@ import 'data/cloud.dart';
 import 'data/photos.dart';
 import 'data/repository.dart';
 import 'data/sync.dart';
+import 'ui/screens/online.dart';
 import 'ui/screens/onboarding_screen.dart';
 import 'ui/screens/shell.dart';
 
@@ -20,7 +21,23 @@ Future<void> main() async {
   // Matches load in the background; Home shows a skeleton until they arrive.
   await repo.load();
   await sync.start();
+  // Notifications: tapping one opens that match.
+  sync.push.onOpen = (matchId) {
+    final ctx = appNavigator.currentContext;
+    if (matchId != null && ctx != null && ctx.mounted) openFollowed(ctx, matchId);
+  };
+  sync.push.onForeground = (title, body, matchId) {
+    appMessenger.currentState?.showSnackBar(SnackBar(
+      content: Text(body.isEmpty ? title : '$title\n$body'),
+      action: matchId == null ? null : SnackBarAction(label: 'Open', onPressed: () => sync.push.onOpen?.call(matchId)),
+    ));
+  };
+  await sync.push.init();
+  await sync.updatePush();
 }
+
+final appNavigator = GlobalKey<NavigatorState>();
+final appMessenger = GlobalKey<ScaffoldMessengerState>();
 
 class GullyScoreApp extends StatelessWidget {
   GullyScoreApp({super.key, required this.settings, required this.repo, SyncService? sync}) : sync = sync ?? SyncService(repo, HttpCloud(''));
@@ -39,6 +56,8 @@ class GullyScoreApp extends StatelessWidget {
         rev: settings.rev,
         child: MaterialApp(
           title: 'GullyScore',
+          navigatorKey: appNavigator,
+          scaffoldMessengerKey: appMessenger,
           debugShowCheckedModeBanner: false,
           themeMode: settings.themeMode,
           theme: buildTheme(Palette.lightP),

@@ -6,6 +6,7 @@ import '../../app/scope.dart';
 import '../../app/theme.dart';
 import '../../data/models.dart';
 import '../widgets/common.dart';
+import 'grounds_screen.dart';
 import 'help.dart';
 import 'info_screens.dart';
 import 'leaderboard_screen.dart';
@@ -86,6 +87,7 @@ class AppDrawer extends StatelessWidget {
           item(Icons.table_chart_outlined, const Color(0xFFA855F7), context.tr('tournaments_table'), () => _push(context, const SeriesScreen(pushed: true))),
           item(Icons.videocam_outlined, p.liveText, context.tr('live_streaming'), () => _run(context, comingSoon), badge: context.tr('soon')),
           item(Icons.leaderboard_outlined, p.win, context.tr('leaderboard'), () => _push(context, const LeaderboardScreen())),
+          item(Icons.place_outlined, p.liveText, context.tr('grounds_near_you'), () => _push(context, const GroundsScreen())),
           item(Icons.article_outlined, const Color(0xFF5B9BFF), context.tr('nav_news'), () => _push(context, const NewsScreen(pushed: true))),
           Padding(padding: const EdgeInsets.symmetric(horizontal: 18, vertical: Space.s), child: Divider(color: p.line, height: 1)),
           item(Icons.help_outline_rounded, const Color(0xFF5B9BFF), context.tr('help_and_faq'), () => _push(context, const FaqScreen())),
@@ -107,7 +109,7 @@ class AppDrawer extends StatelessWidget {
           ),
           Padding(
             padding: const EdgeInsets.only(top: Space.l),
-            child: Text('GullyScore 0.6 · Made in India 🇮🇳', textAlign: TextAlign.center, style: Tx.label(p.text2, w: FontWeight.w600)),
+            child: Text('GullyScore 0.7 · Made in India 🇮🇳', textAlign: TextAlign.center, style: Tx.label(p.text2, w: FontWeight.w600)),
           ),
         ]),
       ),

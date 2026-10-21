@@ -130,6 +130,23 @@ class Khata {
   List<KhataItem> get items => [for (final i in (j['items'] as List? ?? const [])) KhataItem(Map<String, dynamic>.from(i as Map))];
 }
 
+class Ground {
+  Ground(this.j);
+  final Map<String, dynamic> j;
+  String? get id => j['id'] as String?; // null for a Google result not saved yet
+  String get name => (j['name'] as String?) ?? '';
+  String get address => (j['address'] as String?) ?? '';
+  double get lat => (j['lat'] as num).toDouble();
+  double get lng => (j['lng'] as num).toDouble();
+  String? get placeId => j['placeId'] as String?;
+  String get pitch => (j['pitch'] as String?) ?? '';
+  String get fee => (j['fee'] as String?) ?? '';
+  String get phone => (j['phone'] as String?) ?? '';
+  bool get lights => j['lights'] == true;
+  bool get toilet => j['toilet'] == true;
+  double? get km => (j['km'] as num?)?.toDouble();
+}
+
 const reactionEmojis = ['👍', '❤️', '😂', '🔥', '👏', '😮'];
 const ratingTags = ['sportsmen', 'tough', 'late', 'again'];
 
@@ -236,6 +253,26 @@ class SocialApi {
       Khata(await _send('POST', '${_team(scorerId, teamId)}/khata',
           body: {'kind': kind, 'amount': amount, 'playerId': playerId, 'note': note, if (month.isNotEmpty) 'month': month}, auth: _need()));
   Future<Khata> deleteKhata(String id) async => Khata(await _send('DELETE', '/v1/khata/$id', auth: _need()));
+
+  // ----- Grounds -----
+  String _ll(double? lat, double? lng) => lat == null || lng == null ? '' : 'lat=$lat&lng=$lng';
+
+  Future<List<Ground>> grounds({double? lat, double? lng}) async {
+    final q = _ll(lat, lng);
+    final j = await _send('GET', '/v1/grounds${q.isEmpty ? '' : '?$q'}');
+    return [for (final g in (j['grounds'] as List? ?? const [])) Ground(Map<String, dynamic>.from(g as Map))];
+  }
+
+  Future<({List<Ground> ours, List<Ground> google})> searchGrounds(String text, {double? lat, double? lng}) async {
+    final q = _ll(lat, lng);
+    final j = await _send('GET', '/v1/grounds/search?q=${Uri.encodeQueryComponent(text)}${q.isEmpty ? '' : '&$q'}');
+    return (
+      ours: [for (final g in (j['ours'] as List? ?? const [])) Ground(Map<String, dynamic>.from(g as Map))],
+      google: [for (final g in (j['google'] as List? ?? const [])) Ground(Map<String, dynamic>.from(g as Map))],
+    );
+  }
+
+  Future<Ground> addGround(Map<String, dynamic> body) async => Ground(await _send('POST', '/v1/grounds', body: body, auth: _need()));
 
   Future<void> deleteAccount() async => _send('DELETE', '/v1/me/account', auth: _need());
 }
