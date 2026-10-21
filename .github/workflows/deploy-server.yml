@@ -103,8 +103,9 @@ jobs:
           sub=$(curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/subdomain" | python3 -c "import json,sys;print(json.load(sys.stdin)['result']['subdomain'])")
           url="https://gullyscore-api.$sub.workers.dev"
           echo "Service address: $url"
-          for i in 1 2 3 4 5 6; do
-            if curl -sf "$url/v1/health" | grep -q gullyscore; then echo "Online"; node test/smoke.mjs "$url"; exit $?; fi
+          # The new version can take a few seconds to reach every Cloudflare location.
+          for i in 1 2 3 4 5 6 7 8 9 10 11 12; do
+            if curl -sf "$url/v1/health" | grep -q gullyscore && node test/smoke.mjs "$url"; then echo "Online"; exit 0; fi
             sleep 10
           done
           echo "::error::The service did not answer at $url"
