@@ -94,7 +94,7 @@ jobs:
           url="https://gullyscore-api.$sub.workers.dev"
           echo "Service address: $url"
           for i in 1 2 3 4 5 6; do
-            if curl -sf "$url/v1/health" | grep -q gullyscore; then echo "Online"; exit 0; fi
+            if curl -sf "$url/v1/health" | grep -q gullyscore; then echo "Online"; node test/smoke.mjs "$url"; exit $?; fi
             sleep 10
           done
           echo "::error::The service did not answer at $url"
