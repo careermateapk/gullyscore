@@ -43,6 +43,8 @@ import 'package:gullyscore/ui/screens/ratings_screens.dart';
 import 'package:gullyscore/ui/screens/series_screen.dart';
 import 'package:gullyscore/ui/screens/insights_screens.dart';
 import 'package:gullyscore/ui/screens/booking_screens.dart';
+import 'package:gullyscore/studio/share_entry.dart';
+import 'package:gullyscore/studio/stories.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'online_fakes.dart';
@@ -545,33 +547,34 @@ void main() {
 
         final dm = r.matches[done]!;
         final batter = dm.playersA.first, bowler = dm.playersB.first;
+        Future<void> launch(String name, Future<void> Function(BuildContext) open) async {
+          await tester.pumpWidget(app(Scaffold(body: Builder(builder: (ctx) => Center(child: TextButton(onPressed: () => open(ctx), child: const Text('GO')))))));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text('GO'));
+          await tester.pumpAndSettle();
+          check(tester, name);
+        }
+
         await show(PlayerScreen(playerId: batter), 'player tools $lang');
-        await tapText(Strings.get('player_card', lang), 'player card $lang');
+        await launch('player card $lang', (c) => openPlayerCard(c, batter));
         for (final t in ['royal', 'neon', 'ivory']) {
           await tapText(Strings.get('theme_$t', lang), 'card theme $t $lang');
         }
         await tapText(Strings.get('size_story', lang), 'card story size $lang');
         await tapText(Strings.get('size_square', lang), 'card square size $lang');
-        await show(PlayerScreen(playerId: batter), 'player tools again $lang');
-        await tapText(Strings.get('season_wrapped', lang), 'wrapped $lang');
+        await launch('wrapped $lang', (c) => openSeasonWrapped(c, batter));
         await storySteps('wrapped $lang');
+        await launch('face off $lang', (c) => openFaceOff(c, batter, bowler));
         await show(LevelScreen(playerId: batter), 'level $lang');
         await show(HeadToHeadScreen(batter: batter, bowler: bowler), 'head to head $lang');
-        await show(HeadToHeadScreen(batter: bowler, bowler: batter), 'head to head none $lang');
+        await show(HeadToHeadScreen(batter: bowler, bowler: batter), 'head to head other way $lang');
         await show(MatchCentreScreen(matchId: done), 'match centre studio $lang');
-        await tapText(Strings.get('match_poster', lang), 'poster $lang');
+        await launch('poster $lang', (c) => openPoster(c, dm));
         await tapText(Strings.get('poster_tab_day', lang), 'poster day $lang');
         await tapText(Strings.get('poster_tab_live', lang), 'poster live $lang');
-        await show(MatchCentreScreen(matchId: done), 'match centre story $lang');
-        await tapText(Strings.get('match_story', lang), 'match story $lang');
+        await launch('match story $lang', (c) => openMatchStory(c, dm));
         await storySteps('match story $lang');
-        await show(MatchCentreScreen(matchId: done), 'match centre certificate $lang');
-        final cert = find.byTooltip(Strings.get('mom_certificate', lang));
-        if (cert.evaluate().isNotEmpty) {
-          await tester.tap(cert.first);
-          await tester.pumpAndSettle();
-          check(tester, 'certificate $lang');
-        }
+        await launch('certificate $lang', (c) => openMomCertificate(c, dm));
         await show(const BookingsScreen(), 'bookings $lang');
         await tapText(Strings.get('bookings_incoming', lang), 'bookings incoming $lang');
         final g1 = Ground(Map<String, dynamic>.from(await fakeSend('GET', '/v1/grounds/g1')));
