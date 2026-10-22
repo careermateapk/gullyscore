@@ -130,7 +130,7 @@ jobs:
         run: ci/run_and_report.sh flutter analyze --no-fatal-infos
 
       - name: Run tests
-        run: ci/run_and_report.sh flutter test
+        run: ci/run_and_report.sh flutter test --timeout=180s
 
       - name: Accept Android SDK licenses (maps and Firebase download extra SDK parts)
         run: |

@@ -17,5 +17,15 @@ if [ "$code" -ne 0 ]; then
   [ -n "$exc" ] && echo "::error title=Exceptions::${exc}"
   [ -z "$msg" ] && msg=$(tail -40 /tmp/step_output.txt | sed 's/%/%25/g; s/\r//g' | awk 'BEGIN{ORS="%0A"} {print}')
   echo "::error title=Step failed::${msg}"
+  # Full output to the ci-logs branch, so it can be read without the log viewer.
+  if [ -n "$GITHUB_WORKSPACE" ]; then
+    (
+      d=$(mktemp -d) && cd "$d" && git init -q && git checkout -q -b ci-logs &&
+      sed 's/\x1b\[[0-9;]*m//g' /tmp/step_output.txt > log.txt && git add log.txt &&
+      git -c user.name=ci -c user.email=ci@localhost commit -qm "log ${GITHUB_RUN_ID}" &&
+      hdr=$(git -C "$GITHUB_WORKSPACE" config --get http.https://github.com/.extraheader) &&
+      git -c http.extraheader="$hdr" push -qf "$(git -C "$GITHUB_WORKSPACE" remote get-url origin)" ci-logs
+    ) || echo "could not save the log"
+  fi
 fi
 exit "$code"
