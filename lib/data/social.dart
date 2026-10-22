@@ -350,5 +350,100 @@ class SocialApi {
 
   Future<GroundInsights> groundInsights(String id) async => GroundInsights(await _send('GET', '/v1/grounds/$id/insights'));
 
+  // ------------------------------------------------------------ booking and weather
+
+  Future<GroundSlots> groundSlots(String id, {String? date}) async =>
+      GroundSlots(await _send('GET', '/v1/grounds/$id/slots${date == null ? '' : '?date=$date'}', auth: _token()));
+  Future<GroundSlots> saveGroundSlots(String id, List<Slot> slots) async =>
+      GroundSlots(await _send('PUT', '/v1/grounds/$id/slots', body: {'slots': [for (final s in slots) s.toJson()]}, auth: _need()));
+  Future<void> requestBooking(String groundId, {required String slotId, required String date, required String team, required String phone, String note = ''}) async =>
+      _send('POST', '/v1/grounds/$groundId/bookings', body: {'slotId': slotId, 'date': date, 'team': team, 'phone': phone, 'note': note}, auth: _need());
+  Future<({List<Booking> asked, List<Booking> incoming})> bookings() async {
+    final j = await _send('GET', '/v1/bookings', auth: _need());
+    List<Booking> list(String k) => [for (final b in (j[k] as List? ?? const [])) Booking(Map<String, dynamic>.from(b as Map))];
+    return (asked: list('asked'), incoming: list('incoming'));
+  }
+
+  Future<void> answerBooking(String id, String action) async => _send('POST', '/v1/bookings/$id', body: {'action': action}, auth: _need());
+
+  Future<List<DayWeather>> weather(double lat, double lng) async {
+    final j = await _send('GET', '/v1/weather?lat=${lat.toStringAsFixed(3)}&lng=${lng.toStringAsFixed(3)}');
+    return [for (final d in (j['days'] as List? ?? const [])) DayWeather(Map<String, dynamic>.from(d as Map))];
+  }
+
   Future<void> deleteAccount() async => _send('DELETE', '/v1/me/account', auth: _need());
+}
+
+/// A bookable time at a ground, e.g. "Morning 6–10 AM, ₹1,500".
+class Slot {
+  Slot({this.id, this.label = '', required this.start, required this.end, this.price = 0, this.days = 127, this.status = 'free'});
+  final String? id;
+  String label;
+  int start; // minutes after midnight
+  int end;
+  int price;
+  int days; // bit 0 Monday … bit 6 Sunday
+  final String status; // free, booked, requested, mine, closed
+
+  factory Slot.fromJson(Map<String, dynamic> j) => Slot(
+        id: j['id'] as String?,
+        label: '${j['label'] ?? ''}',
+        start: (j['start'] as num?)?.toInt() ?? 0,
+        end: (j['end'] as num?)?.toInt() ?? 0,
+        price: (j['price'] as num?)?.toInt() ?? 0,
+        days: (j['days'] as num?)?.toInt() ?? 127,
+        status: '${j['status'] ?? 'free'}',
+      );
+  Map<String, dynamic> toJson() => {if (id != null) 'id': id, 'label': label, 'start': start, 'end': end, 'price': price, 'days': days};
+}
+
+class GroundSlots {
+  GroundSlots(Map<String, dynamic> j)
+      : mine = j['mine'] == true,
+        date = '${j['date'] ?? ''}',
+        slots = [for (final s in (j['slots'] as List? ?? const [])) Slot.fromJson(Map<String, dynamic>.from(s as Map))],
+        days = [for (final d in (j['days'] as List? ?? const [])) ('${(d as Map)['date']}', ((d)['free'] as num?)?.toInt() ?? 0)];
+  final bool mine;
+  final String date;
+  final List<Slot> slots;
+  final List<(String, int)> days; // date, free slots
+}
+
+class Booking {
+  Booking(this.j);
+  final Map<String, dynamic> j;
+  String get id => '${j['id']}';
+  String get groundId => '${j['groundId'] ?? ''}';
+  String get groundName => '${j['groundName'] ?? ''}';
+  String get slotLabel => '${j['slotLabel'] ?? ''}';
+  int? get start => (j['start'] as num?)?.toInt();
+  int? get end => (j['end'] as num?)?.toInt();
+  int get price => (j['price'] as num?)?.toInt() ?? 0;
+  String get date => '${j['date'] ?? ''}';
+  String get team => '${j['team'] ?? ''}';
+  String get note => '${j['note'] ?? ''}';
+  String get status => '${j['status'] ?? ''}';
+  String get by => '${j['by'] ?? ''}';
+  String? get phone => j['phone'] as String?;
+}
+
+class DayWeather {
+  DayWeather(Map<String, dynamic> j)
+      : date = '${j['date'] ?? ''}',
+        code = (j['code'] as num?)?.toInt(),
+        max = (j['max'] as num?)?.round(),
+        min = (j['min'] as num?)?.round(),
+        rain = (j['rain'] as num?)?.round();
+  final String date;
+  final int? code; // WMO weather code
+  final int? max, min, rain;
+
+  String get emoji {
+    final c = code ?? 0;
+    if (c >= 95) return '⛈';
+    if (c >= 61 || (c >= 51 && c <= 57) || c >= 80) return '🌧';
+    if (c >= 45 && c <= 48) return '🌫';
+    if (c >= 2) return '⛅';
+    return '☀️';
+  }
 }

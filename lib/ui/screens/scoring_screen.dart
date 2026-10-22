@@ -12,6 +12,7 @@ import 'help.dart';
 import 'match_centre_screen.dart';
 import 'scoring_sheets.dart';
 import 'share_card.dart';
+import 'voice_sheet.dart';
 import '../widgets/avatar.dart';
 
 class ScoringScreen extends StatefulWidget {
@@ -158,6 +159,17 @@ class _ScoringScreenState extends State<ScoringScreen> {
           'out': {'kind': w.kind, 'player': w.outPlayer, if (w.fielder != null) 'fielder': w.fielder},
         });
       });
+
+  /// Say the ball instead of tapping it.
+  Future<void> _voice(MatchRecord m, MatchState st) async {
+    if (_busy) return;
+    _tick();
+    final inn = st.current!;
+    final call = await listenForBall(context, striker: _name(inn.striker!), bowler: _name(inn.bowler!));
+    if (call == null || !mounted) return;
+    if (call.needsWicketDetails) return _wicket(m, st);
+    _add({'t': Ev.ball, ...call.toEvent(inn.striker!)});
+  }
 
   void _undo(MatchRecord m) {
     _tick();
@@ -427,6 +439,8 @@ class _ScoringScreenState extends State<ScoringScreen> {
                   onPressed: () => _runs(m, st, 5),
                 ),
               ),
+              const SizedBox(width: Space.s),
+              VoiceButton(onPressed: () => _voice(m, st)),
             ]),
           ),
         ];

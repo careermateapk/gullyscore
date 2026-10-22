@@ -48,6 +48,24 @@ void main() {
     used.addAll(['sportsmen', 'tough', 'late', 'again'].map((k) => 'tag_$k'));
     used.addAll(['registered', 'joined', 'accept_challenge', 'im_in', 'paid', 'not_paid', 'schedule_match', 'no_live_now', 'no_upcoming']);
     used.addAll(['no_upcoming_body', 'feed_empty_body', 'in_short', 'about_short', 'most_runs', 'most_wickets', 'runs', 'wickets']);
+    // v0.9: picture studio, stories, levels and booking
+    final st = RegExp(r"\bst\('([a-z0-9_]+)'");
+    for (final f in Directory('lib').listSync(recursive: true).whereType<File>().where((f) => f.path.endsWith('.dart'))) {
+      for (final m in st.allMatches(f.readAsStringSync())) {
+        used.add(m.group(1)!);
+      }
+    }
+    used.addAll(['midnight', 'royal', 'neon', 'emerald', 'sunset', 'ivory', 'ocean', 'holo'].map((k) => 'theme_$k'));
+    used.addAll(['post', 'story', 'square', 'wide'].map((k) => 'size_$k'));
+    used.addAll(['rookie', 'club', 'pro', 'star', 'legend'].map((k) => 'tier_$k'));
+    for (final k in ['finisher', 'six_hitter', 'opener', 'all_round', 'wicket_taker', 'safe_hands', 'anchor', 'team_player', 'new']) {
+      used.addAll(['persona_$k', 'persona_${k}_line']);
+    }
+    used.addAll(['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'].map((k) => 'day_$k'));
+    used.addAll(['requested', 'accepted', 'declined', 'cancelled'].map((k) => 'booking_$k'));
+    used.addAll(['morning', 'day', 'afternoon', 'night'].map((k) => 'slot_$k'));
+    used.addAll(['no_slots', 'no_slots_body', 'no_slots_owner', 'no_incoming_bookings', 'no_incoming_bookings_body', 'no_bookings', 'no_bookings_body', 'gtab_book']);
+    used.addAll(['xp_match', 'xp_run', 'xp_wicket', 'xp_catch', 'xp_fifty', 'xp_hundred', 'xp_potm']);
     for (final f in faqs) {
       used.add('faq_${f.id}_q');
       used.add('faq_${f.id}_a');

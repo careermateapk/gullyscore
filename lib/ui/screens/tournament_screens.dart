@@ -11,7 +11,7 @@ import '../../scoring/tournament.dart';
 import '../widgets/avatar.dart';
 import '../widgets/common.dart';
 import '../widgets/sponsors.dart';
-import 'certificates.dart';
+import '../../studio/share_entry.dart';
 import 'help.dart';
 import 'match_centre_screen.dart';
 import 'new_match_screen.dart';
@@ -493,7 +493,14 @@ class TournamentScreen extends StatelessWidget {
                               label: context.tr('champion_certificate'),
                               icon: Icons.workspace_premium_rounded,
                               height: 44,
-                              onPressed: () => shareChampionCertificate(context, t, champ),
+                              onPressed: () => openChampionCertificate(context, t, champ),
+                            ),
+                            const SizedBox(height: Space.s),
+                            OutlineBtn(
+                              label: context.tr('series_certificate'),
+                              icon: Icons.star_rounded,
+                              height: 44,
+                              onPressed: () => openSeriesCertificate(context, t),
                             ),
                           ] else ...[
                             Text(context.tr('played_of', {'n': v.played, 'm': t.fixtures.length}), style: Tx.body(p.text, w: FontWeight.w800)),

@@ -610,4 +610,71 @@ assert.equal(big.status, 413);
   delete env.FAKE_PUSH;
 }
 
+// ================= v0.9: ground booking and weather =================
+{
+  const sent = [];
+  env.FAKE_PUSH = (m) => sent.push(m);
+  const owner = (await call('POST', '/v1/login', { idToken: 'good:bookowner:o@x.com' })).body.token;
+  const team = (await call('POST', '/v1/login', { idToken: 'good:bookteam:t@x.com' })).body.token;
+  const other = (await call('POST', '/v1/login', { idToken: 'good:bookother:x@x.com' })).body.token;
+  const g = (await call('POST', '/v1/grounds', { name: 'Booking Ground', lat: 26.1, lng: 85.9 }, owner)).body;
+  let s = (await call('GET', '/v1/grounds/' + g.id + '/slots')).body;
+  assert.equal(s.slots.length, 0);
+  assert.equal(s.days.length, 14);
+  assert.equal((await call('PUT', '/v1/grounds/' + g.id + '/slots', { slots: [] }, team)).status, 403);
+  s = (await call('PUT', '/v1/grounds/' + g.id + '/slots', {
+    slots: [
+      { label: 'Morning', start: 360, end: 600, price: 1500 },
+      { label: 'Night', start: 1140, end: 1380, price: 2500, days: 0b1100000 },
+    ],
+  }, owner)).body;
+  assert.equal(s.slots.length, 2);
+  assert.equal(s.mine, true);
+  const [morning, night] = s.slots;
+  const day = s.days[0].date;
+  // Ask, then the owner sees the request with the phone number.
+  assert.equal((await call('POST', '/v1/grounds/' + g.id + '/bookings', { slotId: morning.id, date: day, team: 'Sakri Kings', phone: '98765 43210' })).status, 401);
+  const r1 = (await call('POST', '/v1/grounds/' + g.id + '/bookings', { slotId: morning.id, date: day, team: 'Sakri Kings', phone: '98765 43210' }, team)).body;
+  assert.equal(r1.status, 'requested');
+  assert.equal((await call('POST', '/v1/grounds/' + g.id + '/bookings', { slotId: morning.id, date: day, team: 'Sakri Kings' }, team)).body.id, r1.id, 'no double request');
+  const r2 = (await call('POST', '/v1/grounds/' + g.id + '/bookings', { slotId: morning.id, date: day, team: 'Other XI' }, other)).body;
+  assert.ok(sent.some((m) => (m.notification?.title || '').includes('Booking request')), 'owner told');
+  assert.equal((await call('GET', '/v1/grounds/' + g.id + '/slots?date=' + day, undefined, team)).body.slots[0].status, 'requested');
+  let mine = (await call('GET', '/v1/bookings', undefined, owner)).body;
+  assert.equal(mine.incoming.length, 2);
+  assert.equal(mine.incoming.find((x) => x.id === r1.id).phone, '98765 43210');
+  assert.equal(mine.incoming[0].groundName, 'Booking Ground');
+  const asked = (await call('GET', '/v1/bookings', undefined, team)).body.asked;
+  assert.equal(asked.length, 1);
+  assert.equal(asked[0].phone, undefined, 'requester list has no phone field');
+  // Only the owner accepts; accepting declines the other request.
+  assert.equal((await call('POST', '/v1/bookings/' + r1.id, { action: 'accept' }, team)).status, 403);
+  assert.equal((await call('POST', '/v1/bookings/' + r1.id, { action: 'accept' }, owner)).body.status, 'accepted');
+  mine = (await call('GET', '/v1/bookings', undefined, owner)).body;
+  assert.equal(mine.incoming.find((x) => x.id === r2.id).status, 'declined');
+  assert.equal((await call('GET', '/v1/grounds/' + g.id + '/slots?date=' + day, undefined, team)).body.slots[0].status, 'mine');
+  assert.equal((await call('GET', '/v1/grounds/' + g.id + '/slots?date=' + day, undefined, other)).body.slots[0].status, 'booked');
+  assert.equal((await call('POST', '/v1/grounds/' + g.id + '/bookings', { slotId: morning.id, date: day }, other)).status, 409);
+  // Night slot only on weekends.
+  const days = (await call('GET', '/v1/grounds/' + g.id + '/slots')).body.days;
+  const weekdayDate = days.map((d) => d.date).find((d) => [1, 2, 3, 4, 5].includes(new Date(d + 'T00:00:00Z').getUTCDay()));
+  assert.equal((await call('POST', '/v1/grounds/' + g.id + '/bookings', { slotId: night.id, date: weekdayDate }, team)).status, 409);
+  assert.equal((await call('POST', '/v1/grounds/' + g.id + '/bookings', { slotId: night.id, date: '2001-01-01' }, team)).status, 400);
+  // The team cancels.
+  assert.equal((await call('POST', '/v1/bookings/' + r1.id, { action: 'cancel' }, other)).status, 403);
+  assert.equal((await call('POST', '/v1/bookings/' + r1.id, { action: 'cancel' }, team)).body.status, 'cancelled');
+  assert.equal((await call('GET', '/v1/grounds/' + g.id + '/slots?date=' + day, undefined, other)).body.slots[0].status, 'free');
+  // Removing a slot keeps the other.
+  s = (await call('PUT', '/v1/grounds/' + g.id + '/slots', { slots: [{ id: night.id, label: 'Night', start: 1140, end: 1380, price: 3000 }] }, owner)).body;
+  assert.equal(s.slots.length, 1);
+  assert.equal(s.slots[0].id, night.id);
+  assert.equal(s.slots[0].price, 3000);
+  delete env.FAKE_PUSH;
+
+  env.FAKE_WEATHER = async () => [{ date: day, code: 0, max: 31, min: 22, rain: 5 }];
+  assert.equal((await call('GET', '/v1/weather?lat=26.1&lng=85.9')).body.days[0].max, 31);
+  assert.equal((await call('GET', '/v1/weather?lat=x')).status, 400);
+  delete env.FAKE_WEATHER;
+}
+
 console.log('server tests passed');

@@ -12,6 +12,7 @@ import { myCricket, socialRoutes, deleteUserEverywhere } from './social.js';
 import { contentRoutes } from './pages.js';
 import { teamRoutes } from './team.js';
 import { groundRoutes } from './grounds.js';
+import { bookingRoutes } from './booking.js';
 import { notifyMatch } from './push.js';
 
 export default {
@@ -118,6 +119,8 @@ async function route(request, env, ctx) {
   if (team) return team;
   const grounds = await groundRoutes(p, method, url, request, env, ctx);
   if (grounds) return grounds;
+  const booking = await bookingRoutes(p, method, url, request, env);
+  if (booking) return booking;
   const page = contentRoutes(p, method, url);
   if (page) return page;
 

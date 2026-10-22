@@ -14,7 +14,8 @@ import '../widgets/ground_map.dart';
 import '../widgets/online_cards.dart';
 import '../widgets/sponsors.dart';
 import 'ratings_screens.dart';
-import 'certificates.dart';
+import '../../studio/share_entry.dart';
+import '../../studio/stories.dart';
 import 'help.dart';
 import 'player_screen.dart';
 import 'scoring_screen.dart';
@@ -337,6 +338,7 @@ class _SummaryTab extends StatelessWidget {
     return ListView(padding: const EdgeInsets.fromLTRB(Space.edge, Space.m, Space.edge, 96), children: [
       SponsorBanner(sponsors: context.repo.sponsorsOf(m)),
       if (st.finished) RateTeamButton(matchId: m.id, bottomGap: true),
+      MatchStudioRow(m: m),
       if (mom != null) ...[
         HeroCard(
           padding: const EdgeInsets.all(14),
@@ -350,7 +352,7 @@ class _SummaryTab extends StatelessWidget {
                 Text(context.tr('mvp_points', {'n': mvpPoints(mom, st).round()}), style: Tx.label(p.text2)),
               ]),
             ),
-            IconBtn(icon: Icons.workspace_premium_rounded, tooltip: context.tr('mom_certificate'), onPressed: () => shareMomCertificate(context, m)),
+            IconBtn(icon: Icons.workspace_premium_rounded, tooltip: context.tr('mom_certificate'), onPressed: () => openMomCertificate(context, m)),
           ]),
         ),
         const SizedBox(height: Space.s),
@@ -1056,6 +1058,45 @@ class _Stat extends StatelessWidget {
         Text(label, style: Tx.label(p.text2)),
         const SizedBox(height: 2),
         FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text(value, style: Tx.score(22, p.text, w: FontWeight.w800))),
+      ]),
+    );
+  }
+}
+
+/// Poster and Match Story buttons.
+class MatchStudioRow extends StatelessWidget {
+  const MatchStudioRow({super.key, required this.m});
+  final MatchRecord m;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasBalls = m.state.innings.any((i) => i.balls.isNotEmpty);
+    Widget btn(String emoji, String label, List<Color> colors, VoidCallback onTap) => Expanded(
+          child: Pressable(
+            onTap: onTap,
+            semanticLabel: label,
+            child: Container(
+              constraints: const BoxConstraints(minHeight: 56),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(borderRadius: BorderRadius.circular(Corners.card), gradient: LinearGradient(colors: colors)),
+              child: ExcludeSemantics(
+                child: Row(children: [
+                  Text(emoji, style: const TextStyle(fontSize: 20)),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(label, maxLines: 2, overflow: TextOverflow.ellipsis, style: Tx.small(Colors.white, w: FontWeight.w800))),
+                ]),
+              ),
+            ),
+          ),
+        );
+    return Padding(
+      padding: const EdgeInsets.only(bottom: Space.s),
+      child: Row(children: [
+        btn('🖼', context.tr('match_poster'), const [Color(0xFF6D28D9), Color(0xFF3B0F7A)], () => openPoster(context, m)),
+        if (hasBalls) ...[
+          const SizedBox(width: Space.s),
+          btn('📖', context.tr('match_story'), const [Color(0xFFFF6A3D), Color(0xFFE8326E)], () => openMatchStory(context, m)),
+        ],
       ]),
     );
   }

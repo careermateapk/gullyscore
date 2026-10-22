@@ -41,6 +41,8 @@ import 'package:gullyscore/ui/screens/matches_screen.dart';
 import 'package:gullyscore/ui/screens/my_cricket_screen.dart';
 import 'package:gullyscore/ui/screens/ratings_screens.dart';
 import 'package:gullyscore/ui/screens/series_screen.dart';
+import 'package:gullyscore/ui/screens/insights_screens.dart';
+import 'package:gullyscore/ui/screens/booking_screens.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'online_fakes.dart';
@@ -483,7 +485,7 @@ void main() {
         await tester.pump(const Duration(seconds: 1));
         await tester.pumpAndSettle();
         check(tester, 'choose location $lang');
-        for (final tab in ['about', 'photos', 'reviews', 'matches', 'tournaments', 'insights']) {
+        for (final tab in ['about', 'book', 'photos', 'reviews', 'matches', 'tournaments', 'insights']) {
           await show(const GroundDetailScreen(groundId: 'g1'), 'ground $tab $lang');
           final tabText = find.text(Strings.get('gtab_$tab', lang)).first;
           await tester.ensureVisible(tabText);
@@ -509,6 +511,70 @@ void main() {
         }
         await show(const NotificationsScreen(), 'notifications $lang');
         await show(const NewMatchScreen(), 'new match $lang', taps: [hi ? 'बाद में खेलें' : 'Schedule for later']);
+
+        // v0.9: picture studio, stories, levels, head to head and booking
+        Future<void> tapText(String text, String name) async {
+          var f = find.text(text);
+          for (var i = 0; i < 8 && f.evaluate().isEmpty; i++) {
+            await tester.drag(find.byType(Scrollable).first, const Offset(0, -300));
+            await tester.pumpAndSettle();
+            f = find.text(text);
+          }
+          if (f.evaluate().isEmpty) {
+            FlutterError.onError = _savedOnError;
+            fail('$name: "$text" not found');
+          }
+          await tester.ensureVisible(f.first);
+          await tester.pumpAndSettle();
+          await tester.tap(f.first);
+          await tester.pumpAndSettle();
+          check(tester, name);
+        }
+
+        Future<void> storySteps(String name) async {
+          for (var i = 0; i < 6; i++) {
+            final next = find.byTooltip(Strings.get('next', lang));
+            if (next.evaluate().isEmpty) break;
+            await tester.tap(next.first);
+            await tester.pumpAndSettle();
+            check(tester, '$name slide ${i + 2}');
+          }
+        }
+
+        final dm = r.matches[done]!;
+        final batter = dm.playersA.first, bowler = dm.playersB.first;
+        await show(PlayerScreen(playerId: batter), 'player tools $lang');
+        await tapText(Strings.get('player_card', lang), 'player card $lang');
+        for (final t in ['royal', 'neon', 'ivory']) {
+          await tapText(Strings.get('theme_$t', lang), 'card theme $t $lang');
+        }
+        await tapText(Strings.get('size_story', lang), 'card story size $lang');
+        await tapText(Strings.get('size_square', lang), 'card square size $lang');
+        await show(PlayerScreen(playerId: batter), 'player tools again $lang');
+        await tapText(Strings.get('season_wrapped', lang), 'wrapped $lang');
+        await storySteps('wrapped $lang');
+        await show(LevelScreen(playerId: batter), 'level $lang');
+        await show(HeadToHeadScreen(batter: batter, bowler: bowler), 'head to head $lang');
+        await show(HeadToHeadScreen(batter: bowler, bowler: batter), 'head to head none $lang');
+        await show(MatchCentreScreen(matchId: done), 'match centre studio $lang');
+        await tapText(Strings.get('match_poster', lang), 'poster $lang');
+        await tapText(Strings.get('poster_tab_day', lang), 'poster day $lang');
+        await tapText(Strings.get('poster_tab_live', lang), 'poster live $lang');
+        await show(MatchCentreScreen(matchId: done), 'match centre story $lang');
+        await tapText(Strings.get('match_story', lang), 'match story $lang');
+        await storySteps('match story $lang');
+        await show(MatchCentreScreen(matchId: done), 'match centre certificate $lang');
+        final cert = find.byTooltip(Strings.get('mom_certificate', lang));
+        if (cert.evaluate().isNotEmpty) {
+          await tester.tap(cert.first);
+          await tester.pumpAndSettle();
+          check(tester, 'certificate $lang');
+        }
+        await show(const BookingsScreen(), 'bookings $lang');
+        await tapText(Strings.get('bookings_incoming', lang), 'bookings incoming $lang');
+        final g1 = Ground(Map<String, dynamic>.from(await fakeSend('GET', '/v1/grounds/g1')));
+        await show(SlotsEditorScreen(ground: g1, slots: [Slot(id: 's1', label: 'Morning', start: 360, end: 600, price: 150000)]), 'slots editor $lang');
+        await tapText('+ ${Strings.get('slot_night', lang)}', 'slots editor add $lang');
       }
       await tester.pump(const Duration(seconds: 1));
       FlutterError.onError = _savedOnError;

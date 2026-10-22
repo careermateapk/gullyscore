@@ -280,6 +280,12 @@ class TournamentView {
 
   MatchState? stateOf(Fixture f) => f.matchId == null ? null : matchState[f.matchId];
 
+  /// Every match of the tournament saved on this phone.
+  List<StatMatch> get statMatches => [
+        for (final e in matchState.entries)
+          if (matchTeams[e.key] != null) StatMatch(id: e.key, teamIds: matchTeams[e.key]!, state: e.value),
+      ];
+
   bool isFinished(Fixture f) => f.winnerOverride != null || (stateOf(f)?.finished ?? false);
 
   /// Winner's team id, or null if not decided (yet).

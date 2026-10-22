@@ -135,6 +135,50 @@ Future<Map<String, dynamic>> fakeSend(String method, String path, {Object? body,
       ],
     };
   }
+  if (path.startsWith('/v1/weather')) {
+    final d = DateTime.now();
+    return {
+      'days': [
+        for (var i = 0; i < 14; i++)
+          {'date': d.add(Duration(days: i)).toIso8601String().substring(0, 10), 'code': i.isEven ? 0 : 63, 'max': 31, 'min': 22, 'rain': i * 7}
+      ],
+    };
+  }
+  if (path.startsWith('/v1/bookings')) {
+    Map<String, dynamic> b(String id, String status) => {
+          'id': id,
+          'groundId': 'g1',
+          'groundName': 'Rajnagar Stadium Cricket Ground and Sports Complex',
+          'slotLabel': 'Morning',
+          'start': 360,
+          'end': 600,
+          'price': 150000,
+          'date': DateTime.now().toIso8601String().substring(0, 10),
+          'team': 'Madhubani Super Strikers Cricket Club XI',
+          'note': 'We will bring our own balls and umpire, please keep the sight screen ready',
+          'status': status,
+          'by': 'Suraj Kumar Thakur',
+          'phone': '98765 43210',
+        };
+    return {
+      'asked': [b('k1', 'accepted'), b('k2', 'requested')],
+      'incoming': [b('k3', 'requested'), b('k4', 'declined')],
+    };
+  }
+  if (path.startsWith('/v1/grounds') && path.contains('/slots')) {
+    final d = DateTime.now();
+    return {
+      'mine': true,
+      'date': d.toIso8601String().substring(0, 10),
+      'slots': [
+        {'id': 's1', 'label': 'Morning', 'start': 360, 'end': 600, 'price': 150000, 'days': 127, 'status': 'booked'},
+        {'id': 's2', 'label': 'Afternoon session long label', 'start': 600, 'end': 840, 'price': 1200, 'days': 127, 'status': 'free'},
+        {'id': 's3', 'label': 'Evening', 'start': 840, 'end': 1080, 'price': 1200, 'days': 127, 'status': 'requested'},
+        {'id': 's4', 'label': 'Night', 'start': 1140, 'end': 1380, 'price': 2500, 'days': 96, 'status': 'closed'},
+      ],
+      'days': [for (var i = 0; i < 14; i++) {'date': d.add(Duration(days: i)).toIso8601String().substring(0, 10), 'free': i % 3}],
+    };
+  }
   if (path.startsWith('/v1/grounds')) {
     final g = {
       'id': 'g1',

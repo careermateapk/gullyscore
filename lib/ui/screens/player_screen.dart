@@ -7,6 +7,7 @@ import '../../scoring/engine.dart';
 import '../../scoring/stats.dart';
 import '../widgets/common.dart';
 import '../widgets/ground_map.dart';
+import 'insights_screens.dart';
 import 'match_centre_screen.dart';
 import 'online.dart';
 import '../widgets/avatar.dart';
@@ -153,6 +154,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
                 const SizedBox(width: Space.s),
                 kv(context.tr('sr'), s.balls == 0 ? '-' : s.strikeRate.toStringAsFixed(1)),
               ]),
+              const SizedBox(height: Space.m),
+              PlayerTools(playerId: pl.id),
               const SizedBox(height: Space.m),
               Segmented<int>(values: const [0, 1], labels: [context.tr('batting'), context.tr('bowling')], selected: _tab, onChanged: (v) => setState(() => _tab = v)),
               const SizedBox(height: Space.m),

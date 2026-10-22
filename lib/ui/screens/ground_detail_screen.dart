@@ -9,6 +9,7 @@ import '../../data/cloud.dart';
 import '../../data/social.dart';
 import '../widgets/common.dart';
 import '../widgets/online_cards.dart';
+import 'booking_screens.dart';
 import 'grounds_screen.dart';
 import 'info_screens.dart';
 import 'match_centre_screen.dart';
@@ -29,7 +30,7 @@ class GroundDetailScreen extends StatefulWidget {
   State<GroundDetailScreen> createState() => _GroundDetailScreenState();
 }
 
-const _tabs = ['about', 'photos', 'reviews', 'matches', 'tournaments', 'insights'];
+const _tabs = ['about', 'book', 'photos', 'reviews', 'matches', 'tournaments', 'insights'];
 
 class _GroundDetailScreenState extends State<GroundDetailScreen> {
   Ground? _g;
@@ -311,6 +312,8 @@ class _GroundDetailScreenState extends State<GroundDetailScreen> {
             InkWell(onTap: () => openLink(context, 'tel:${g.phone2.replaceAll(' ', '')}'), child: Text('📞 ${g.phone2}', style: Tx.body(p.goldText, w: FontWeight.w700))),
           ],
         ]);
+      case 'book':
+        return GroundBookingTab(ground: g);
       case 'photos':
         return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           OutlineBtn(label: context.tr('add_photo'), icon: Icons.add_a_photo_outlined, height: 44, onPressed: _addPhoto),

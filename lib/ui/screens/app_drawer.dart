@@ -6,6 +6,7 @@ import '../../app/scope.dart';
 import '../../app/theme.dart';
 import '../../data/models.dart';
 import '../widgets/common.dart';
+import 'booking_screens.dart';
 import 'grounds_screen.dart';
 import 'help.dart';
 import 'info_screens.dart';
@@ -88,6 +89,7 @@ class AppDrawer extends StatelessWidget {
           item(Icons.videocam_outlined, p.liveText, context.tr('live_streaming'), () => _run(context, comingSoon), badge: context.tr('soon')),
           item(Icons.leaderboard_outlined, p.win, context.tr('leaderboard'), () => _push(context, const LeaderboardScreen())),
           item(Icons.place_outlined, p.liveText, context.tr('grounds_near_you'), () => _push(context, const GroundsScreen())),
+          item(Icons.event_available_outlined, p.goldText, context.tr('my_bookings'), () => _push(context, const BookingsScreen())),
           item(Icons.article_outlined, const Color(0xFF5B9BFF), context.tr('nav_news'), () => _push(context, const NewsScreen(pushed: true))),
           Padding(padding: const EdgeInsets.symmetric(horizontal: 18, vertical: Space.s), child: Divider(color: p.line, height: 1)),
           item(Icons.help_outline_rounded, const Color(0xFF5B9BFF), context.tr('help_and_faq'), () => _push(context, const FaqScreen())),

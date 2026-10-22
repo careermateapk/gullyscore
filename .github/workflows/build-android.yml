@@ -52,7 +52,14 @@ jobs:
           sed -i 's/minSdk = flutter.minSdkVersion/minSdk = maxOf(24, flutter.minSdkVersion)/' android/app/build.gradle.kts || true
           grep -n "minSdk" android/app/build.gradle* || true
           # Location (grounds near you) and notifications
-          sed -i 's#<application#<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>\n    <application#' android/app/src/main/AndroidManifest.xml
+          sed -i 's#<application#<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>\n    <uses-permission android:name="android.permission.RECORD_AUDIO"/>\n    <application#' android/app/src/main/AndroidManifest.xml
+          # Voice scoring: the phone's speech service must be visible to the app
+          if grep -q "<queries>" android/app/src/main/AndroidManifest.xml; then
+            sed -i 's#<queries>#<queries>\n        <intent>\n            <action android:name="android.speech.RecognitionService"/>\n        </intent>#' android/app/src/main/AndroidManifest.xml
+          else
+            sed -i 's#</manifest>#    <queries>\n        <intent>\n            <action android:name="android.speech.RecognitionService"/>\n        </intent>\n    </queries>\n</manifest>#' android/app/src/main/AndroidManifest.xml
+          fi
+          grep -n "RecognitionService\|RECORD_AUDIO" android/app/src/main/AndroidManifest.xml
           # GullyScore's own app icon (instead of Flutter's default)
           cp -r ci/icon/res/. android/app/src/main/res/
           ls android/app/src/main/res/mipmap-anydpi-v26
