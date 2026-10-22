@@ -138,7 +138,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
                 final w = box.maxWidth, h = box.maxHeight;
                 return Stack(children: [
                   // the scene's picture (top part)
-                  Positioned(left: 0, right: 0, top: 50, height: math.max(220, h * 0.5), child: _art(t, l, w, math.max(220, h * 0.5))),
+                  Positioned(left: 0, right: 0, top: 50, height: math.max(220, h * 0.5), child: MediaQuery.withNoTextScaling(child: _art(t, l, w, math.max(220, h * 0.5)))),
                   // top bar: progress, brand, language, skip
                   Positioned(
                     left: 16,
@@ -163,8 +163,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
                       ]),
                       const SizedBox(height: 10),
                       Row(children: [
-                        const _Brand(),
-                        const Spacer(),
+                        const Flexible(child: Align(alignment: Alignment.centerLeft, child: FittedBox(fit: BoxFit.scaleDown, child: _Brand()))),
+                        const SizedBox(width: 6),
                         _LangSwitch(lang: s.lang, onChanged: s.setLang),
                         if (!last) ...[
                           const SizedBox(width: 6),
@@ -363,16 +363,16 @@ class _ScoreArt extends StatelessWidget {
                   const Text('● LIVE', style: TextStyle(color: Color(0xFFFF8080), fontSize: 10, fontWeight: FontWeight.w800)),
                 ]),
                 const SizedBox(height: 6),
-                Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Row(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.end, children: [
                   AnimatedSwitcher(
                     duration: const Duration(milliseconds: 350),
                     transitionBuilder: (c, a) => SlideTransition(position: Tween(begin: const Offset(0, 0.6), end: Offset.zero).animate(CurvedAnimation(parent: a, curve: Curves.easeOutBack)), child: FadeTransition(opacity: a, child: c)),
                     child: Text('$runs', key: ValueKey(runs), style: _display(54)),
                   ),
                   Text('/3', style: _display(54).copyWith(color: Colors.white54)),
-                  const Spacer(),
+                  const SizedBox(width: 24),
                   Text(balls, style: _display(24)),
-                ]),
+                ])),
               ]),
             ),
           ),

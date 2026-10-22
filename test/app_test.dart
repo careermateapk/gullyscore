@@ -149,7 +149,9 @@ void main() {
     await tester.ensureVisible(find.text('Continue with Google'));
     await tester.tap(find.text('Continue with Google'));
     await tester.pumpAndSettle();
-    expect(find.text('No account for this Gmail'), findsOneWidget);
+    if (find.text('No account for this Gmail').evaluate().isEmpty) {
+      fail('no warning; sent=${sent.keys} texts=${tester.widgetList<Text>(find.byType(Text)).map((t) => t.data).join(' | ')}');
+    }
     await tester.tap(find.text('Sign up now'));
     await tester.pumpAndSettle();
 
@@ -351,6 +353,33 @@ void main() {
         await tester.pumpAndSettle();
         check(tester, screen.runtimeType.toString());
       }
+      // Every intro scene.
+      await tester.pumpWidget(scaled(wrap(s, r, OnboardingScreen(onDone: () {}), mode: mode)));
+      await tester.pumpAndSettle();
+      for (var i = 1; i < 5; i++) {
+        await tester.tap(find.text('Next'));
+        await tester.pumpAndSettle();
+        check(tester, 'intro scene $i');
+      }
+      // Sign up with a picked state and a foreign country code.
+      await tester.pumpWidget(scaled(wrap(s, r, const AuthScreen(startOnSignUp: true), mode: mode)));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('State'));
+      await tester.tap(find.text('State'));
+      await tester.pumpAndSettle();
+      check(tester, 'state sheet');
+      await tester.tap(find.text('Bihar'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('+91'));
+      await tester.tap(find.text('+91'));
+      await tester.pumpAndSettle();
+      check(tester, 'country sheet');
+      await tester.tap(find.textContaining('United Kingdom'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Create account'));
+      await tester.tap(find.text('Create account'));
+      await tester.pumpAndSettle();
+      check(tester, 'sign up errors');
       // Every tab of the main app.
       await tester.pumpWidget(scaled(GullyScoreApp(settings: s, repo: r)));
       await tester.pumpAndSettle();
