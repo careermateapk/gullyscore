@@ -140,6 +140,8 @@ void main() {
 
     final sync = SyncService(r, OnlineCloud(), google: NoGoogle(), socialSender: send);
     await sync.start(timers: false);
+    _savedOnError = FlutterError.onError;
+    FlutterError.onError = (d) => _errors.add(d);
     await tester.pumpWidget(GullyScoreApp(settings: s, repo: r, sync: sync));
     await tester.pumpAndSettle();
     expect(find.byType(AuthScreen), findsOneWidget);
@@ -151,13 +153,13 @@ void main() {
     await tester.pumpAndSettle();
     if (find.text('No account for this Gmail').evaluate().isEmpty) {
       final gd = tester.widget<GestureDetector>(find.ancestor(of: find.text('Continue with Google'), matching: find.byType(GestureDetector)).first);
-      Object? err;
-      try {
-        await sync.logInGoogle();
-      } catch (e) {
-        err = e;
-      }
-      fail('no warning; onTap=${gd.onTap != null} direct=$err sent=${sent.keys} texts=${tester.widgetList<Text>(find.byType(Text)).map((t) => t.data).join(' | ')}');
+      gd.onTap?.call();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle();
+      final after = find.text('No account for this Gmail').evaluate().length;
+      FlutterError.onError = _savedOnError;
+      fail('no warning; onTap=${gd.onTap != null} afterDirect=$after errors=${_errors.map((e) => e.exceptionAsString()).join(';')} sent=${sent.keys} texts=${tester.widgetList<Text>(find.byType(Text)).map((t) => t.data).join(' | ')}');
     }
     await tester.tap(find.text('Sign up now'));
     await tester.pumpAndSettle();
@@ -212,6 +214,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(AuthScreen), findsOneWidget);
     await tester.pump(const Duration(seconds: 1));
+    FlutterError.onError = _savedOnError;
+    check(tester, 'login flow');
   });
 
   testWidgets('switching to Hindi changes the navigation', (tester) async {
