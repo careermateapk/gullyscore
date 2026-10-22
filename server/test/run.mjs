@@ -405,6 +405,7 @@ assert.equal(big.status, 413);
 
 // ================= v0.8: grounds =================
 {
+  env.NO_MAP = true;
   env.FAKE_PLACES = async (q) => [{ name: 'Darbhanga', detail: 'Bihar, India', lat: 26.15, lng: 85.9 }];
   assert.equal((await call('GET', '/v1/places?q=Darbh')).body.places[0].name, 'Darbhanga');
   assert.equal((await call('GET', '/v1/places?q=D')).body.places.length, 0);
@@ -495,6 +496,45 @@ assert.equal(big.status, 413);
   assert.equal(ins.days.reduce((a, b) => a + b, 0), 2);
   assert.equal((await call('GET', '/v1/grounds/nope')).status, 404);
   delete env.FAKE_PLACES;
+  delete env.NO_MAP;
+}
+
+// ================= v0.9: grounds from the map =================
+{
+  let lookups = 0;
+  env.FAKE_OVERPASS = async () => {
+    lookups++;
+    return [
+      { type: 'way', id: 11, center: { lat: 28.6, lon: 77.2 }, tags: { leisure: 'pitch', sport: 'cricket', name: 'Siri Fort Cricket Ground', surface: 'grass', lit: 'yes' } },
+      { type: 'node', id: 12, lat: 28.61, lon: 77.21, tags: { leisure: 'stadium', sport: 'cricket;football', name: 'Delhi Stadium', 'addr:city': 'New Delhi' } },
+      { type: 'node', id: 13, lat: 28.6, lon: 77.2, tags: { shop: 'sports', sport: 'cricket', name: 'Cricket Bats Shop' } },
+      { type: 'way', id: 14, center: { lat: 28.6, lon: 77.2 }, tags: { leisure: 'pitch', sport: 'cricket' } },
+      { type: 'way', id: 15, center: { lat: 28.62, lon: 77.2 }, tags: { leisure: 'pitch', sport: 'football', name: 'Football Field' } },
+      { type: 'node', id: 16, lat: 28.6, lon: 77.19, tags: { club: 'sport', sport: 'cricket', name: 'Push Sports Cricket Academy', phone: '+91 98100 00000' } },
+    ];
+  };
+  let near = (await call('GET', '/v1/grounds?lat=28.6&lng=77.2&km=15')).body;
+  assert.deepEqual(near.grounds.map((g) => g.name).sort(), ['Delhi Stadium', 'Push Sports Cricket Academy', 'Siri Fort Cricket Ground']);
+  const siri = near.grounds.find((g) => g.name.startsWith('Siri'));
+  assert.equal(siri.fromMap, true);
+  assert.deepEqual(siri.pitches, ['turf']);
+  assert.deepEqual(siri.facilities, ['lights']);
+  near = (await call('GET', '/v1/grounds?lat=28.6&lng=77.2&km=15')).body;
+  assert.equal(near.total, 3, 'no duplicates');
+  assert.equal(lookups, 1, 'area cached');
+  // Anyone signed in can fill a map ground's details; then it is theirs.
+  const a = (await call('POST', '/v1/login', { idToken: 'good:mapper:m@x.com' })).body.token;
+  const b = (await call('POST', '/v1/login', { idToken: 'good:mapper2:m2@x.com' })).body.token;
+  assert.equal((await call('PUT', '/v1/grounds/' + siri.id, { feeMin: 1500, feeMax: 2000 })).status, 401);
+  assert.equal((await call('PUT', '/v1/grounds/' + siri.id, { feeMin: 1500, feeMax: 2000 }, a)).body.feeMin, 1500);
+  assert.equal((await call('GET', '/v1/grounds/' + siri.id, undefined, a)).body.mine, true);
+  assert.equal((await call('GET', '/v1/grounds/' + siri.id)).body.fromMap, false);
+  assert.equal((await call('PUT', '/v1/grounds/' + siri.id, { feeMin: 1 }, b)).status, 403);
+  // Map down: still answers with what we have.
+  env.FAKE_OVERPASS = async () => null;
+  assert.equal((await call('GET', '/v1/grounds?lat=19.07&lng=72.87&km=15')).body.total, 0);
+  delete env.FAKE_OVERPASS;
+  env.NO_MAP = true;
 }
 
 // ================= v0.7: notifications =================

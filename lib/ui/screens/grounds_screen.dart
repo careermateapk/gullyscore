@@ -144,11 +144,12 @@ class GroundCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 Wrap(spacing: 8, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
                   if (g.rating != null) Tag('★ ${g.rating!.toStringAsFixed(1)}', color: p.win),
+                  if (g.fromMap) Tag('🗺 ${context.tr('from_map')}'),
                   Text(g.reviews == 0 ? context.tr('no_reviews_yet') : context.tr('reviews_n', {'n': g.reviews}), style: Tx.label(p.text2, w: FontWeight.w600)),
                 ]),
                 const SizedBox(height: 6),
                 Text(
-                  ['📍 ${g.area}', if (g.pitches.isNotEmpty) context.tr('pitch_${g.pitches.first}'), context.tr('matches_n', {'n': g.matches})].join(' · '),
+                  [if (g.area.isNotEmpty) '📍 ${g.area}', if (g.pitches.isNotEmpty) context.tr('pitch_${g.pitches.first}'), context.tr('matches_n', {'n': g.matches})].join(' · '),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: Tx.label(p.text2, w: FontWeight.w600),
@@ -374,6 +375,11 @@ class _GroundsScreenState extends State<GroundsScreen> {
                   else
                     for (final g in _list!)
                       Padding(padding: const EdgeInsets.fromLTRB(Space.edge, 0, Space.edge, Space.m), child: GroundCard(g: g, onTap: () => _open(g))),
+                  if (_list != null && _list!.any((g) => g.fromMap))
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(Space.edge, 0, Space.edge, Space.l),
+                      child: Text('Map data © OpenStreetMap contributors', textAlign: TextAlign.center, style: Tx.label(p.text2, w: FontWeight.w600)),
+                    ),
                 ]),
               ),
             ),

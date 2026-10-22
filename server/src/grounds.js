@@ -8,6 +8,8 @@ export const PITCHES = ['turf', 'matting', 'cement', 'mud', 'astroturf'];
 export const FACILITIES = ['lights', 'washrooms', 'water', 'nets', 'umpires', 'scorers', 'parking', 'pavilion', 'cafeteria', 'sightscreen', 'balls'];
 const MAX_PHOTO = 400 * 1024; // base64 characters (~300 KB JPEG)
 const MAX_PHOTOS = 12;
+const MAP_DAYS = 14; // look an area up on the map again after this many days
+const OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
 
 const str = (v, n) => (typeof v === 'string' ? v.trim().slice(0, n) : '');
 const num = (v) => (v === null || v === undefined || v === '' || !Number.isFinite(Number(v)) ? null : Number(v));
@@ -62,6 +64,7 @@ function view(g, s, lat, lng) {
     phone: g.phone || '',
     phone2: g.phone2 || '',
     mine: false,
+    fromMap: String(g.place_id || '').startsWith('osm:') && !g.user_id,
     km: lat == null || lng == null ? null : Math.round(km(lat, lng, g.lat, g.lng) * 10) / 10,
     ...(s || { reviews: 0, rating: null, matches: 0, photo: null, photos: 0 }),
   };
@@ -176,6 +179,98 @@ async function places(q, env) {
   }));
 }
 
+/** Cricket grounds from OpenStreetMap around a point (raw Overpass elements). */
+async function overpass(env, lat, lng, radiusKm) {
+  if (env.FAKE_OVERPASS) return env.FAKE_OVERPASS(lat, lng, radiusKm); // tests
+  const r = Math.round(radiusKm * 1000);
+  const around = `(around:${r},${lat},${lng})`;
+  const q = `[out:json][timeout:20];(nwr["sport"~"cricket"]${around};nwr["leisure"~"^(pitch|stadium|sports_centre)$"]["name"~"[Cc]ricket"]${around};);out center tags 400;`;
+  for (const endpoint of OVERPASS) {
+    try {
+      const ac = new AbortController();
+      const t = setTimeout(() => ac.abort(), 15000);
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'content-type': 'application/x-www-form-urlencoded', 'user-agent': 'GullyScore/0.9 (cricket scoring app; grounds search)' },
+        body: 'data=' + encodeURIComponent(q),
+        signal: ac.signal,
+      });
+      clearTimeout(t);
+      if (!res.ok) continue;
+      const j = await res.json();
+      return j.elements || [];
+    } catch {}
+  }
+  return null; // map not reachable now; try again next time
+}
+
+const PLACE_KINDS = ['pitch', 'stadium', 'sports_centre', 'recreation_ground', 'park', 'track', 'sports_hall'];
+
+/** Turn one map element into ground fields, or null if it is not a ground. */
+export function mapGround(e) {
+  const t = e.tags || {};
+  const lat = e.lat ?? e.center?.lat;
+  const lng = e.lon ?? e.center?.lon;
+  if (lat == null || lng == null) return null;
+  if (t.shop || t.amenity === 'school' && !t.leisure) return null;
+  const sport = String(t.sport || '');
+  const isPlace = PLACE_KINDS.includes(t.leisure) || t.landuse === 'recreation_ground' || t.club === 'sport';
+  if (!isPlace) return null;
+  let name = String(t.name || t['name:en'] || '').trim();
+  if (!name) {
+    // Unnamed pitches are often just a strip inside a park; keep only big ones.
+    if (t.leisure !== 'stadium' && t.leisure !== 'sports_centre') return null;
+    name = 'Cricket ground';
+  }
+  if (!/cricket/i.test(sport) && !/cricket/i.test(name)) return null;
+  const addr = [t['addr:housenumber'], t['addr:street'], t['addr:suburb'] || t['addr:neighbourhood']].filter(Boolean).join(', ');
+  const city = String(t['addr:city'] || t['addr:district'] || '').slice(0, 80);
+  const surface = String(t.surface || '').toLowerCase();
+  const pitches = /artificial|astroturf/.test(surface) ? ['astroturf'] : /grass/.test(surface) ? ['turf'] : /concrete|asphalt/.test(surface) ? ['cement'] : /dirt|earth|ground|sand/.test(surface) ? ['mud'] : [];
+  const facilities = [];
+  if (t.lit === 'yes') facilities.push('lights');
+  if (t.toilets === 'yes') facilities.push('washrooms');
+  const phone = String(t.phone || t['contact:phone'] || '').replace(/[^\d+ ]/g, '').slice(0, 16);
+  return {
+    placeId: `osm:${e.type}/${e.id}`,
+    name: name.slice(0, 100),
+    address: addr.slice(0, 200),
+    city,
+    lat: Number(lat),
+    lng: Number(lng),
+    pitches,
+    facilities,
+    timings: String(t.opening_hours || '').slice(0, 80),
+    phone,
+  };
+}
+
+/** Make sure map grounds around this point are in the grounds table. */
+async function loadMapGrounds(env, lat, lng, radiusKm) {
+  if (env.NO_MAP) return;
+  const r = Math.min(radiusKm, 30);
+  const area = `${lat.toFixed(2)},${lng.toFixed(2)},${r}`;
+  const seen = await env.DB.prepare('SELECT fetched FROM map_areas WHERE area = ?').bind(area).first();
+  if (seen && Date.now() - seen.fetched < MAP_DAYS * 86400000) return;
+  const els = await overpass(env, lat, lng, r);
+  if (els == null) return;
+  const now = Date.now();
+  const stmts = [];
+  for (const e of els) {
+    const g = mapGround(e);
+    if (!g) continue;
+    stmts.push(
+      env.DB.prepare(
+        `INSERT INTO grounds (id, name, address, city, lat, lng, place_id, pitches, facilities, timings, phone, user_id, created)
+         SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '', ? WHERE NOT EXISTS (SELECT 1 FROM grounds WHERE place_id = ?)`,
+      ).bind('m' + randomString(13, TOKEN_ALPHABET), g.name, g.address, g.city, g.lat, g.lng, g.placeId, JSON.stringify(g.pitches),
+        JSON.stringify(g.facilities), g.timings, g.phone, now, g.placeId),
+    );
+  }
+  stmts.push(env.DB.prepare('INSERT INTO map_areas (area, fetched) VALUES (?, ?) ON CONFLICT(area) DO UPDATE SET fetched = excluded.fetched').bind(area, now));
+  for (let i = 0; i < stmts.length; i += 50) await env.DB.batch(stmts.slice(i, i + 50));
+}
+
 export async function groundRoutes(p, method, url, request, env) {
   let m;
   // Places for the location picker.
@@ -200,6 +295,9 @@ export async function groundRoutes(p, method, url, request, env) {
       const like = '%' + q.replace(/[%_]/g, '') + '%';
       rows = await env.DB.prepare('SELECT * FROM grounds WHERE hidden = 0 AND (name LIKE ? OR address LIKE ? OR city LIKE ?) LIMIT 100').bind(like, like, like).all();
     } else if (lat != null && lng != null) {
+      try {
+        await loadMapGrounds(env, lat, lng, radius);
+      } catch {}
       const d = radius / 100; // degrees ≈ km/111, a little wider
       rows = await env.DB.prepare('SELECT * FROM grounds WHERE hidden = 0 AND lat BETWEEN ? AND ? AND lng BETWEEN ? AND ? LIMIT 400')
         .bind(lat - d, lat + d, lng - d * 1.2, lng + d * 1.2)
@@ -262,7 +360,8 @@ export async function groundRoutes(p, method, url, request, env) {
     }
     if (method === 'PUT') {
       const user = await userAuth(request, env);
-      if (user.id !== g.user_id) throw new HttpError(403, 'only who registered it can edit');
+      if (g.user_id && user.id !== g.user_id) throw new HttpError(403, 'only who registered it can edit');
+      if (!g.user_id) await env.DB.prepare("UPDATE grounds SET user_id = ? WHERE id = ? AND user_id = ''").bind(user.id, g.id).run(); // a map ground: first person to fill details looks after it
       const f = groundFields({ ...view(g), ...(await readJson(request)) });
       await env.DB.prepare(
         `UPDATE grounds SET name = ?, address = ?, city = ?, lat = ?, lng = ?, pitches = ?, facilities = ?, fee_min = ?, fee_max = ?, fee = ?,

@@ -193,8 +193,9 @@ Future<Map<String, dynamic>> fakeSend(String method, String path, {Object? body,
         ],
       };
     }
+    if (path.startsWith('/v1/grounds/gm')) return {...g, 'id': 'gm', 'fromMap': true, 'phone': '', 'address': '', 'city': '', 'rating': null, 'reviews': 0, 'feeMin': 0, 'feeMax': 0, 'fee': '', 'photoIds': <String>[]};
     if (path.startsWith('/v1/grounds/g')) return g;
-    return {'total': 128, 'grounds': [g, {...g, 'id': 'g2', 'phone': '', 'rating': null, 'reviews': 0, 'feeMin': 0, 'feeMax': 0, 'fee': ''}]};
+    return {'total': 128, 'grounds': [g, {...g, 'id': 'g2', 'fromMap': true, 'address': '', 'city': '', 'phone': '', 'rating': null, 'reviews': 0, 'feeMin': 0, 'feeMax': 0, 'fee': ''}]};
   }
   if (path.endsWith('/asks')) {
     return {

@@ -492,6 +492,11 @@ void main() {
           await tester.pumpAndSettle();
           check(tester, 'ground tab $tab $lang');
         }
+        await show(const GroundDetailScreen(groundId: 'gm'), 'map ground $lang');
+        if (find.text(Strings.get('add_details', lang)).evaluate().isEmpty) {
+          FlutterError.onError = _savedOnError;
+          fail('map ground should ask for details ($lang)');
+        }
         final g = Ground(Map<String, dynamic>.from(await fakeSend('GET', '/v1/grounds/g1')));
         await show(RegisterGroundScreen(edit: g, locate: false), 'register ground $lang');
         for (var step = 0; step < 2; step++) {

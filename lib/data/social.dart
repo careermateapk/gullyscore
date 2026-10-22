@@ -150,6 +150,8 @@ class Ground {
   String get phone => (j['phone'] as String?) ?? '';
   String get phone2 => (j['phone2'] as String?) ?? '';
   bool get mine => j['mine'] == true;
+  /// Came from the free map and nobody has filled in its details yet.
+  bool get fromMap => j['fromMap'] == true;
   double? get km => (j['km'] as num?)?.toDouble();
   double? get rating => (j['rating'] as num?)?.toDouble();
   int get reviews => (j['reviews'] as num?)?.toInt() ?? 0;
