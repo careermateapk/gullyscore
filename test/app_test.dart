@@ -381,6 +381,8 @@ void main() {
       await tester.tap(find.text('+91'));
       await tester.pumpAndSettle();
       check(tester, 'country sheet');
+      await tester.enterText(find.byType(TextField).last, 'united k');
+      await tester.pumpAndSettle();
       await tester.tap(find.textContaining('United Kingdom'));
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('Create account'));

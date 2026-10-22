@@ -348,8 +348,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                       ),
                     ),
                   ),
-                  SliverFillRemaining(
-                    hasScrollBody: false,
+                  SliverToBoxAdapter(
                     child: Transform.translate(
                       offset: Offset(0, 80 * (1 - iv(0.15, 0.7))),
                       child: Opacity(
@@ -381,6 +380,8 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                       ),
                     ),
                   ),
+                  // the panel's colour continues to the bottom of the screen
+                  const SliverFillRemaining(hasScrollBody: false, child: ColoredBox(color: Color(0xFF080C18))),
                 ]),
               ),
             ]),
