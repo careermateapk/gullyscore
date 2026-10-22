@@ -430,6 +430,7 @@ void main() {
                 sync: sync,
                 rev: s.rev,
                 child: MaterialApp(
+                  key: UniqueKey(), // a fresh app each time, so sheets from the last screen are gone
                   theme: buildTheme(Palette.lightP),
                   darkTheme: buildTheme(Palette.darkP),
                   themeMode: mode,
