@@ -533,6 +533,11 @@ assert.equal(big.status, 413);
   // Map down: still answers with what we have.
   env.FAKE_OVERPASS = async () => null;
   assert.equal((await call('GET', '/v1/grounds?lat=19.07&lng=72.87&km=15')).body.total, 0);
+  let tries = 0;
+  env.FAKE_OVERPASS = async () => (tries++, []);
+  await call('GET', '/v1/grounds?lat=19.07&lng=72.87&km=15');
+  await call('GET', '/v1/grounds?lat=19.07&lng=72.87&km=15');
+  assert.equal(tries, 2, 'an empty answer is not remembered');
   delete env.FAKE_OVERPASS;
   env.NO_MAP = true;
 }

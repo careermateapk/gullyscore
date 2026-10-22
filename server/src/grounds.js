@@ -9,7 +9,12 @@ export const FACILITIES = ['lights', 'washrooms', 'water', 'nets', 'umpires', 's
 const MAX_PHOTO = 400 * 1024; // base64 characters (~300 KB JPEG)
 const MAX_PHOTOS = 12;
 const MAP_DAYS = 14; // look an area up on the map again after this many days
-const OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
+const OVERPASS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.private.coffee/api/interpreter',
+  'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter',
+];
 
 const str = (v, n) => (typeof v === 'string' ? v.trim().slice(0, n) : '');
 const num = (v) => (v === null || v === undefined || v === '' || !Number.isFinite(Number(v)) ? null : Number(v));
@@ -180,7 +185,7 @@ async function places(q, env) {
 }
 
 /** Cricket grounds from OpenStreetMap around a point (raw Overpass elements). */
-async function overpass(env, lat, lng, radiusKm) {
+async function overpass(env, lat, lng, radiusKm, notes) {
   if (env.FAKE_OVERPASS) return env.FAKE_OVERPASS(lat, lng, radiusKm); // tests
   const r = Math.round(radiusKm * 1000);
   const around = `(around:${r},${lat},${lng})`;
@@ -196,10 +201,21 @@ async function overpass(env, lat, lng, radiusKm) {
         signal: ac.signal,
       });
       clearTimeout(t);
-      if (!res.ok) continue;
+      const host = new URL(endpoint).host;
+      if (!res.ok) {
+        notes.push(`${host}:${res.status}`);
+        continue;
+      }
       const j = await res.json();
+      if (j.remark && !(j.elements || []).length) {
+        notes.push(`${host}:remark`); // timed out or busy: not a real empty answer
+        continue;
+      }
+      notes.push(`${host}:ok:${(j.elements || []).length}`);
       return j.elements || [];
-    } catch {}
+    } catch (e) {
+      notes.push(`${new URL(endpoint).host}:${e?.name || 'error'}`);
+    }
   }
   return null; // map not reachable now; try again next time
 }
@@ -246,14 +262,17 @@ export function mapGround(e) {
 }
 
 /** Make sure map grounds around this point are in the grounds table. */
-async function loadMapGrounds(env, lat, lng, radiusKm) {
+async function loadMapGrounds(env, lat, lng, radiusKm, notes = []) {
   if (env.NO_MAP) return;
   const r = Math.min(radiusKm, 30);
-  const area = `${lat.toFixed(2)},${lng.toFixed(2)},${r}`;
+  const area = `v2:${lat.toFixed(2)},${lng.toFixed(2)},${r}`;
   const seen = await env.DB.prepare('SELECT fetched FROM map_areas WHERE area = ?').bind(area).first();
-  if (seen && Date.now() - seen.fetched < MAP_DAYS * 86400000) return;
-  const els = await overpass(env, lat, lng, r);
-  if (els == null) return;
+  if (seen && Date.now() - seen.fetched < MAP_DAYS * 86400000) {
+    notes.push('cached');
+    return;
+  }
+  const els = await overpass(env, lat, lng, r, notes);
+  if (els == null || !els.length) return; // nothing back: try again next time
   const now = Date.now();
   const stmts = [];
   for (const e of els) {
@@ -291,13 +310,16 @@ export async function groundRoutes(p, method, url, request, env) {
     const radius = int(url.searchParams.get('km') || 15, 1, 200);
     const q = str(url.searchParams.get('q'), 80);
     let rows;
+    const notes = [];
     if (q.length >= 2) {
       const like = '%' + q.replace(/[%_]/g, '') + '%';
       rows = await env.DB.prepare('SELECT * FROM grounds WHERE hidden = 0 AND (name LIKE ? OR address LIKE ? OR city LIKE ?) LIMIT 100').bind(like, like, like).all();
     } else if (lat != null && lng != null) {
       try {
-        await loadMapGrounds(env, lat, lng, radius);
-      } catch {}
+        await loadMapGrounds(env, lat, lng, radius, notes);
+      } catch (e) {
+        notes.push('load:' + String(e?.message || e).slice(0, 60));
+      }
       const d = radius / 100; // degrees ≈ km/111, a little wider
       rows = await env.DB.prepare('SELECT * FROM grounds WHERE hidden = 0 AND lat BETWEEN ? AND ? AND lng BETWEEN ? AND ? LIMIT 400')
         .bind(lat - d, lat + d, lng - d * 1.2, lng + d * 1.2)
@@ -324,7 +346,9 @@ export async function groundRoutes(p, method, url, request, env) {
       name: (a, b) => a.name.localeCompare(b.name),
     }[sort] || ((a, b) => (a.km ?? 1e9) - (b.km ?? 1e9));
     out.sort(by);
-    return json({ total: out.length, grounds: out.slice(0, 60) });
+    const res = json({ total: out.length, grounds: out.slice(0, 60) });
+    if (notes.length) res.headers.set('x-map', notes.join(' '));
+    return res;
   }
 
   if (p === '/v1/grounds' && method === 'POST') {

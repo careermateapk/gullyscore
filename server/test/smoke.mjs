@@ -34,8 +34,10 @@ for (const path of ['/privacy', '/terms', '/blog', '/v1/feed?kind=live', '/v1/le
   assert.equal((await call('GET', path)).status, 200, path);
 }
 // Grounds from the free map (a warning only: the map service can be busy).
-const delhi = await call('GET', '/v1/grounds?lat=28.6139&lng=77.2090&km=15');
+const dres = await fetch(base + '/v1/grounds?lat=28.6139&lng=77.2090&km=15');
+const delhi = { status: dres.status, body: await dres.json() };
+console.log('::notice::Map lookup: ' + (dres.headers.get('x-map') || '(none)'));
 assert.equal(delhi.status, 200, 'grounds');
-if (delhi.body.total > 0) console.log(`Map grounds near New Delhi: ${delhi.body.total} (e.g. ${delhi.body.grounds.slice(0, 5).map((g) => g.name).join(', ')})`);
+if (delhi.body.total > 0) console.log(`::notice::Map grounds near New Delhi: ${delhi.body.total} (e.g. ${delhi.body.grounds.slice(0, 5).map((g) => g.name).join(', ')})`);
 else console.log('::warning::No map grounds near New Delhi yet (map service busy?)');
 console.log('Live service works end to end');
