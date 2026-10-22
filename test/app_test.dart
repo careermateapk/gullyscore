@@ -150,7 +150,14 @@ void main() {
     await tester.tap(find.text('Continue with Google'));
     await tester.pumpAndSettle();
     if (find.text('No account for this Gmail').evaluate().isEmpty) {
-      fail('no warning; sent=${sent.keys} texts=${tester.widgetList<Text>(find.byType(Text)).map((t) => t.data).join(' | ')}');
+      final gd = tester.widget<GestureDetector>(find.ancestor(of: find.text('Continue with Google'), matching: find.byType(GestureDetector)).first);
+      Object? err;
+      try {
+        await sync.logInGoogle();
+      } catch (e) {
+        err = e;
+      }
+      fail('no warning; onTap=${gd.onTap != null} direct=$err sent=${sent.keys} texts=${tester.widgetList<Text>(find.byType(Text)).map((t) => t.data).join(' | ')}');
     }
     await tester.tap(find.text('Sign up now'));
     await tester.pumpAndSettle();

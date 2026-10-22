@@ -843,10 +843,10 @@ class _CardArt extends StatelessWidget {
                       ),
                     ),
                     Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                      const Row(children: [
-                        Text('GullyScore', style: TextStyle(color: Color(0xFFE5D4FF), fontSize: 8, fontWeight: FontWeight.w800)),
-                        Spacer(),
-                        Text('SEASON 2026', style: TextStyle(color: Color(0xFFE5D4FF), fontSize: 8, fontWeight: FontWeight.w800, letterSpacing: 1)),
+                      const Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                        Flexible(child: Text('GullyScore', maxLines: 1, overflow: TextOverflow.clip, style: TextStyle(color: Color(0xFFE5D4FF), fontSize: 8, fontWeight: FontWeight.w800))),
+                        SizedBox(width: 4),
+                        Flexible(child: Text('SEASON 2026', maxLines: 1, overflow: TextOverflow.clip, style: TextStyle(color: Color(0xFFE5D4FF), fontSize: 8, fontWeight: FontWeight.w800, letterSpacing: 1))),
                       ]),
                       const SizedBox(height: 10),
                       Row(children: [
