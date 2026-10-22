@@ -492,7 +492,7 @@ void main() {
           await tester.pumpAndSettle();
           check(tester, 'ground tab $tab $lang');
         }
-        await show(const GroundDetailScreen(groundId: 'gm'), 'map ground $lang');
+        await show(const GroundDetailScreen(key: ValueKey('gm'), groundId: 'gm'), 'map ground $lang');
         if (find.text(Strings.get('add_details', lang)).evaluate().isEmpty) {
           FlutterError.onError = _savedOnError;
           fail('map ground should ask for details ($lang)');
