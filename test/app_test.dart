@@ -493,14 +493,6 @@ void main() {
           check(tester, 'ground tab $tab $lang');
         }
         await show(const GroundDetailScreen(groundId: 'gm'), 'map ground $lang');
-        await tester.scrollUntilVisible(
-          find.text(Strings.get('add_details', lang)),
-          200,
-          scrollable: find.byWidgetPredicate((w) => w is Scrollable && w.axisDirection == AxisDirection.down).first,
-          maxScrolls: 20,
-        );
-        await tester.pumpAndSettle();
-        check(tester, 'map ground details $lang');
         if (find.text(Strings.get('add_details', lang)).evaluate().isEmpty) {
           FlutterError.onError = _savedOnError;
           fail('map ground should ask for details ($lang)');

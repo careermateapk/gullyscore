@@ -187,37 +187,42 @@ async function places(q, env) {
 /** Cricket grounds from OpenStreetMap around a point (raw Overpass elements). */
 async function overpass(env, lat, lng, radiusKm, notes) {
   if (env.FAKE_OVERPASS) return env.FAKE_OVERPASS(lat, lng, radiusKm); // tests
-  const r = Math.round(radiusKm * 1000);
-  const around = `(around:${r},${lat},${lng})`;
-  const q = `[out:json][timeout:20];(nwr["sport"~"cricket"]${around};nwr["leisure"~"^(pitch|stadium|sports_centre)$"]["name"~"[Cc]ricket"]${around};);out center tags 400;`;
-  for (const endpoint of OVERPASS) {
+  // A box is much quicker for the map servers than a circle.
+  const dLat = radiusKm / 111;
+  const dLng = radiusKm / (111 * Math.max(0.2, Math.cos((lat * Math.PI) / 180)));
+  const box = `(${(lat - dLat).toFixed(4)},${(lng - dLng).toFixed(4)},${(lat + dLat).toFixed(4)},${(lng + dLng).toFixed(4)})`;
+  const q = `[out:json][timeout:25];(nwr["sport"~"cricket"]${box};nwr["leisure"~"^(pitch|stadium|sports_centre)$"]["name"~"[Cc]ricket"]${box};);out center tags 400;`;
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), 25000);
+  const ask = async (endpoint) => {
+    const host = new URL(endpoint).host;
     try {
-      const ac = new AbortController();
-      const t = setTimeout(() => ac.abort(), 15000);
       const res = await fetch(endpoint, {
         method: 'POST',
-        headers: { 'content-type': 'application/x-www-form-urlencoded', 'user-agent': 'GullyScore/0.9 (cricket scoring app; grounds search)' },
+        headers: { 'content-type': 'application/x-www-form-urlencoded', accept: 'application/json', 'user-agent': 'GullyScore/0.9 (cricket scoring app; grounds search)' },
         body: 'data=' + encodeURIComponent(q),
         signal: ac.signal,
       });
-      clearTimeout(t);
-      const host = new URL(endpoint).host;
-      if (!res.ok) {
-        notes.push(`${host}:${res.status}`);
-        continue;
-      }
+      if (!res.ok) throw new Error(`${host}:${res.status}`);
       const j = await res.json();
-      if (j.remark && !(j.elements || []).length) {
-        notes.push(`${host}:remark`); // timed out or busy: not a real empty answer
-        continue;
-      }
+      if (j.remark && !(j.elements || []).length) throw new Error(`${host}:remark`); // busy or timed out
       notes.push(`${host}:ok:${(j.elements || []).length}`);
       return j.elements || [];
     } catch (e) {
-      notes.push(`${new URL(endpoint).host}:${e?.name || 'error'}`);
+      notes.push(String(e?.message || '').startsWith(host) ? e.message : `${host}:${e?.name || 'error'}`);
+      throw e;
     }
+  };
+  try {
+    // Ask all map servers at once and take the first good answer.
+    const els = await Promise.any(OVERPASS.map(ask));
+    ac.abort();
+    return els;
+  } catch {
+    return null; // map not reachable now; try again next time
+  } finally {
+    clearTimeout(timer);
   }
-  return null; // map not reachable now; try again next time
 }
 
 const PLACE_KINDS = ['pitch', 'stadium', 'sports_centre', 'recreation_ground', 'park', 'track', 'sports_hall'];

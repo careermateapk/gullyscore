@@ -216,6 +216,26 @@ class _GroundDetailScreenState extends State<GroundDetailScreen> {
                 ],
                 Expanded(child: OutlineBtn(label: context.tr('google_maps'), icon: Icons.map_outlined, height: 46, onPressed: () => openLink(context, mapsLink(g)))),
               ]),
+              if (g.fromMap) ...[
+                const SizedBox(height: Space.m),
+            Container(
+              padding: const EdgeInsets.all(Space.m),
+              decoration: BoxDecoration(color: p.gold.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(Corners.card), border: Border.all(color: p.gold.withValues(alpha: 0.4))),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                Text('🗺 ${context.tr('map_ground_note')}', style: Tx.body(p.text, w: FontWeight.w600)),
+                const SizedBox(height: Space.s),
+                GoldButton(
+                  label: context.tr('add_details'),
+                  icon: Icons.edit_outlined,
+                  height: 44,
+                  onPressed: () async {
+                    final r = await Navigator.push<Ground>(context, MaterialPageRoute(builder: (_) => RegisterGroundScreen(edit: g)));
+                    if (r != null) _load();
+                  },
+                ),
+              ]),
+            ),
+          ],
             ]),
           ),
           const SizedBox(height: Space.m),
@@ -269,26 +289,6 @@ class _GroundDetailScreenState extends State<GroundDetailScreen> {
     switch (_tab) {
       case 'about':
         return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          if (g.fromMap) ...[
-            Container(
-              padding: const EdgeInsets.all(Space.m),
-              decoration: BoxDecoration(color: p.gold.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(Corners.card), border: Border.all(color: p.gold.withValues(alpha: 0.4))),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                Text('🗺 ${context.tr('map_ground_note')}', style: Tx.body(p.text, w: FontWeight.w600)),
-                const SizedBox(height: Space.s),
-                GoldButton(
-                  label: context.tr('add_details'),
-                  icon: Icons.edit_outlined,
-                  height: 44,
-                  onPressed: () async {
-                    final r = await Navigator.push<Ground>(context, MaterialPageRoute(builder: (_) => RegisterGroundScreen(edit: g)));
-                    if (r != null) _load();
-                  },
-                ),
-              ]),
-            ),
-            const SizedBox(height: Space.m),
-          ],
           Row(children: [
             _kv(context, context.tr('fee'), feeText(context, g), context.tr('per_match'), color: p.goldText),
             const SizedBox(width: Space.s),
