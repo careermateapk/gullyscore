@@ -514,11 +514,12 @@ void main() {
 
         // v0.9: picture studio, stories, levels, head to head and booking
         Future<void> tapText(String text, String name) async {
-          var f = find.text(text);
+          // Built but below the screen counts too; ensureVisible scrolls to it.
+          var f = find.text(text, skipOffstage: false);
           for (var i = 0; i < 8 && f.evaluate().isEmpty; i++) {
-            await tester.drag(find.byType(Scrollable).first, const Offset(0, -300));
+            await tester.drag(find.byType(Scrollable).first, const Offset(0, -300), warnIfMissed: false);
             await tester.pumpAndSettle();
-            f = find.text(text);
+            f = find.text(text, skipOffstage: false);
           }
           if (f.evaluate().isEmpty) {
             FlutterError.onError = _savedOnError;
