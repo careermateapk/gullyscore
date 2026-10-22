@@ -285,9 +285,9 @@ async function loadMapGrounds(env, lat, lng, radiusKm, notes = []) {
     if (!g) continue;
     stmts.push(
       env.DB.prepare(
-        `INSERT INTO grounds (id, name, address, city, lat, lng, place_id, pitches, facilities, timings, phone, user_id, created)
+        `INSERT OR IGNORE INTO grounds (id, name, address, city, lat, lng, place_id, pitches, facilities, timings, phone, user_id, created)
          SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '', ? WHERE NOT EXISTS (SELECT 1 FROM grounds WHERE place_id = ?)`,
-      ).bind('m' + randomString(13, TOKEN_ALPHABET), g.name, g.address, g.city, g.lat, g.lng, g.placeId, JSON.stringify(g.pitches),
+      ).bind('m' + g.placeId.slice(4, 5) + g.placeId.split('/')[1], g.name, g.address, g.city, g.lat, g.lng, g.placeId, JSON.stringify(g.pitches),
         JSON.stringify(g.facilities), g.timings, g.phone, now, g.placeId),
     );
   }
