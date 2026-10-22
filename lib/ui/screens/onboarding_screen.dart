@@ -14,7 +14,7 @@ double _iv(double t, double a, double b, [Curve c = Curves.easeOutCubic]) => c.t
 
 /// Fades in from a blur, rising a little.
 class _Reveal extends StatelessWidget {
-  const _Reveal({required this.t, required this.at, required this.child, this.dur = 0.18, this.dy = 14});
+  const _Reveal({required this.t, required this.at, required this.child, this.dy = 14});
   final double t;
   final double at;
   final double dur;
