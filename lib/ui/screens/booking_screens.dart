@@ -151,7 +151,7 @@ class _GroundBookingTabState extends State<GroundBookingTab> {
         )
       else ...[
         SizedBox(
-          height: 72,
+          height: 80,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: d.days.length,
@@ -181,13 +181,17 @@ class _GroundBookingTabState extends State<GroundBookingTab> {
                       color: on ? null : p.surface,
                       border: Border.all(color: on ? Colors.transparent : p.line),
                     ),
+                    padding: const EdgeInsets.symmetric(vertical: 6),
                     child: ExcludeSemantics(
-                      child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                         FittedBox(fit: BoxFit.scaleDown, child: Text(context.tr(_dayShort[x.weekday - 1]), style: Tx.label(on ? const Color(0xFF0B1220) : p.text2, w: FontWeight.w800))),
                         Text('${x.day}', style: Tx.score(22, on ? const Color(0xFF0B1220) : p.text, w: FontWeight.w800)),
                         const SizedBox(height: 3),
                         Container(width: 5, height: 5, decoration: BoxDecoration(shape: BoxShape.circle, color: free > 0 ? p.win : Colors.transparent)),
                       ]),
+                      ),
                     ),
                   ),
                 ),
