@@ -523,7 +523,8 @@ void main() {
           }
           if (f.evaluate().isEmpty) {
             FlutterError.onError = _savedOnError;
-            fail('$name: "$text" not found');
+            final seen = find.byType(Text, skipOffstage: false).evaluate().map((e) => (e.widget as Text).data).whereType<String>().take(60).join(' | ');
+            fail('$name: "$text" not found. On screen: $seen');
           }
           await tester.ensureVisible(f.first);
           await tester.pumpAndSettle();
