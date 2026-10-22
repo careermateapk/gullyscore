@@ -149,30 +149,24 @@ void main() {
 
     // Google without an account → warning.
     await tester.ensureVisible(find.text('Continue with Google'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Continue with Google'));
     await tester.pumpAndSettle();
-    if (find.text('No account for this Gmail').evaluate().isEmpty) {
-      final gd = tester.widget<GestureDetector>(find.ancestor(of: find.text('Continue with Google'), matching: find.byType(GestureDetector)).first);
-      gd.onTap?.call();
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
-      await tester.pumpAndSettle();
-      final after = find.text('No account for this Gmail').evaluate().length;
-      FlutterError.onError = _savedOnError;
-      fail('no warning; onTap=${gd.onTap != null} afterDirect=$after errors=${_errors.map((e) => e.exceptionAsString()).join(';')} sent=${sent.keys} texts=${tester.widgetList<Text>(find.byType(Text)).map((t) => t.data).join(' | ')}');
-    }
+    expect(find.text('No account for this Gmail'), findsOneWidget);
     await tester.tap(find.text('Sign up now'));
     await tester.pumpAndSettle();
 
     Future<void> type(String label, String v) async {
       final f = find.widgetWithText(TextField, label).first;
       await tester.ensureVisible(f);
+      await tester.pumpAndSettle();
       await tester.enterText(f, v);
       await tester.pumpAndSettle();
     }
 
     Future<void> tap(Finder f) async {
       await tester.ensureVisible(f);
+      await tester.pumpAndSettle();
       await tester.tap(f);
       await tester.pumpAndSettle();
     }
@@ -376,18 +370,21 @@ void main() {
       await tester.pumpWidget(scaled(wrap(s, r, const AuthScreen(startOnSignUp: true), mode: mode)));
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('State'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('State'));
       await tester.pumpAndSettle();
       check(tester, 'state sheet');
       await tester.tap(find.text('Bihar'));
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('+91'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('+91'));
       await tester.pumpAndSettle();
       check(tester, 'country sheet');
       await tester.tap(find.textContaining('United Kingdom'));
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('Create account'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Create account'));
       await tester.pumpAndSettle();
       check(tester, 'sign up errors');
