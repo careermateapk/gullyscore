@@ -48,6 +48,9 @@ jobs:
           sed -i 's#<application#<application android:allowBackup="true"#' android/app/src/main/AndroidManifest.xml
           grep -q 'allowBackup="true"' android/app/src/main/AndroidManifest.xml
           python3 ci/patch_signing.py
+          # Newer Flutter writes the package as `in`.gullyscore (Kotlin style) in Gradle too; Gradle wants plain in.gullyscore
+          sed -i 's/`in`\./in./g' android/app/build.gradle.kts
+          grep -n "namespace\|applicationId" android/app/build.gradle.kts
           # Firebase needs Android 7 (API 24) or newer
           sed -i 's/minSdk = flutter.minSdkVersion/minSdk = maxOf(24, flutter.minSdkVersion)/' android/app/build.gradle.kts || true
           grep -n "minSdk" android/app/build.gradle* || true
