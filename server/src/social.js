@@ -2,7 +2,7 @@
 // ratings with comments, reactions and replies, reports, account deletion.
 import { deleteUserTeamData } from './team.js';
 import { push, topic } from './push.js';
-import { HttpError, ID_RE, TOKEN_ALPHABET, auth, json, randomString, readJson, userAuth } from './util.js';
+import { HttpError, ID_RE, TOKEN_ALPHABET, auth, json, photoKey, randomString, readJson, userAuth } from './util.js';
 
 const HOUR = 3600 * 1000;
 const LIVE_FOR = 6 * HOUR; // a "live" match not updated for 6 hours drops off the live list
@@ -112,6 +112,11 @@ async function oneUser(env, id) {
 /** Removes a user and everything they made (Settings → Delete my account). */
 export async function deleteUserEverywhere(env, userId) {
   await deleteUserTeamData(env, userId);
+  if (env.PHOTOS) {
+    const ph = await env.DB.prepare('SELECT id, ground_id FROM ground_photos WHERE user_id = ?').bind(userId).all();
+    const keys = (ph.results || []).map((x) => photoKey(x.ground_id, x.id));
+    for (let i = 0; i < keys.length; i += 500) await env.PHOTOS.delete(keys.slice(i, i + 500));
+  }
   await env.DB.batch([
     env.DB.prepare('DELETE FROM sessions WHERE user_id = ?').bind(userId),
     env.DB.prepare('DELETE FROM claims WHERE user_id = ?').bind(userId),

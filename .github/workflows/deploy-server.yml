@@ -81,6 +81,20 @@ jobs:
           sed -i "s/REPLACED_BY_DEPLOY/$id/" wrangler.toml
           echo "Database: $id"
 
+      - name: Photo store (R2, first time only)
+        if: steps.secrets.outputs.ready == 'yes'
+        run: |
+          # Ground photos go to R2 (10 GB free) when R2 is switched on for the account.
+          # Without it they stay in the database, which still works.
+          if npx --yes wrangler@4 r2 bucket list 2>/tmp/r2.err | grep -q "gullyscore-photos" \
+             || npx --yes wrangler@4 r2 bucket create gullyscore-photos 2>>/tmp/r2.err; then
+            printf '\n[[r2_buckets]]\nbinding = "PHOTOS"\nbucket_name = "gullyscore-photos"\n' >> wrangler.toml
+            echo "::notice::Ground photos are stored in R2 (gullyscore-photos)."
+          else
+            tail -5 /tmp/r2.err
+            echo "::warning::R2 is not switched on for this Cloudflare account, so ground photos stay in the database. Turn on R2 in the Cloudflare dashboard to use it."
+          fi
+
       - name: Update database tables
         if: steps.secrets.outputs.ready == 'yes'
         run: npx --yes wrangler@4 d1 migrations apply gullyscore --remote

@@ -2,12 +2,13 @@
 // filters, register with photos, reviews, matches played there and insights.
 // No Google billing needed: maps and directions open in the Google Maps app.
 import { matchItem } from './social.js';
-import { HttpError, ID_RE, TOKEN_ALPHABET, json, randomString, readJson, userAuth } from './util.js';
+import { HttpError, ID_RE, TOKEN_ALPHABET, json, photoKey, randomString, readJson, userAuth } from './util.js';
 
 export const PITCHES = ['turf', 'matting', 'cement', 'mud', 'astroturf'];
 export const FACILITIES = ['lights', 'washrooms', 'water', 'nets', 'umpires', 'scorers', 'parking', 'pavilion', 'cafeteria', 'sightscreen', 'balls'];
 const MAX_PHOTO = 400 * 1024; // base64 characters (~300 KB JPEG)
 const MAX_PHOTOS = 12;
+const JPEG_HEADERS = { 'content-type': 'image/jpeg', 'cache-control': 'public, max-age=2592000, immutable' };
 const MAP_DAYS = 14; // look an area up on the map again after this many days
 const OVERPASS = [
   'https://overpass-api.de/api/interpreter',
@@ -421,7 +422,13 @@ export async function groundRoutes(p, method, url, request, env, ctx) {
     const n = await env.DB.prepare('SELECT COUNT(*) AS n FROM ground_photos WHERE ground_id = ?').bind(g.id).first();
     if ((n?.n || 0) >= MAX_PHOTOS) throw new HttpError(409, 'this ground has enough photos');
     const id = Date.now().toString(36) + randomString(6, TOKEN_ALPHABET);
-    await env.DB.prepare('INSERT INTO ground_photos (id, ground_id, user_id, data, created) VALUES (?, ?, ?, ?, ?)').bind(id, g.id, user.id, data, Date.now()).run();
+    if (env.PHOTOS) {
+      // Photo store (R2): the database keeps only the row.
+      await env.PHOTOS.put(photoKey(g.id, id), Uint8Array.from(atob(data), (c) => c.charCodeAt(0)), { httpMetadata: { contentType: 'image/jpeg' } });
+      await env.DB.prepare("INSERT INTO ground_photos (id, ground_id, user_id, data, created) VALUES (?, ?, ?, '', ?)").bind(id, g.id, user.id, Date.now()).run();
+    } else {
+      await env.DB.prepare('INSERT INTO ground_photos (id, ground_id, user_id, data, created) VALUES (?, ?, ?, ?, ?)').bind(id, g.id, user.id, data, Date.now()).run();
+    }
     return json({ id });
   }
 
@@ -429,8 +436,21 @@ export async function groundRoutes(p, method, url, request, env, ctx) {
     if (method === 'GET') {
       const row = await env.DB.prepare('SELECT data FROM ground_photos WHERE id = ? AND ground_id = ?').bind(m[2], m[1]).first();
       if (!row) throw new HttpError(404, 'no photo');
+      if (!row.data) {
+        const obj = env.PHOTOS ? await env.PHOTOS.get(photoKey(m[1], m[2])) : null;
+        if (!obj) throw new HttpError(404, 'no photo');
+        return new Response(obj.body, { headers: JPEG_HEADERS });
+      }
       const bytes = Uint8Array.from(atob(row.data), (c) => c.charCodeAt(0));
-      return new Response(bytes, { headers: { 'content-type': 'image/jpeg', 'cache-control': 'public, max-age=2592000, immutable' } });
+      if (env.PHOTOS) {
+        // An older photo still in the database: move it to the photo store.
+        const move = env.PHOTOS.put(photoKey(m[1], m[2]), bytes, { httpMetadata: { contentType: 'image/jpeg' } })
+          .then(() => env.DB.prepare("UPDATE ground_photos SET data = '' WHERE id = ?").bind(m[2]).run())
+          .catch(() => {});
+        if (ctx?.waitUntil) ctx.waitUntil(move);
+        else await move;
+      }
+      return new Response(bytes, { headers: JPEG_HEADERS });
     }
     if (method === 'DELETE') {
       const user = await userAuth(request, env);
@@ -440,6 +460,7 @@ export async function groundRoutes(p, method, url, request, env, ctx) {
       if (!row) return json({ ok: true });
       if (row.user_id !== user.id && row.owner !== user.id) throw new HttpError(403, 'not yours');
       await env.DB.prepare('DELETE FROM ground_photos WHERE id = ?').bind(m[2]).run();
+      if (env.PHOTOS) await env.PHOTOS.delete(photoKey(m[1], m[2]));
       return json({ ok: true });
     }
   }

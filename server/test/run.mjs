@@ -450,6 +450,27 @@ assert.equal(big.status, 413);
   assert.equal(d.mine, true);
   assert.equal(d.photo, ph.id);
   assert.equal((await call('GET', '/v1/grounds/' + g1.id, undefined, v)).body.mine, false);
+  // With a photo store (R2): new photos go there, old ones move there when first seen.
+  const store = new Map();
+  env.PHOTOS = {
+    put: async (k, v) => store.set(k, new Uint8Array(v)),
+    get: async (k) => (store.has(k) ? { body: store.get(k) } : null),
+    delete: async (k) => [].concat(k).forEach((x) => store.delete(x)),
+  };
+  const old = await worker.fetch(new Request('https://x.test/v1/grounds/' + g1.id + '/photos/' + ph.id), env);
+  assert.equal(Buffer.from(await old.arrayBuffer()).toString('base64'), jpeg, 'old photo still shows');
+  assert.ok(store.has('grounds/' + g1.id + '/' + ph.id + '.jpg'), 'old photo moved to the store');
+  const ph2 = (await call('POST', '/v1/grounds/' + g1.id + '/photos', { jpeg }, v)).body;
+  assert.ok(store.has('grounds/' + g1.id + '/' + ph2.id + '.jpg'), 'new photo in the store');
+  const r2 = await worker.fetch(new Request('https://x.test/v1/grounds/' + g1.id + '/photos/' + ph2.id), env);
+  assert.equal(r2.headers.get('content-type'), 'image/jpeg');
+  assert.equal(Buffer.from(await r2.arrayBuffer()).toString('base64'), jpeg);
+  assert.equal((await call('DELETE', '/v1/grounds/' + g1.id + '/photos/' + ph2.id, undefined, v)).status, 200);
+  assert.ok(!store.has('grounds/' + g1.id + '/' + ph2.id + '.jpg'), 'deleted from the store');
+  delete env.PHOTOS;
+  const moved = await worker.fetch(new Request('https://x.test/v1/grounds/' + g1.id + '/photos/' + ph.id), env);
+  assert.equal(moved.status, 404, 'without the store a moved photo is not found');
+  env.PHOTOS = { put: async () => {}, get: async (k) => (store.has(k) ? { body: store.get(k) } : null), delete: async (k) => [].concat(k).forEach((x) => store.delete(x)) };
   // Owner of the ground can remove anyone's photo there.
   assert.equal((await call('DELETE', '/v1/grounds/' + g1.id + '/photos/' + ph.id, undefined, u)).status, 200);
   await call('POST', '/v1/grounds/' + g1.id + '/photos', { jpeg }, v);

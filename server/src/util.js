@@ -77,3 +77,6 @@ export function html(body) {
 export function esc(s) {
   return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
+
+/** Where a ground photo lives in the photo store (R2), when the account has one. */
+export const photoKey = (groundId, photoId) => `grounds/${groundId}/${photoId}.jpg`;
