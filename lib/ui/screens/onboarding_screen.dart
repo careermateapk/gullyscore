@@ -17,7 +17,7 @@ class _Reveal extends StatelessWidget {
   const _Reveal({required this.t, required this.at, required this.child, this.dy = 14});
   final double t;
   final double at;
-  final double dur;
+  static const double dur = 0.18;
   final double dy;
   final Widget child;
 
