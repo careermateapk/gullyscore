@@ -78,6 +78,68 @@ async function verifyGoogle(idToken, env) {
   return { sub: String(t.sub), email: String(t.email || ''), name: String(t.name || '') };
 }
 
+
+// ---------------------------------------------------------------- accounts
+
+/** 0 weak … 3 strong: length 8+, a number, a capital and a symbol. */
+export function passwordScore(pw) {
+  const s = String(pw || '');
+  if (s.length < 8) return 0;
+  let n = 0;
+  if (/\d/.test(s)) n++;
+  if (/[A-Z]/.test(s) && /[a-z]/.test(s)) n++;
+  if (/[^A-Za-z0-9]/.test(s)) n++;
+  return Math.min(3, n);
+}
+
+async function passHash(password, salt) {
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: new TextEncoder().encode(salt), iterations: 100000 }, key, 256);
+  return [...new Uint8Array(bits)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function userByEmail(env, email) {
+  return env.DB.prepare('SELECT * FROM users WHERE lower(email) = ? ORDER BY created LIMIT 1').bind(String(email).toLowerCase()).first();
+}
+
+function signupFields(b) {
+  const name = String(b?.name || '').trim().slice(0, 80);
+  const email = String(b?.email || '').trim().toLowerCase().slice(0, 120);
+  const password = String(b?.password || '');
+  const code = /^\+\d{1,4}$/.test(String(b?.countryCode || '')) ? String(b.countryCode) : '+91';
+  const phone = String(b?.phone || '').replace(/\D/g, '');
+  const state = String(b?.state || '').trim().slice(0, 60);
+  const city = String(b?.city || '').trim().slice(0, 60);
+  if (name.length < 2) return { error: 'name' };
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { error: 'email' };
+  if (passwordScore(password) < 1) return { error: 'password too weak' };
+  if (phone.length < 6 || phone.length > 14) return { error: 'phone' };
+  if (!state || !city) return { error: 'state and city' };
+  if (b?.agree !== true) return { error: 'agree to the terms' };
+  return { name, email, password, code, phone, state, city };
+}
+
+/** Saves the mobile (hashed) and links every player profile a scorer made with it. */
+async function linkPhone(env, user, code, phone) {
+  const digits = code === '+91' ? cleanPhone(phone) : (code.replace('+', '') + phone).slice(-15);
+  if (!digits) return;
+  const h = await phoneHash(await phoneKey(env), digits);
+  await env.DB.batch([
+    env.DB.prepare('UPDATE users SET phone_hash = ? WHERE id = ?').bind(h, user.id),
+    env.DB.prepare(
+      `INSERT OR IGNORE INTO claims (user_id, scorer_id, player_id, status, created)
+       SELECT ?, scorer_id, player_id, 'ok', ? FROM player_phones WHERE phone_hash = ?`,
+    ).bind(user.id, Date.now(), h),
+  ]);
+}
+
+async function newSession(env, userId) {
+  const token = randomString(40, TOKEN_ALPHABET);
+  await env.DB.prepare('INSERT INTO sessions (token_hash, user_id, created) VALUES (?, ?, ?)').bind(await sha256(token), userId, Date.now()).run();
+  const user = await env.DB.prepare('SELECT id, email, name, phone_hash FROM users WHERE id = ?').bind(userId).first();
+  return { token: 'U' + token, ...(await meInfo(user, env)) };
+}
+
 /** Everything a logged-in player sees: their profiles and their matches. */
 /** Everything a logged-in player sees: profiles, their matches, their teams and totals. */
 async function meInfo(user, env) {
@@ -289,6 +351,73 @@ async function route(request, env, ctx) {
     await env.DB.prepare('INSERT INTO sessions (token_hash, user_id, created) VALUES (?, ?, ?)').bind(await sha256(token), id, Date.now()).run();
     const user = await env.DB.prepare('SELECT id, email, name, phone_hash FROM users WHERE id = ?').bind(id).first();
     return json({ token: 'U' + token, ...(await meInfo(user, env)) });
+  }
+
+  // ---------------------------------------------------------------- v1.1 accounts
+  // Sign up with email + password, or with Google; log in only after signing up.
+  if (p === '/v1/auth/signup' && method === 'POST') {
+    const b = await readJson(request);
+    const f = signupFields(b);
+    if (f.error) throw new HttpError(400, f.error);
+    const exists = await userByEmail(env, f.email);
+    if (exists) throw new HttpError(409, 'email already registered');
+    const id = 'p' + randomString(20, TOKEN_ALPHABET);
+    const salt = randomString(24, TOKEN_ALPHABET);
+    await env.DB.prepare(
+      'INSERT INTO users (id, email, name, created, pass_hash, pass_salt, phone_code, state, city, terms_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    ).bind(id, f.email, f.name, Date.now(), await passHash(f.password, salt), salt, f.code, f.state, f.city, Date.now()).run();
+    await linkPhone(env, { id, phone_hash: null }, f.code, f.phone);
+    return json(await newSession(env, id));
+  }
+
+  if (p === '/v1/auth/login' && method === 'POST') {
+    const b = await readJson(request);
+    const email = String(b?.email || '').trim().toLowerCase().slice(0, 120);
+    const password = String(b?.password || '');
+    if (!email || !password) throw new HttpError(400, 'email and password');
+    const fails = await env.DB.prepare('SELECT COUNT(*) AS n FROM login_fails WHERE email = ? AND at > ?').bind(email, Date.now() - 15 * 60000).first();
+    if ((fails?.n || 0) >= 8) throw new HttpError(429, 'too many tries, wait 15 minutes');
+    const u = await userByEmail(env, email);
+    if (!u) throw new HttpError(404, 'not signed up');
+    if (!u.pass_hash) throw new HttpError(409, 'use google');
+    if ((await passHash(password, u.pass_salt)) !== u.pass_hash) {
+      await env.DB.prepare('INSERT INTO login_fails (email, at) VALUES (?, ?)').bind(email, Date.now()).run();
+      throw new HttpError(401, 'wrong password');
+    }
+    await env.DB.prepare('DELETE FROM login_fails WHERE email = ?').bind(email).run();
+    return json(await newSession(env, u.id));
+  }
+
+  // Google: "login" only works for people who signed up; "signup" makes the account.
+  if (p === '/v1/auth/google' && method === 'POST') {
+    const b = await readJson(request);
+    if (!b || typeof b.idToken !== 'string' || b.idToken.length > 8000) throw new HttpError(400, 'missing token');
+    const g = await verifyGoogle(b.idToken, env);
+    const email = g.email.trim().toLowerCase().slice(0, 120);
+    const gid = 'g' + g.sub.replace(/[^A-Za-z0-9]/g, '').slice(0, 60);
+    const existing = (await env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(gid).first()) || (await userByEmail(env, email));
+    if (b.mode === 'signup') {
+      if (existing) return json({ ...(await newSession(env, existing.id)), existed: true });
+      const f = signupFields({ ...b, email, password: 'Google@Sign1n', name: b.name || g.name });
+      if (f.error) throw new HttpError(400, f.error);
+      await env.DB.prepare('INSERT INTO users (id, email, name, created, phone_code, state, city, terms_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+        .bind(gid, email, f.name, Date.now(), f.code, f.state, f.city, Date.now())
+        .run();
+      await linkPhone(env, { id: gid, phone_hash: null }, f.code, f.phone);
+      return json(await newSession(env, gid));
+    }
+    if (!existing) throw new HttpError(404, 'not signed up');
+    return json(await newSession(env, existing.id));
+  }
+
+  // Set a new password while logged in (forgot it? log in with Google, then set one).
+  if (p === '/v1/auth/password' && method === 'PUT') {
+    const user = await userAuth(request, env);
+    const pw = String((await readJson(request))?.password || '');
+    if (passwordScore(pw) < 2) throw new HttpError(400, 'password too weak');
+    const salt = randomString(24, TOKEN_ALPHABET);
+    await env.DB.prepare('UPDATE users SET pass_hash = ?, pass_salt = ? WHERE id = ?').bind(await passHash(pw, salt), salt, user.id).run();
+    return json({ ok: true });
   }
 
   if (p === '/v1/me' && method === 'GET') {

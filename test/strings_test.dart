@@ -63,6 +63,9 @@ void main() {
     }
     used.addAll(['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'].map((k) => 'day_$k'));
     used.addAll(['requested', 'accepted', 'declined', 'cancelled'].map((k) => 'booking_$k'));
+    for (final k in ['score', 'live', 'grounds', 'card']) {
+      used.addAll(['kicker', 'a', 'b', 'body'].map((x) => 'intro_${k}_$x'));
+    }
     used.addAll(['morning', 'day', 'afternoon', 'night'].map((k) => 'slot_$k'));
     used.addAll(['no_slots', 'no_slots_body', 'no_slots_owner', 'no_incoming_bookings', 'no_incoming_bookings_body', 'no_bookings', 'no_bookings_body', 'gtab_book']);
     used.addAll(['xp_match', 'xp_run', 'xp_wicket', 'xp_catch', 'xp_fifty', 'xp_hundred', 'xp_potm']);

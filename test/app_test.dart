@@ -43,6 +43,7 @@ import 'package:gullyscore/ui/screens/ratings_screens.dart';
 import 'package:gullyscore/ui/screens/series_screen.dart';
 import 'package:gullyscore/ui/screens/insights_screens.dart';
 import 'package:gullyscore/ui/screens/booking_screens.dart';
+import 'package:gullyscore/ui/screens/auth_screen.dart';
 import 'package:gullyscore/studio/share_entry.dart';
 import 'package:gullyscore/studio/stories.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -112,12 +113,96 @@ void main() {
     final (s, r) = await setUpApp(onboarded: false);
     await tester.pumpWidget(GullyScoreApp(settings: s, repo: r));
     await tester.pumpAndSettle();
-    expect(find.text('Welcome to GullyScore'), findsOneWidget);
+    expect(find.text('EVERY BALL.'), findsOneWidget);
     await tester.tap(find.text('Skip'));
     await tester.pumpAndSettle();
     expect(find.text('Score your first match'), findsOneWidget);
     expect(find.text('Community'), findsOneWidget);
     expect(find.text('My Cricket'), findsOneWidget);
+  });
+
+  testWidgets('no dashboard without login; Google needs sign up first; sign up works', (tester) async {
+    SharedPreferences.setMockInitialValues({'onboarded': true, 'reduceMotion': true, 'askShot': false});
+    final s = Settings();
+    await s.load();
+    final r = Repository(store: MemoryStore());
+    await r.load();
+    final sent = <String, Object?>{};
+    Future<Map<String, dynamic>> send(String method, String path, {Object? body, String? auth}) async {
+      if (path.startsWith('/v1/auth/')) {
+        final b = body as Map<String, dynamic>;
+        sent[path] = b;
+        if (path == '/v1/auth/google' && b['mode'] == 'login') throw CloudError(404, 'not signed up');
+        return {...meJson, 'token': 'Unew'};
+      }
+      return fakeSend(method, path, body: body, auth: auth);
+    }
+
+    final sync = SyncService(r, OnlineCloud(), google: NoGoogle(), socialSender: send);
+    await sync.start(timers: false);
+    await tester.pumpWidget(GullyScoreApp(settings: s, repo: r, sync: sync));
+    await tester.pumpAndSettle();
+    expect(find.byType(AuthScreen), findsOneWidget);
+    expect(find.text('Community'), findsNothing);
+
+    // Google without an account → warning.
+    await tester.ensureVisible(find.text('Continue with Google'));
+    await tester.tap(find.text('Continue with Google'));
+    await tester.pumpAndSettle();
+    expect(find.text('No account for this Gmail'), findsOneWidget);
+    await tester.tap(find.text('Sign up now'));
+    await tester.pumpAndSettle();
+
+    Future<void> type(String label, String v) async {
+      final f = find.widgetWithText(TextField, label).first;
+      await tester.ensureVisible(f);
+      await tester.enterText(f, v);
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> tap(Finder f) async {
+      await tester.ensureVisible(f);
+      await tester.tap(f);
+      await tester.pumpAndSettle();
+    }
+
+    await type('Full name', 'Suraj Kumar');
+    await type('Mobile number', '9876543210');
+    await type('Email', 'suraj@example.com');
+    await type('Password', 'abc');
+    expect(find.textContaining('Weak'), findsOneWidget);
+    await type('Password', 'Gully2024!');
+    expect(find.textContaining('Strong'), findsOneWidget);
+    await type('Re-enter password', 'Gully2024!');
+    expect(find.textContaining('Match'), findsWidgets);
+    await tap(find.text('State'));
+    await tester.tap(find.text('Bihar'));
+    await tester.pumpAndSettle();
+    await tap(find.text('City'));
+    await tester.tap(find.text('Madhubani'));
+    await tester.pumpAndSettle();
+
+    // Not agreed yet → blocked.
+    await tap(find.text('Create account'));
+    expect(sent.containsKey('/v1/auth/signup'), false);
+    expect(find.textContaining('Please accept'), findsWidgets);
+
+    await tap(find.byType(Checkbox));
+    await tap(find.text('Create account'));
+    final b = sent['/v1/auth/signup'] as Map<String, dynamic>;
+    expect(b['state'], 'Bihar');
+    expect(b['city'], 'Madhubani');
+    expect(b['countryCode'], '+91');
+    expect(b['agree'], true);
+    expect(sync.loggedIn, true);
+    expect(find.byType(AuthScreen), findsNothing);
+    expect(find.text('Community'), findsOneWidget);
+
+    // Logging out brings the login screen back.
+    await sync.logout();
+    await tester.pumpAndSettle();
+    expect(find.byType(AuthScreen), findsOneWidget);
+    await tester.pump(const Duration(seconds: 1));
   });
 
   testWidgets('switching to Hindi changes the navigation', (tester) async {
@@ -249,6 +334,8 @@ void main() {
         const FaqScreen(),
         ArticleScreen(matchId: done),
         OnboardingScreen(onDone: () {}),
+        const AuthScreen(),
+        const AuthScreen(startOnSignUp: true),
         const CreateTournamentScreen(),
         TournamentScreen(tournamentId: tour.id),
         TournamentScreen(tournamentId: ko.id),

@@ -7,6 +7,7 @@ import 'data/cloud.dart';
 import 'data/photos.dart';
 import 'data/repository.dart';
 import 'data/sync.dart';
+import 'ui/screens/auth_screen.dart';
 import 'ui/screens/online.dart';
 import 'ui/screens/onboarding_screen.dart';
 import 'ui/screens/shell.dart';
@@ -63,9 +64,54 @@ class GullyScoreApp extends StatelessWidget {
           theme: buildTheme(Palette.lightP),
           darkTheme: buildTheme(Palette.darkP),
           themeAnimationDuration: settings.reduceMotion ? Duration.zero : Motion.page,
-          home: settings.onboarded ? const Shell() : OnboardingScreen(onDone: () {}),
+          home: settings.onboarded ? _AuthGate(sync: sync) : OnboardingScreen(onDone: () {}),
         ),
       ),
+    );
+  }
+}
+
+/// No dashboard without an account (when the online server is set up).
+class _AuthGate extends StatefulWidget {
+  const _AuthGate({required this.sync});
+  final SyncService sync;
+  @override
+  State<_AuthGate> createState() => _AuthGateState();
+}
+
+class _AuthGateState extends State<_AuthGate> {
+  bool? _wasIn;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.sync.addListener(_changed);
+  }
+
+  @override
+  void dispose() {
+    widget.sync.removeListener(_changed);
+    super.dispose();
+  }
+
+  bool get _in => !widget.sync.enabled || widget.sync.loggedIn;
+
+  void _changed() {
+    final now = _in;
+    // Logged out from somewhere deep in the app: close those pages.
+    if (_wasIn == true && !now) appNavigator.currentState?.popUntil((r) => r.isFirst);
+    _wasIn = now;
+    if (mounted) setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = widget.sync;
+    if (s.enabled && !s.ready) return const Scaffold(backgroundColor: Color(0xFF03060D));
+    _wasIn ??= _in;
+    return AnimatedSwitcher(
+      duration: context.reduceMotion ? Duration.zero : const Duration(milliseconds: 400),
+      child: _in ? const Shell(key: ValueKey('shell')) : const AuthScreen(key: ValueKey('auth')),
     );
   }
 }

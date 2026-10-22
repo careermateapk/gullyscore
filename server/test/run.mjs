@@ -677,4 +677,43 @@ assert.equal(big.status, 413);
   delete env.FAKE_WEATHER;
 }
 
+// ================= v1.1: sign up, log in, Google only after sign up =================
+{
+  const form = { name: 'Suraj Thakur', email: 'Suraj@Example.com', password: 'Suraj@2026!', countryCode: '+91', phone: '98765 11111', state: 'Bihar', city: 'Madhubani', agree: true };
+  assert.equal((await call('POST', '/v1/auth/signup', { ...form, agree: false })).status, 400, 'must agree');
+  assert.equal((await call('POST', '/v1/auth/signup', { ...form, password: 'short' })).status, 400, 'weak password');
+  assert.equal((await call('POST', '/v1/auth/signup', { ...form, state: '' })).status, 400, 'state needed');
+  const su = await call('POST', '/v1/auth/signup', form);
+  assert.equal(su.status, 200);
+  assert.ok(su.body.token.startsWith('U'));
+  assert.equal(su.body.email, 'suraj@example.com');
+  assert.equal(su.body.hasPhone, true);
+  assert.equal((await call('POST', '/v1/auth/signup', form)).status, 409, 'one account per email');
+  assert.equal((await call('POST', '/v1/auth/login', { email: 'suraj@example.com', password: 'nope' })).status, 401);
+  const li = await call('POST', '/v1/auth/login', { email: ' SURAJ@example.com ', password: 'Suraj@2026!' });
+  assert.equal(li.status, 200);
+  assert.equal((await call('GET', '/v1/me', undefined, li.body.token)).body.name, 'Suraj Thakur');
+  assert.equal((await call('POST', '/v1/auth/login', { email: 'nobody@example.com', password: 'x' })).status, 404);
+  // Google login without signing up first: refused.
+  assert.equal((await call('POST', '/v1/auth/google', { idToken: 'good:newg:rohit@gmail.com', mode: 'login' })).status, 404);
+  // Google sign up needs the same details, then login works.
+  assert.equal((await call('POST', '/v1/auth/google', { idToken: 'good:newg:rohit@gmail.com', mode: 'signup', countryCode: '+977', phone: '9812345678', state: 'Bihar', city: 'Darbhanga' })).status, 400, 'agree needed');
+  const gs = await call('POST', '/v1/auth/google', { idToken: 'good:newg:rohit@gmail.com', mode: 'signup', name: 'Rohit Jha', countryCode: '+977', phone: '9812345678', state: 'Bihar', city: 'Darbhanga', agree: true });
+  assert.equal(gs.status, 200);
+  assert.equal((await call('POST', '/v1/auth/google', { idToken: 'good:newg:rohit@gmail.com', mode: 'login' })).status, 200);
+  // Google with the email of a password account logs into that account.
+  const same = await call('POST', '/v1/auth/google', { idToken: 'good:other:suraj@example.com', mode: 'login' });
+  assert.equal(same.status, 200);
+  assert.equal(same.body.id, su.body.id);
+  // Password login for a Google-only account says so.
+  assert.equal((await call('POST', '/v1/auth/login', { email: 'rohit@gmail.com', password: 'Whatever1!' })).status, 409);
+  // Set a password while logged in, then it works.
+  assert.equal((await call('PUT', '/v1/auth/password', { password: 'weak' }, gs.body.token)).status, 400);
+  assert.equal((await call('PUT', '/v1/auth/password', { password: 'Rohit@2026' }, gs.body.token)).status, 200);
+  assert.equal((await call('POST', '/v1/auth/login', { email: 'rohit@gmail.com', password: 'Rohit@2026' })).status, 200);
+  // Too many wrong tries are slowed down.
+  for (let i = 0; i < 8; i++) await call('POST', '/v1/auth/login', { email: 'suraj@example.com', password: 'bad' + i });
+  assert.equal((await call('POST', '/v1/auth/login', { email: 'suraj@example.com', password: 'Suraj@2026!' })).status, 429);
+}
+
 console.log('server tests passed');

@@ -106,6 +106,8 @@ class SyncService extends ChangeNotifier {
   DateTime? _claimsAt;
 
   SyncState state = SyncState.off;
+  /// True once saved login details are read (so the app knows whether to show Log in).
+  bool ready = false;
   DateTime? lastOk;
   SharedPreferences? _prefs;
   Timer? _timer;
@@ -134,6 +136,7 @@ class SyncService extends ChangeNotifier {
         me = MeInfo(email: email, name: p.getString('cloud.userName') ?? '', hasPhone: myPhone.isNotEmpty, profiles: const [], matches: const []);
       }
     } catch (_) {}
+    ready = true;
     state = enabled ? SyncState.idle : SyncState.off;
     notifyListeners();
     if (!enabled) return;
@@ -435,6 +438,35 @@ class SyncService extends ChangeNotifier {
     await _saveMe(info);
     // Same person reinstalled the app: send their number again.
     if (myPhone.isNotEmpty && !info.hasPhone) await setMyPhone(myPhone);
+  }
+
+  Future<void> _loggedIn(MeInfo info, {String phone = ''}) async {
+    _userToken = info.token;
+    await _prefs?.setString('cloud.user', info.token ?? '');
+    if (phone.isNotEmpty) {
+      myPhone = phone;
+      await _prefs?.setString('cloud.myPhone', phone);
+    }
+    await _saveMe(info);
+  }
+
+  /// New account with email and password (or Google when [google] is true).
+  Future<void> signUp(SignUpForm f, {bool google = false}) async {
+    final info = google ? await social.googleAuth(await this.google.idToken(), signUp: f) : await social.signUp(f);
+    await _loggedIn(info, phone: f.countryCode == '+91' ? cleanPhone(f.phone) : '');
+  }
+
+  Future<void> logInEmail(String email, String password) async => _loggedIn(await social.logInEmail(email, password));
+
+  /// Google login only works for people who signed up (else CloudError 404).
+  Future<void> logInGoogle() async {
+    final idToken = await google.idToken();
+    try {
+      await _loggedIn(await social.googleAuth(idToken));
+    } on CloudError catch (e) {
+      if (e.status == 404) await google.signOut(); // let them pick another account next time
+      rethrow;
+    }
   }
 
   /// The player's own mobile number: links every profile scorers made with it.

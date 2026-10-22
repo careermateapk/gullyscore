@@ -1,7 +1,7 @@
 name: gullyscore
 description: GullyScore — ball-by-ball cricket scoring for local matches.
 publish_to: "none"
-version: 1.0.0+10
+version: 1.1.0+11
 
 environment:
   sdk: ^3.8.0

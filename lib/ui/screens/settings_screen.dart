@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../app/scope.dart';
 import '../../app/theme.dart';
+import '../../data/social.dart';
 import '../widgets/common.dart';
 import 'backup_ui.dart';
 import 'help.dart';
@@ -31,6 +32,50 @@ class SettingsScreen extends StatelessWidget {
     await repo.deleteAll();
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('all_deleted'))));
+    }
+  }
+
+  Future<void> _setPassword(BuildContext context) async {
+    final a = TextEditingController();
+    final b = TextEditingController();
+    final pw = await showDialog<String>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, set) {
+          final score = passwordScore(a.text);
+          final ok = score >= 2 && a.text == b.text;
+          return AlertDialog(
+            title: Text(ctx.tr('set_password')),
+            content: SingleChildScrollView(
+              child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(ctx.tr('set_password_body')),
+                TextField(controller: a, obscureText: true, decoration: InputDecoration(labelText: ctx.tr('auth_password')), onChanged: (_) => set(() {})),
+                TextField(controller: b, obscureText: true, decoration: InputDecoration(labelText: ctx.tr('auth_password_again')), onChanged: (_) => set(() {})),
+                const SizedBox(height: 8),
+                if (a.text.isNotEmpty)
+                  Text(ctx.tr(score >= 2 ? 'auth_strong' : (score == 1 ? 'auth_medium' : 'auth_weak')) + (score < 2 ? ' · ${ctx.tr('set_password_need_strong')}' : ''),
+                      style: TextStyle(fontWeight: FontWeight.w800, color: score >= 2 ? const Color(0xFF1FA463) : const Color(0xFFD14343))),
+              ]),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx), child: Text(ctx.tr('cancel'))),
+              TextButton(onPressed: ok ? () => Navigator.pop(ctx, a.text) : null, child: Text(ctx.tr('save'))),
+            ],
+          );
+        },
+      ),
+    );
+    a.dispose();
+    b.dispose();
+    if (pw == null || !context.mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final done = context.tr('password_saved');
+    final failed = context.tr('online_failed');
+    try {
+      await context.sync.social.setPassword(pw);
+      messenger.showSnackBar(SnackBar(content: Text(done)));
+    } catch (_) {
+      messenger.showSnackBar(SnackBar(content: Text(failed)));
     }
   }
 
@@ -189,6 +234,7 @@ class SettingsScreen extends StatelessWidget {
                   link(Icons.account_circle_rounded, p.goldText, sync.me?.email ?? context.tr('logged_in'), () => logoutPlayer(context), trailing: context.tr('logout')),
                   link(Icons.phone_android_rounded, p.goldText, sync.myPhone.isEmpty ? context.tr('add_my_mobile') : context.tr('my_mobile_n', {'n': sync.myPhone}),
                       () => askMyPhone(context)),
+                  link(Icons.password_rounded, p.goldText, context.tr('set_password'), () => _setPassword(context)),
                   link(Icons.person_remove_outlined, p.liveText, context.tr('delete_account'), () => _deleteAccount(context), textColor: p.liveText),
                 ] else if (sync.loginAvailable)
                   link(Icons.login_rounded, p.goldText, context.tr('login_google'), () => loginAsPlayer(context)),

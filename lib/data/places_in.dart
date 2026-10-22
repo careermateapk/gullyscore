@@ -1,0 +1,88 @@
+// Countries (for the mobile number) and Indian states with their main cities
+// (for sign up). "Other" lets people type a town that is not listed.
+
+class Country {
+  const Country(this.flag, this.name, this.code);
+  final String flag;
+  final String name;
+  final String code; // e.g. +91
+}
+
+const countries = <Country>[
+  Country('🇮🇳', 'India', '+91'),
+  Country('🇳🇵', 'Nepal', '+977'),
+  Country('🇧🇩', 'Bangladesh', '+880'),
+  Country('🇵🇰', 'Pakistan', '+92'),
+  Country('🇱🇰', 'Sri Lanka', '+94'),
+  Country('🇧🇹', 'Bhutan', '+975'),
+  Country('🇦🇫', 'Afghanistan', '+93'),
+  Country('🇲🇻', 'Maldives', '+960'),
+  Country('🇦🇪', 'United Arab Emirates', '+971'),
+  Country('🇸🇦', 'Saudi Arabia', '+966'),
+  Country('🇶🇦', 'Qatar', '+974'),
+  Country('🇴🇲', 'Oman', '+968'),
+  Country('🇰🇼', 'Kuwait', '+965'),
+  Country('🇧🇭', 'Bahrain', '+973'),
+  Country('🇲🇾', 'Malaysia', '+60'),
+  Country('🇸🇬', 'Singapore', '+65'),
+  Country('🇺🇸', 'United States', '+1'),
+  Country('🇨🇦', 'Canada', '+1'),
+  Country('🇬🇧', 'United Kingdom', '+44'),
+  Country('🇮🇪', 'Ireland', '+353'),
+  Country('🇦🇺', 'Australia', '+61'),
+  Country('🇳🇿', 'New Zealand', '+64'),
+  Country('🇿🇦', 'South Africa', '+27'),
+  Country('🇿🇼', 'Zimbabwe', '+263'),
+  Country('🇰🇪', 'Kenya', '+254'),
+  Country('🇺🇬', 'Uganda', '+256'),
+  Country('🇳🇱', 'Netherlands', '+31'),
+  Country('🇩🇪', 'Germany', '+49'),
+  Country('🇫🇷', 'France', '+33'),
+  Country('🇮🇹', 'Italy', '+39'),
+  Country('🇯🇵', 'Japan', '+81'),
+  Country('🇭🇰', 'Hong Kong', '+852'),
+  Country('🇫🇯', 'Fiji', '+679'),
+  Country('🇲🇺', 'Mauritius', '+230'),
+  Country('🇯🇲', 'Jamaica', '+1'),
+  Country('🇹🇹', 'Trinidad and Tobago', '+1'),
+];
+
+/// Indian states and union territories, each with its main cities.
+const indiaPlaces = <String, List<String>>{
+  'Andaman and Nicobar Islands': ['Port Blair', 'Car Nicobar', 'Mayabunder'],
+  'Andhra Pradesh': ['Visakhapatnam', 'Vijayawada', 'Guntur', 'Nellore', 'Kurnool', 'Tirupati', 'Rajahmundry', 'Kakinada', 'Anantapur', 'Kadapa', 'Eluru', 'Ongole'],
+  'Arunachal Pradesh': ['Itanagar', 'Naharlagun', 'Pasighat', 'Tawang', 'Ziro', 'Bomdila'],
+  'Assam': ['Guwahati', 'Silchar', 'Dibrugarh', 'Jorhat', 'Nagaon', 'Tinsukia', 'Tezpur', 'Bongaigaon', 'Dhubri', 'Karimganj'],
+  'Bihar': ['Patna', 'Gaya', 'Bhagalpur', 'Muzaffarpur', 'Darbhanga', 'Madhubani', 'Purnia', 'Begusarai', 'Samastipur', 'Arrah', 'Katihar', 'Munger', 'Chapra', 'Sitamarhi', 'Saharsa', 'Hajipur', 'Motihari', 'Bettiah', 'Siwan', 'Nalanda', 'Jhanjharpur', 'Supaul', 'Kishanganj', 'Aurangabad', 'Buxar'],
+  'Chandigarh': ['Chandigarh'],
+  'Chhattisgarh': ['Raipur', 'Bhilai', 'Bilaspur', 'Korba', 'Durg', 'Rajnandgaon', 'Raigarh', 'Jagdalpur', 'Ambikapur'],
+  'Dadra and Nagar Haveli and Daman and Diu': ['Daman', 'Diu', 'Silvassa'],
+  'Delhi': ['New Delhi', 'Dwarka', 'Rohini', 'Saket', 'Laxmi Nagar', 'Karol Bagh', 'Janakpuri', 'Shahdara', 'Mayur Vihar', 'Narela'],
+  'Goa': ['Panaji', 'Margao', 'Vasco da Gama', 'Mapusa', 'Ponda'],
+  'Gujarat': ['Ahmedabad', 'Surat', 'Vadodara', 'Rajkot', 'Bhavnagar', 'Jamnagar', 'Gandhinagar', 'Junagadh', 'Anand', 'Navsari', 'Morbi', 'Bharuch', 'Mehsana'],
+  'Haryana': ['Gurugram', 'Faridabad', 'Panipat', 'Ambala', 'Rohtak', 'Hisar', 'Karnal', 'Sonipat', 'Yamunanagar', 'Panchkula', 'Bhiwani', 'Sirsa'],
+  'Himachal Pradesh': ['Shimla', 'Dharamshala', 'Mandi', 'Solan', 'Kullu', 'Hamirpur', 'Una', 'Bilaspur'],
+  'Jammu and Kashmir': ['Srinagar', 'Jammu', 'Anantnag', 'Baramulla', 'Udhampur', 'Kathua', 'Sopore'],
+  'Jharkhand': ['Ranchi', 'Jamshedpur', 'Dhanbad', 'Bokaro', 'Deoghar', 'Hazaribagh', 'Giridih', 'Dumka', 'Ramgarh', 'Palamu'],
+  'Karnataka': ['Bengaluru', 'Mysuru', 'Mangaluru', 'Hubballi', 'Belagavi', 'Kalaburagi', 'Davanagere', 'Ballari', 'Shivamogga', 'Tumakuru', 'Udupi', 'Vijayapura'],
+  'Kerala': ['Thiruvananthapuram', 'Kochi', 'Kozhikode', 'Thrissur', 'Kollam', 'Kannur', 'Alappuzha', 'Palakkad', 'Kottayam', 'Malappuram'],
+  'Ladakh': ['Leh', 'Kargil'],
+  'Lakshadweep': ['Kavaratti', 'Agatti', 'Minicoy'],
+  'Madhya Pradesh': ['Indore', 'Bhopal', 'Jabalpur', 'Gwalior', 'Ujjain', 'Sagar', 'Rewa', 'Satna', 'Ratlam', 'Dewas', 'Katni', 'Chhindwara'],
+  'Maharashtra': ['Mumbai', 'Pune', 'Nagpur', 'Thane', 'Nashik', 'Aurangabad', 'Solapur', 'Kolhapur', 'Amravati', 'Navi Mumbai', 'Sangli', 'Latur', 'Akola', 'Jalgaon', 'Nanded'],
+  'Manipur': ['Imphal', 'Thoubal', 'Bishnupur', 'Churachandpur'],
+  'Meghalaya': ['Shillong', 'Tura', 'Jowai'],
+  'Mizoram': ['Aizawl', 'Lunglei', 'Champhai'],
+  'Nagaland': ['Kohima', 'Dimapur', 'Mokokchung'],
+  'Odisha': ['Bhubaneswar', 'Cuttack', 'Rourkela', 'Berhampur', 'Sambalpur', 'Puri', 'Balasore', 'Bhadrak', 'Baripada'],
+  'Puducherry': ['Puducherry', 'Karaikal', 'Mahe', 'Yanam'],
+  'Punjab': ['Ludhiana', 'Amritsar', 'Jalandhar', 'Patiala', 'Bathinda', 'Mohali', 'Pathankot', 'Hoshiarpur', 'Moga', 'Firozpur'],
+  'Rajasthan': ['Jaipur', 'Jodhpur', 'Kota', 'Bikaner', 'Ajmer', 'Udaipur', 'Bhilwara', 'Alwar', 'Sikar', 'Bharatpur', 'Sri Ganganagar', 'Pali'],
+  'Sikkim': ['Gangtok', 'Namchi', 'Gyalshing', 'Mangan'],
+  'Tamil Nadu': ['Chennai', 'Coimbatore', 'Madurai', 'Tiruchirappalli', 'Salem', 'Tirunelveli', 'Erode', 'Vellore', 'Thoothukudi', 'Thanjavur', 'Tiruppur', 'Dindigul'],
+  'Telangana': ['Hyderabad', 'Warangal', 'Nizamabad', 'Karimnagar', 'Khammam', 'Ramagundam', 'Mahbubnagar', 'Nalgonda', 'Secunderabad'],
+  'Tripura': ['Agartala', 'Udaipur', 'Dharmanagar', 'Kailashahar'],
+  'Uttar Pradesh': ['Lucknow', 'Kanpur', 'Ghaziabad', 'Agra', 'Varanasi', 'Meerut', 'Prayagraj', 'Bareilly', 'Aligarh', 'Moradabad', 'Saharanpur', 'Gorakhpur', 'Noida', 'Jhansi', 'Ayodhya', 'Mathura', 'Firozabad', 'Muzaffarnagar', 'Ballia', 'Azamgarh'],
+  'Uttarakhand': ['Dehradun', 'Haridwar', 'Roorkee', 'Haldwani', 'Rudrapur', 'Kashipur', 'Rishikesh', 'Nainital'],
+  'West Bengal': ['Kolkata', 'Howrah', 'Durgapur', 'Asansol', 'Siliguri', 'Bardhaman', 'Malda', 'Kharagpur', 'Haldia', 'Darjeeling', 'Krishnanagar', 'Baharampur'],
+};

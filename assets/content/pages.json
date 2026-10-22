@@ -24,7 +24,7 @@
             [
               "While \"Share matches online\" is on: match scores, ball-by-ball data, player and team names, ground, date and time, and each player's score in that match.",
               "Mobile numbers that a scorer types for players are sent to our server and turned into a locked code at once. The number itself is not stored.",
-              "When you log in with Google: your name, email and Google account ID.",
+              "When you make an account: your name, email, state, city and mobile number (the number is stored only in scrambled form, used to link your player profiles). Your password is never stored — only a one-way scrambled form of it. With Google: your name, email and Google account ID.",
               "Things you post in Community: posts, polls, votes, ratings, comments, replies and reactions, with your name.",
               "If you add a WhatsApp number to a post, it is shown only to people who tap \"I'm in\" on that post.",
               "Grounds you register, ground photos you upload and ground reviews you write are public, with your name on reviews.",
@@ -88,7 +88,7 @@
             [
               "\"मैच ऑनलाइन शेयर करें\" चालू होने पर: मैच का स्कोर, हर गेंद का हिसाब, खिलाड़ी और टीम के नाम, ग्राउंड, तारीख और समय, और उस मैच में हर खिलाड़ी का स्कोर।",
               "स्कोरर जो मोबाइल नंबर डालता है, वह हमारे सर्वर पर आते ही लॉक कोड में बदल जाता है। असली नंबर सेव नहीं होता।",
-              "Google से लॉगिन करने पर: आपका नाम, ईमेल और Google अकाउंट ID।",
+              "अकाउंट बनाने पर: आपका नाम, ईमेल, राज्य, शहर और मोबाइल नंबर (नंबर सिर्फ़ बदले हुए रूप में रखा जाता है, आपकी प्लेयर प्रोफ़ाइल जोड़ने के लिए)। आपका पासवर्ड कभी सेव नहीं होता — सिर्फ़ उसका एक-तरफ़ा बदला हुआ रूप। Google से: आपका नाम, ईमेल और Google अकाउंट ID।",
               "कम्युनिटी में आप जो डालते हैं: पोस्ट, पोल, वोट, रेटिंग, कमेंट, जवाब और रिएक्शन, आपके नाम के साथ।",
               "पोस्ट में WhatsApp नंबर डालने पर वह सिर्फ़ उन्हें दिखता है जो उस पोस्ट पर \"मैं आऊँगा\" दबाते हैं।",
               "आप जो ग्राउंड जोड़ते हैं, ग्राउंड की फ़ोटो और ग्राउंड रिव्यू सबको दिखते हैं, रिव्यू पर आपका नाम रहता है।",

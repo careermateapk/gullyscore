@@ -372,6 +372,41 @@ class SocialApi {
   }
 
   Future<void> deleteAccount() async => _send('DELETE', '/v1/me/account', auth: _need());
+
+  // ------------------------------------------------------------ accounts (sign up / log in)
+
+  Future<MeInfo> signUp(SignUpForm f) async => MeInfo.fromJson(await _send('POST', '/v1/auth/signup', body: f.toJson()));
+  Future<MeInfo> logInEmail(String email, String password) async =>
+      MeInfo.fromJson(await _send('POST', '/v1/auth/login', body: {'email': email.trim(), 'password': password}));
+  Future<MeInfo> googleAuth(String idToken, {SignUpForm? signUp}) async => MeInfo.fromJson(await _send('POST', '/v1/auth/google',
+      body: {'idToken': idToken, 'mode': signUp == null ? 'login' : 'signup', if (signUp != null) ...signUp.toJson()..remove('password')}));
+  Future<void> setPassword(String password) async => _send('PUT', '/v1/auth/password', body: {'password': password}, auth: _need());
+}
+
+class SignUpForm {
+  SignUpForm({this.name = '', this.email = '', this.password = '', this.countryCode = '+91', this.phone = '', this.state = '', this.city = '', this.agree = false});
+  String name, email, password, countryCode, phone, state, city;
+  bool agree;
+  Map<String, dynamic> toJson() => {
+        'name': name.trim(),
+        'email': email.trim(),
+        'password': password,
+        'countryCode': countryCode,
+        'phone': phone.replaceAll(RegExp(r'\D'), ''),
+        'state': state.trim(),
+        'city': city.trim(),
+        'agree': agree,
+      };
+}
+
+/// 0 weak (too short), 1 medium, 2+ strong — the same rule as the server.
+int passwordScore(String pw) {
+  if (pw.length < 8) return 0;
+  var n = 0;
+  if (RegExp(r'\d').hasMatch(pw)) n++;
+  if (RegExp(r'[A-Z]').hasMatch(pw) && RegExp(r'[a-z]').hasMatch(pw)) n++;
+  if (RegExp(r'[^A-Za-z0-9]').hasMatch(pw)) n++;
+  return n > 3 ? 3 : n;
 }
 
 /// A bookable time at a ground, e.g. "Morning 6–10 AM, ₹1,500".
