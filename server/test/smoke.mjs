@@ -40,4 +40,9 @@ console.log('::notice::Map lookup: ' + (dres.headers.get('x-map') || '(none)'));
 assert.equal(delhi.status, 200, 'grounds');
 if (delhi.body.total > 0) console.log(`::notice::Map grounds near New Delhi: ${delhi.body.total} (e.g. ${delhi.body.grounds.slice(0, 5).map((g) => g.name).join(', ')})`);
 else console.log('::warning::No map grounds near New Delhi yet (map service busy?)');
+for (const [name, la, ln] of [['Bihar', 25.6441, 85.906], ['Patna', 25.5941, 85.1376], ['Darbhanga', 26.1542, 85.8918], ['Mumbai', 19.076, 72.8777]]) {
+  const t0 = Date.now();
+  const r = await call('GET', `/v1/grounds?lat=${la}&lng=${ln}&km=15`);
+  console.log(`::notice::${name}: ${r.body.total} grounds${r.body.widenedKm ? ' (within ' + r.body.widenedKm + ' km)' : ''} in ${Date.now() - t0} ms`);
+}
 console.log('Live service works end to end');

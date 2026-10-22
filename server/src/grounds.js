@@ -295,7 +295,7 @@ async function loadMapGrounds(env, lat, lng, radiusKm, notes = []) {
   for (let i = 0; i < stmts.length; i += 50) await env.DB.batch(stmts.slice(i, i + 50));
 }
 
-export async function groundRoutes(p, method, url, request, env) {
+export async function groundRoutes(p, method, url, request, env, ctx) {
   let m;
   // Places for the location picker.
   if (p === '/v1/places' && method === 'GET') {
@@ -320,11 +320,11 @@ export async function groundRoutes(p, method, url, request, env) {
       const like = '%' + q.replace(/[%_]/g, '') + '%';
       rows = await env.DB.prepare('SELECT * FROM grounds WHERE hidden = 0 AND (name LIKE ? OR address LIKE ? OR city LIKE ?) LIMIT 100').bind(like, like, like).all();
     } else if (lat != null && lng != null) {
-      try {
-        await loadMapGrounds(env, lat, lng, radius, notes);
-      } catch (e) {
-        notes.push('load:' + String(e?.message || e).slice(0, 60));
-      }
+      // Most of India is already in the list (monthly import), so the map is
+      // asked in the background and never makes the phone wait.
+      const look = loadMapGrounds(env, lat, lng, radius, notes).catch((e) => notes.push('load:' + String(e?.message || e).slice(0, 60)));
+      if (ctx?.waitUntil) ctx.waitUntil(look);
+      else await look;
       const d = radius / 100; // degrees ≈ km/111, a little wider
       rows = await env.DB.prepare('SELECT * FROM grounds WHERE hidden = 0 AND lat BETWEEN ? AND ? AND lng BETWEEN ? AND ? LIMIT 400')
         .bind(lat - d, lat + d, lng - d * 1.2, lng + d * 1.2)
@@ -333,9 +333,19 @@ export async function groundRoutes(p, method, url, request, env) {
       rows = await env.DB.prepare('SELECT * FROM grounds WHERE hidden = 0 ORDER BY created DESC LIMIT 100').all();
     }
     let gs = rows.results || [];
+    let widenedKm = null;
+    if (!gs.some((g) => lat != null && km(lat, lng, g.lat, g.lng) <= radius) && lat != null && q.length < 2 && radius < 100) {
+      // Nothing that close: show the nearest grounds within 100 km instead of an empty page.
+      const d = 1;
+      const wide = await env.DB.prepare('SELECT * FROM grounds WHERE hidden = 0 AND lat BETWEEN ? AND ? AND lng BETWEEN ? AND ? LIMIT 400')
+        .bind(lat - d, lat + d, lng - d * 1.2, lng + d * 1.2)
+        .all();
+      gs = wide.results || [];
+      widenedKm = 100;
+    }
     const st = await stats(env, gs.map((g) => g.id));
     let out = gs.map((g) => view(g, st[g.id], lat, lng));
-    if (lat != null && q.length < 2) out = out.filter((g) => g.km <= radius);
+    if (lat != null && q.length < 2) out = out.filter((g) => g.km <= (widenedKm ?? radius));
     const pitch = list((url.searchParams.get('pitch') || '').split(','), PITCHES);
     const fac = list((url.searchParams.get('fac') || '').split(','), FACILITIES);
     const feeMax = num(url.searchParams.get('feeMax'));
@@ -351,7 +361,7 @@ export async function groundRoutes(p, method, url, request, env) {
       name: (a, b) => a.name.localeCompare(b.name),
     }[sort] || ((a, b) => (a.km ?? 1e9) - (b.km ?? 1e9));
     out.sort(by);
-    const res = json({ total: out.length, grounds: out.slice(0, 60) });
+    const res = json({ total: out.length, grounds: out.slice(0, 60), ...(widenedKm ? { widenedKm } : {}) });
     if (notes.length) res.headers.set('x-map', notes.join(' '));
     return res;
   }

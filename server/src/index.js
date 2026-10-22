@@ -116,7 +116,7 @@ async function route(request, env, ctx) {
   if (social) return social;
   const team = await teamRoutes(p, method, url, request, env);
   if (team) return team;
-  const grounds = await groundRoutes(p, method, url, request, env);
+  const grounds = await groundRoutes(p, method, url, request, env, ctx);
   if (grounds) return grounds;
   const page = contentRoutes(p, method, url);
   if (page) return page;
