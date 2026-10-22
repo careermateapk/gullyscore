@@ -103,10 +103,8 @@ class _StoryViewerState extends State<StoryViewer> {
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(16),
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 220),
-                      child: StudioCanvas(key: ValueKey(_i), size: StudioSize.story, boundaryKey: _key, child: widget.slides[_i](lang)),
-                    ),
+                    // One slide at a time: the share key must sit on a single picture.
+                    child: StudioCanvas(key: ValueKey(_i), size: StudioSize.story, boundaryKey: _key, child: widget.slides[_i](lang)),
                   ),
                 ),
               ),
