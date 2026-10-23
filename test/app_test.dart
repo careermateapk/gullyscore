@@ -669,7 +669,7 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
   });
 
-  testWidgets('new team: save, then add a player's details and captain', (tester) async {
+  testWidgets('new team: save, then add a player\'s details and captain', (tester) async {
     final (s, r) = await setUpApp();
     _savedOnError = FlutterError.onError;
     FlutterError.onError = _errors.add;
