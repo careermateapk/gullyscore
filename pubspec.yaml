@@ -1,7 +1,7 @@
 name: gullyscore
 description: GullyScore — ball-by-ball cricket scoring for local matches.
 publish_to: "none"
-version: 1.1.0+11
+version: 1.2.0+12
 
 environment:
   sdk: ^3.8.0
@@ -32,6 +32,13 @@ dependencies:
   firebase_messaging: any
   # Voice scoring: say "chauka" and the ball is added (uses the phone's speech service)
   speech_to_text: ^7.0.0
+  # Live streaming to YouTube from the phone camera (our own plugin, Android)
+  gs_live:
+    path: packages/gs_live
+  # Fans watch the YouTube live video inside the match page
+  webview_flutter: ^4.10.0
+  # Playing highlight clips
+  video_player: ^2.9.2
 
 dev_dependencies:
   flutter_test:

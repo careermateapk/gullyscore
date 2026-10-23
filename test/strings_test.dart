@@ -55,7 +55,7 @@ void main() {
         used.add(m.group(1)!);
       }
     }
-    used.addAll(['midnight', 'royal', 'neon', 'emerald', 'sunset', 'ivory', 'ocean', 'holo'].map((k) => 'theme_$k'));
+    used.addAll(['midnight', 'royal', 'neon', 'emerald', 'sunset', 'ivory', 'ocean', 'holo', 'gold', 'mint'].map((k) => 'theme_$k'));
     used.addAll(['post', 'story', 'square', 'wide'].map((k) => 'size_$k'));
     used.addAll(['rookie', 'club', 'pro', 'star', 'legend'].map((k) => 'tier_$k'));
     for (final k in ['finisher', 'six_hitter', 'opener', 'all_round', 'wicket_taker', 'safe_hands', 'anchor', 'team_player', 'new']) {

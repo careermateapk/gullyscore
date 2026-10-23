@@ -10,6 +10,7 @@ import '../widgets/common.dart';
 import 'booking_screens.dart';
 import 'grounds_screen.dart';
 import 'help.dart';
+import 'live_stream_screen.dart';
 import 'info_screens.dart';
 import 'leaderboard_screen.dart';
 import 'new_match_screen.dart';
@@ -87,7 +88,7 @@ class AppDrawer extends StatelessWidget {
           item(Icons.add_circle_outline_rounded, p.goldText, context.tr('create_match'), () => _push(context, const NewMatchScreen()), highlight: true),
           item(Icons.emoji_events_outlined, const Color(0xFFA855F7), context.tr('add_tournament'), () => _push(context, const CreateTournamentScreen())),
           item(Icons.table_chart_outlined, const Color(0xFFA855F7), context.tr('tournaments_table'), () => _push(context, const SeriesScreen(pushed: true))),
-          item(Icons.videocam_outlined, p.liveText, context.tr('live_streaming'), () => _run(context, comingSoon), badge: context.tr('soon')),
+          item(Icons.videocam_outlined, p.liveText, context.tr('live_streaming'), () => _run(context, pickMatchToStream), badge: context.tr('new_badge')),
           item(Icons.leaderboard_outlined, p.win, context.tr('leaderboard'), () => _push(context, const LeaderboardScreen())),
           item(Icons.place_outlined, p.liveText, context.tr('grounds_near_you'), () => _push(context, const GroundsScreen())),
           item(Icons.event_available_outlined, p.goldText, context.tr('my_bookings'), () => _push(context, const BookingsScreen())),

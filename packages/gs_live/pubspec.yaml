@@ -1,0 +1,19 @@
+name: gs_live
+description: GullyScore live streaming to YouTube (camera, score on the video, replay, clips). Android only.
+version: 1.0.0
+publish_to: "none"
+
+environment:
+  sdk: ^3.8.0
+  flutter: ">=3.27.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: app.gullyscore.live
+        pluginClass: GsLivePlugin

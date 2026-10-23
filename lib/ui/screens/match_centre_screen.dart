@@ -2,6 +2,8 @@
 import 'package:flutter/material.dart';
 
 import '../../app/scope.dart';
+import '../../live/highlights.dart';
+import '../../live/youtube_embed.dart';
 import '../../app/theme.dart';
 import '../../data/models.dart';
 import '../../scoring/commentary.dart';
@@ -93,12 +95,27 @@ class MatchCentreScreen extends StatelessWidget {
                                 maxLines: 1, overflow: TextOverflow.ellipsis, style: Tx.label(p.text2)),
                           ]),
                         ),
+                        if (!m.remote) ...[
+                          IconBtn(
+                            icon: Icons.movie_filter_outlined,
+                            tooltip: context.tr('highlights'),
+                            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => HighlightsScreen(matchId: m.id))),
+                          ),
+                          const SizedBox(width: Space.s),
+                        ],
                         IconBtn(icon: Icons.help_outline_rounded, tooltip: context.tr('help'), onPressed: () => showHelp(context, 'match_centre')),
                         const SizedBox(width: Space.s),
                         IconBtn(icon: Icons.ios_share_rounded, tooltip: context.tr('share_score'), onPressed: () => showShareOptions(context, m)),
                       ]),
                     ),
                   ),
+                  if (m.stream.isNotEmpty && status != MatchStatus.finished)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(Space.edge, 0, Space.edge, Space.m),
+                        child: YoutubeLive(key: ValueKey(m.stream), streamRef: m.stream),
+                      ),
+                    ),
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: Space.edge),

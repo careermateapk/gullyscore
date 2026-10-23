@@ -716,4 +716,11 @@ assert.equal(big.status, 413);
   assert.equal((await call('POST', '/v1/auth/login', { email: 'suraj@example.com', password: 'Suraj@2026!' })).status, 429);
 }
 
+// ================= v1.2: YouTube embed page =================
+{
+  assert.equal((await call('GET', '/embed/yt?v=dQw4w9WgXcQ')).status, 200);
+  assert.equal((await call('GET', '/embed/yt?c=UCabcdefghijklmnopqrstuv')).status, 200);
+  assert.equal((await call('GET', '/embed/yt?v=<script>')).status, 400);
+}
+
 console.log('server tests passed');

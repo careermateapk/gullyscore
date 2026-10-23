@@ -215,6 +215,14 @@ class Repository extends ChangeNotifier {
     _changed();
   }
 
+  /// The YouTube video fans can watch with this match (see lib/live/youtube.dart).
+  void setStream(MatchRecord m, String stream) {
+    if (m.stream == stream) return;
+    m.stream = stream;
+    m.updatedAt = DateTime.now();
+    _changed();
+  }
+
   void markCelebrated(MatchRecord m, String key) {
     if (m.celebrated.add(key)) _changed();
   }

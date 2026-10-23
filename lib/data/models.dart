@@ -98,6 +98,7 @@ class MatchRecord {
     this.tossPending = false,
     this.sponsors = const [],
     this.groundId = '',
+    this.stream = '',
     List<Map<String, dynamic>>? events,
     DateTime? updatedAt,
     Set<String>? celebrated,
@@ -120,6 +121,7 @@ class MatchRecord {
   bool tossPending; // scheduled match: the toss is asked when scoring starts
   final List<Map<String, dynamic>> sponsors; // followed matches only (from the tournament online)
   final String groundId; // a registered ground (Grounds near you), if picked
+  String stream; // YouTube live: 'v:<video id>' or 'c:<channel id>' (empty = no video)
   final String? tournamentId;
   final String? fixtureId;
   final bool remote; // someone else's match, followed from a live link
@@ -154,6 +156,7 @@ class MatchRecord {
         if (tossPending) 'tossPending': true,
         if (sponsors.isNotEmpty) 'sponsors': sponsors,
         if (groundId.isNotEmpty) 'ground': groundId,
+        if (stream.isNotEmpty) 'stream': stream,
         'events': events,
         'celebrated': celebrated.toList(),
       };
@@ -178,6 +181,7 @@ class MatchRecord {
         tossPending: (j['tossPending'] as bool?) ?? false,
         sponsors: [for (final x in (j['sponsors'] as List? ?? const [])) Map<String, dynamic>.from(x as Map)],
         groundId: (j['ground'] as String?) ?? '',
+        stream: (j['stream'] as String?) ?? '',
         events: [for (final e in (j['events'] as List? ?? const [])) Map<String, dynamic>.from(e as Map)],
         celebrated: {for (final c in (j['celebrated'] as List? ?? const [])) c as String},
       );

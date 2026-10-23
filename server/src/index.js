@@ -173,6 +173,17 @@ async function route(request, env, ctx) {
     });
   }
 
+  // YouTube live video for the match page inside the app (a web page gives YouTube a proper address).
+  if (p === '/embed/yt' && method === 'GET') {
+    const v = url.searchParams.get('v') || '';
+    const c = url.searchParams.get('c') || '';
+    let src = '';
+    if (/^[A-Za-z0-9_-]{6,20}$/.test(v)) src = `https://www.youtube.com/embed/${v}?autoplay=1&mute=1&playsinline=1&rel=0&modestbranding=1`;
+    else if (/^UC[A-Za-z0-9_-]{10,40}$/.test(c)) src = `https://www.youtube.com/embed/live_stream?channel=${c}&autoplay=1&mute=1&playsinline=1&rel=0`;
+    if (!src) return json({ error: 'bad video' }, 400);
+    return html(`<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="strict-origin-when-cross-origin"><style>html,body{margin:0;height:100%;background:#000}iframe{border:0;width:100%;height:100%}</style></head><body><iframe src="${src}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></body></html>`);
+  }
+
   if (p === '/v1/health') return json({ ok: true, service: 'gullyscore', login: !!String(env.GOOGLE_CLIENT_ID || '').trim() });
 
   const social = await socialRoutes(p, method, url, request, env);

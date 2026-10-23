@@ -9,6 +9,7 @@ import '../../scoring/engine.dart';
 import '../widgets/celebration.dart';
 import '../widgets/common.dart';
 import 'help.dart';
+import 'live_stream_screen.dart';
 import 'match_centre_screen.dart';
 import 'scoring_sheets.dart';
 import 'share_card.dart';
@@ -281,6 +282,7 @@ class _ScoringScreenState extends State<ScoringScreen> {
               _TopBar(
                 title: inn == null || inn.ended ? context.tr('scoring') : context.tr('scoring_team_innings', {'team': teamName}),
                 onHelp: () => showHelp(context, 'scoring'),
+                onLive: st.finished ? null : () => Navigator.push(context, MaterialPageRoute(builder: (_) => LiveStreamScreen(matchId: m.id))),
                 menu: PopupMenuButton<String>(
                   tooltip: context.tr('more'),
                   icon: Icon(Icons.more_vert_rounded, color: p.text),
@@ -457,9 +459,10 @@ class _ScoringScreenState extends State<ScoringScreen> {
 // ------------------------------------------------------------ parts
 
 class _TopBar extends StatelessWidget {
-  const _TopBar({required this.title, required this.onHelp, required this.menu});
+  const _TopBar({required this.title, required this.onHelp, required this.menu, this.onLive});
   final String title;
   final VoidCallback onHelp;
+  final VoidCallback? onLive;
   final Widget menu;
 
   @override
@@ -480,6 +483,10 @@ class _TopBar extends StatelessWidget {
             ]),
           ]),
         ),
+        if (onLive != null) ...[
+          IconBtn(icon: Icons.videocam_rounded, tooltip: context.tr('live_go_youtube'), onPressed: onLive),
+          const SizedBox(width: Space.s),
+        ],
         IconBtn(icon: Icons.help_outline_rounded, tooltip: context.tr('help'), onPressed: onHelp),
         menu,
       ]),

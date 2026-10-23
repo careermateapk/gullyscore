@@ -44,6 +44,10 @@ import 'package:gullyscore/ui/screens/series_screen.dart';
 import 'package:gullyscore/ui/screens/insights_screens.dart';
 import 'package:gullyscore/ui/screens/booking_screens.dart';
 import 'package:gullyscore/ui/screens/auth_screen.dart';
+import 'package:gullyscore/ui/screens/live_stream_screen.dart';
+import 'package:gullyscore/live/live_engine.dart';
+import 'package:gullyscore/live/highlights.dart';
+import 'dart:io';
 import 'package:gullyscore/studio/share_entry.dart';
 import 'package:gullyscore/studio/stories.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -109,6 +113,8 @@ void check(WidgetTester tester, String where) {
 }
 
 void main() {
+  liveEngine = FakeLiveEngine();
+  HighlightStore.root = () async => Directory.systemTemp.createTempSync('gs_live');
   testWidgets('first launch shows onboarding, then the empty home', (tester) async {
     final (s, r) = await setUpApp(onboarded: false);
     await tester.pumpWidget(GullyScoreApp(settings: s, repo: r));
@@ -281,6 +287,67 @@ void main() {
     check(tester, 'tour end');
   });
 
+  testWidgets('live stream: set up, open camera, go live, score a four, end', (tester) async {
+    final (s, r) = await setUpApp();
+    final id = seedMatch(r);
+    final m = r.matches[id]!;
+    r.addEvent(m, {'t': Ev.start, 'striker': m.playersA[0], 'nonStriker': m.playersA[1], 'bowler': m.playersB[0]});
+    final engine = FakeLiveEngine();
+    liveEngine = engine;
+    _savedOnError = FlutterError.onError;
+    FlutterError.onError = _errors.add;
+    await tester.pumpWidget(wrap(s, r, LiveStreamScreen(matchId: id)));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Open camera'));
+    await tester.pumpAndSettle();
+    expect(find.text('Paste your YouTube stream key first.'), findsOneWidget);
+    await tester.enterText(find.widgetWithText(TextField, 'Stream key'), 'abcd-efgh-ijkl-mnop');
+    await tester.enterText(find.widgetWithText(TextField, 'YouTube link for fans (optional)'), 'https://www.youtube.com/channel/UCabcdefghijklmnopqrstuv');
+    await tester.ensureVisible(find.text('Open camera'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Open camera'));
+    await tester.pumpAndSettle();
+    check(tester, 'live setup');
+    expect(m.stream, 'c:UCabcdefghijklmnopqrstuv');
+    // The camera page on a small landscape phone.
+    await tester.pumpWidget(MediaQuery(
+      data: const MediaQueryData(size: Size(640, 320), textScaler: TextScaler.linear(1.3)),
+      child: wrap(s, r, LiveStreamScreen(key: UniqueKey(), matchId: id)),
+    ));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextField, 'Stream key'), 'abcd-efgh-ijkl-mnop');
+    await tester.ensureVisible(find.text('Open camera'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Open camera'));
+    await tester.pump(const Duration(seconds: 7)); // intro graphic goes away
+    await tester.pumpAndSettle();
+    check(tester, 'camera page');
+    expect(find.text('Ready'), findsOneWidget);
+    await tester.tap(find.byTooltip('Go LIVE'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.textContaining('LIVE  00:'), findsOneWidget);
+    expect(engine.calls, containsAll(['prepare', 'start', 'segment']));
+    await tester.tap(find.text('4'));
+    await tester.pump();
+    expect(find.text('FOUR!'), findsOneWidget);
+    check(tester, 'four on the video');
+    expect(engine.calls, contains('cut'));
+    await tester.pump(const Duration(seconds: 4));
+    await tester.tap(find.byTooltip('Replay last ball'));
+    await tester.pump(const Duration(seconds: 1));
+    await tester.tap(find.byTooltip('End live'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('End live').last);
+    await tester.pumpAndSettle();
+    expect(engine.calls, contains('stop'));
+    check(tester, 'live end');
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 20));
+    FlutterError.onError = _savedOnError;
+    liveEngine = FakeLiveEngine();
+  });
+
   testWidgets('switching to Hindi changes the navigation', (tester) async {
     final (s, r) = await setUpApp();
     await tester.pumpWidget(GullyScoreApp(settings: s, repo: r));
@@ -412,6 +479,8 @@ void main() {
         OnboardingScreen(onDone: () {}),
         const AuthScreen(),
         const AuthScreen(startOnSignUp: true),
+        LiveStreamScreen(matchId: id),
+        HighlightsScreen(matchId: id),
         const CreateTournamentScreen(),
         TournamentScreen(tournamentId: tour.id),
         TournamentScreen(tournamentId: ko.id),
