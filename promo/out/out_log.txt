@@ -1,0 +1,38 @@
+Traceback (most recent call last):
+  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/torch/_ops.py", line 1587, in load_library
+    ctypes.CDLL(path)
+  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/ctypes/__init__.py", line 376, in __init__
+    self._handle = _dlopen(self._name, mode)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^
+OSError: libcudart.so.13: cannot open shared object file: No such file or directory
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/runner/work/gullyscore/gullyscore/promo/tts.py", line 4, in <module>
+    from parler_tts import ParlerTTSForConditionalGeneration
+  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/parler_tts/__init__.py", line 7, in <module>
+    from .dac_wrapper import DACConfig, DACModel
+  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/parler_tts/dac_wrapper/__init__.py", line 2, in <module>
+    from .modeling_dac import DACModel
+  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/parler_tts/dac_wrapper/modeling_dac.py", line 2, in <module>
+    from dac.model import DAC
+  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/dac/__init__.py", line 6, in <module>
+    import audiotools
+  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/audiotools/__init__.py", line 2, in <module>
+    from .core import AudioSignal
+  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/audiotools/core/__init__.py", line 1, in <module>
+    from . import util
+  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/audiotools/core/util.py", line 16, in <module>
+    import torchaudio
+  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/torchaudio/__init__.py", line 7, in <module>
+    from . import _extension  # noqa  # usort: skip
+    ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/torchaudio/_extension/__init__.py", line 30, in <module>
+    _IS_TORCHAUDIO_EXT_AVAILABLE = _load_lib("_torchaudio")
+                                   ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/torchaudio/_extension/utils.py", line 56, in _load_lib
+    torch.ops.load_library(paths[0])
+  File "/opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/torch/_ops.py", line 1589, in load_library
+    raise OSError(f"Could not load this library: {path}") from e
+OSError: Could not load this library: /opt/hostedtoolcache/Python/3.11.17/x64/lib/python3.11/site-packages/torchaudio/lib/_torchaudio.abi3.so
