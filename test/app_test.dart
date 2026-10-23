@@ -238,7 +238,7 @@ void main() {
     }
     expect(sync.loggedIn, true);
     expect(find.byType(AuthScreen), findsOneWidget); // still celebrating
-    expect(find.textContaining('WELCOME BACK'), findsOneWidget);
+    expect(find.textContaining('Good to see you again'), findsOneWidget);
     expect(find.textContaining('SURAJ!'), findsOneWidget);
     for (var i = 0; i < 30; i++) {
       await tester.pump(const Duration(milliseconds: 100));

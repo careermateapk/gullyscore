@@ -39,7 +39,8 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
   String? _error; // shown above the buttons
   bool _noGoogleAccount = false; // "No account for this Gmail" card
   ({bool back, Offset from})? _party; // welcome animation after logging in
-  final _btnKey = GlobalKey();
+  final _loginBtn = GlobalKey();
+  final _signUpBtn = GlobalKey();
 
   // log in
   final _email = TextEditingController();
@@ -206,7 +207,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
   void _celebrate({required bool back}) {
     if (!mounted || !authHold.value) return;
     HapticFeedback.heavyImpact();
-    final box = _btnKey.currentContext?.findRenderObject() as RenderBox?;
+    final box = (_signUp ? _signUpBtn : _loginBtn).currentContext?.findRenderObject() as RenderBox?;
     final size = MediaQuery.sizeOf(context);
     final from = box != null && box.hasSize ? box.localToGlobal(box.size.center(Offset.zero)) : Offset(size.width / 2, size.height * 0.8);
     setState(() => _party = (back: back, from: from));
@@ -473,7 +474,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
       ),
       _errorLine(),
       const SizedBox(height: 10),
-      _PrimaryButton(key: _signUp ? null : _btnKey, busy: _busy, label: _busy ? context.tr('auth_please_wait') : context.tr('auth_login_btn'), onTap: _busy ? null : _logIn),
+      _PrimaryButton(key: _loginBtn, busy: _busy, label: _busy ? context.tr('auth_please_wait') : context.tr('auth_login_btn'), onTap: _busy ? null : _logIn),
       _Or(text: context.tr('auth_or')),
       _GoogleButton(label: context.tr('auth_google_login'), onTap: _busy ? null : _googleLogIn, warn: _noGoogleAccount),
       const SizedBox(height: 14),
@@ -598,7 +599,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
         ),
       _errorLine(),
       const SizedBox(height: 12),
-      _PrimaryButton(key: _signUp ? _btnKey : null, busy: _busy, label: _busy ? context.tr('auth_please_wait') : context.tr('auth_create_btn'), onTap: _busy ? null : () => _signUpNow(), dim: !ready && !_busy),
+      _PrimaryButton(key: _signUpBtn, busy: _busy, label: _busy ? context.tr('auth_please_wait') : context.tr('auth_create_btn'), onTap: _busy ? null : () => _signUpNow(), dim: !ready && !_busy),
       _Or(text: context.tr('auth_or')),
       _GoogleButton(label: context.tr('auth_google_signup'), onTap: _busy ? null : () => _signUpNow(google: true)),
       Padding(
