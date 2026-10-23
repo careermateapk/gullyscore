@@ -1,0 +1,25 @@
+name: Promo voice
+on:
+  push:
+    branches: [promo-tts]
+permissions:
+  contents: write
+jobs:
+  tts:
+    if: "!contains(github.event.head_commit.message, '[out]')"
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - run: sudo apt-get update -q && sudo apt-get install -y -q ffmpeg
+      - run: |
+          pip install -q torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -q git+https://github.com/huggingface/parler-tts.git openai-whisper soundfile librosa
+      - run: cd promo && python tts.py 2>&1 | tee out_log.txt
+      - if: always()
+        run: |
+          cd promo && mkdir -p out && cp out_log.txt out/ || true
+          git config user.name gs-bot && git config user.email bot@users.noreply.github.com
+          git add out && git commit -m "voice [out]" && git push
