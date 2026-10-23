@@ -1,2 +1,4 @@
 -keep class com.pedro.** { *; }
 -dontwarn com.pedro.**
+-dontwarn org.slf4j.**
+-dontwarn javax.annotation.**
