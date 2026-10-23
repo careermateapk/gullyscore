@@ -139,8 +139,8 @@ class OverlayData {
 
 enum Graphic { none, intro, need, batter, boundary, sponsor, summary, replay }
 
-class OverlayState {
-  const OverlayState({
+class StreamOverlayState {
+  const StreamOverlayState({
     required this.theme,
     required this.data,
     this.graphic = Graphic.none,
@@ -169,7 +169,7 @@ TextStyle _t(double size, Color c, {FontWeight w = FontWeight.w800, String? fami
 
 class StreamOverlay extends StatelessWidget {
   const StreamOverlay({super.key, required this.state});
-  final OverlayState state;
+  final StreamOverlayState state;
 
   @override
   Widget build(BuildContext context) {

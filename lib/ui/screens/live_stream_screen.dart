@@ -330,7 +330,7 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
 
   // ------------------------------------------------------------ overlay
 
-  OverlayState _overlayState(MatchRecord m) {
+  StreamOverlayState _overlayState(MatchRecord m) {
     final repo = context.repo;
     final st = m.state;
     final sponsors = repo.sponsorsOf(m);
@@ -347,7 +347,7 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
         summary.add((repo.playerName(b.id), '${b.wickets}-${b.runs} (${b.overs})'));
       }
     }
-    return OverlayState(
+    return StreamOverlayState(
       theme: StreamTheme.of(_theme),
       data: OverlayData.of(repo, st, teamA: m.teamA, teamB: m.teamB, title: m.title, venue: m.venue),
       graphic: _graphic,
