@@ -28,6 +28,6 @@ android {
 
 dependencies {
     // Camera + RTMP streaming + recording (Apache 2.0). 2.6.1 is built with Kotlin 2.1 / AGP 8.6.
-    implementation 'com.github.pedroSG94.RootEncoder:library:2.6.1'
+    api 'com.github.pedroSG94.RootEncoder:library:2.6.1'
     implementation 'org.jetbrains.kotlin:kotlin-stdlib:2.1.20'
 }
