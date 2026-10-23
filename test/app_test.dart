@@ -312,6 +312,7 @@ void main() {
     await tester.pumpAndSettle();
     check(tester, 'live setup');
     expect(m.stream, 'c:UCabcdefghijklmnopqrstuv');
+    expect(find.text('Ready'), findsOneWidget);
     // The camera page on a small landscape phone.
     await tester.pumpWidget(MediaQuery(
       data: const MediaQueryData(size: Size(640, 320), textScaler: TextScaler.linear(1.3)),

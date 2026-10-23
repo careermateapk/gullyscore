@@ -197,9 +197,11 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
         });
         return;
       }
-      await SystemChrome.setPreferredOrientations([DeviceOrientation.landscapeLeft]);
-      await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-      if (_engine.real) await Future<void>.delayed(const Duration(milliseconds: 700));
+      if (_engine.real) {
+        await SystemChrome.setPreferredOrientations([DeviceOrientation.landscapeLeft]);
+        await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+        await Future<void>.delayed(const Duration(milliseconds: 700));
+      }
       final hd = _quality == '720';
       await _engine.prepare(width: hd ? 1280 : 854, height: hd ? 720 : 480, bitrate: hd ? 2500 * 1024 : 1200 * 1024);
       _sub ??= _engine.events.listen(_onEvent);
@@ -222,6 +224,7 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
   }
 
   Future<void> _restoreOrientation() async {
+    if (!_engine.real) return;
     await SystemChrome.setPreferredOrientations(const []);
     await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   }
