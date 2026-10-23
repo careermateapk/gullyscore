@@ -212,6 +212,43 @@ void main() {
     check(tester, 'login flow');
   });
 
+  testWidgets('logging in plays the welcome, then opens home', (tester) async {
+    SharedPreferences.setMockInitialValues({'onboarded': true, 'reduceMotion': false, 'askShot': false});
+    final s = Settings();
+    await s.load();
+    final r = Repository(store: MemoryStore());
+    await r.load();
+    Future<Map<String, dynamic>> send(String method, String path, {Object? body, String? auth}) async {
+      if (path == '/v1/auth/login') return {...meJson, 'token': 'Unew'};
+      return fakeSend(method, path, body: body, auth: auth);
+    }
+
+    final sync = SyncService(r, OnlineCloud(), google: NoGoogle(), socialSender: send);
+    await sync.start(timers: false);
+    await tester.pumpWidget(GullyScoreApp(settings: s, repo: r, sync: sync));
+    await tester.pump(const Duration(seconds: 1));
+    await tester.enterText(find.widgetWithText(TextField, 'Email'), 'suraj@example.com');
+    await tester.enterText(find.widgetWithText(TextField, 'Password'), 'Gully2024!');
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.ensureVisible(find.text('Log in').last);
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.text('Log in').last);
+    for (var i = 0; i < 20; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(sync.loggedIn, true);
+    expect(find.byType(AuthScreen), findsOneWidget); // still celebrating
+    expect(find.textContaining('WELCOME BACK'), findsOneWidget);
+    expect(find.textContaining('SURAJ!'), findsOneWidget);
+    for (var i = 0; i < 30; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(find.byType(AuthScreen), findsNothing);
+    expect(find.text('Community'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 1));
+  });
+
   testWidgets('switching to Hindi changes the navigation', (tester) async {
     final (s, r) = await setUpApp();
     await tester.pumpWidget(GullyScoreApp(settings: s, repo: r));

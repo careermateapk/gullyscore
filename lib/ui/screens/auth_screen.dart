@@ -19,6 +19,10 @@ const _goldB = Color(0xFFFFE7A3);
 const _green = Color(0xFF2BD38A);
 const _red = Color(0xFFFF4D4D);
 
+/// True while the welcome animation plays after logging in, so the app
+/// waits before showing the home screen.
+final authHold = ValueNotifier<bool>(false);
+
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key, this.startOnSignUp = false});
   final bool startOnSignUp;
@@ -34,6 +38,8 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
   bool _busy = false;
   String? _error; // shown above the buttons
   bool _noGoogleAccount = false; // "No account for this Gmail" card
+  ({bool back, Offset from})? _party; // welcome animation after logging in
+  final _btnKey = GlobalKey();
 
   // log in
   final _email = TextEditingController();
@@ -49,7 +55,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
   final _sPass2 = TextEditingController();
   final _stateText = TextEditingController();
   final _cityText = TextEditingController();
-  Country _country = countries.first;
+  Country _country = india;
   bool _showSPass = false;
   bool _tried = false; // show what is missing after the first try
 
@@ -70,6 +76,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
     }
     _enter.dispose();
     _shake.dispose();
+    if (authHold.value) WidgetsBinding.instance.addPostFrameCallback((_) => authHold.value = false);
     super.dispose();
   }
 
@@ -107,14 +114,17 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
     if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(_email.text.trim()) || _pass.text.isEmpty) {
       return _fail(context.tr('auth_fill_login'));
     }
-    await _run(() => context.sync.logInEmail(_email.text, _pass.text));
+    await _run(() => context.sync.logInEmail(_email.text, _pass.text), back: true);
   }
 
   Future<void> _googleLogIn() async {
     setState(() => _noGoogleAccount = false);
+    final sync = context.sync;
+    _hold();
     try {
       setState(() => _busy = true);
-      await context.sync.logInGoogle();
+      await sync.logInGoogle();
+      _celebrate(back: true);
     } on GoogleLoginError catch (e) {
       if (!e.cancelled && mounted) _fail(_msg(e));
     } on CloudError catch (e) {
@@ -130,6 +140,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
       if (mounted) _fail(_msg(e));
     } finally {
       if (mounted) setState(() => _busy = false);
+      if (_party == null) authHold.value = false;
     }
   }
 
@@ -165,23 +176,40 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
     setState(() => _tried = true);
     final m = _missing(google: google);
     if (m != null) return _fail(m);
-    await _run(() => context.sync.signUp(_form, google: google));
+    await _run(() => context.sync.signUp(_form, google: google), back: false);
   }
 
-  Future<void> _run(Future<void> Function() f) async {
+  Future<void> _run(Future<void> Function() f, {required bool back}) async {
     setState(() {
       _busy = true;
       _error = null;
     });
+    _hold();
     try {
       await f();
+      _celebrate(back: back);
     } on GoogleLoginError catch (e) {
       if (!e.cancelled && mounted) _fail(_msg(e));
     } catch (e) {
       if (mounted) _fail(_msg(e));
     } finally {
       if (mounted) setState(() => _busy = false);
+      if (_party == null) authHold.value = false;
     }
+  }
+
+  /// Keep this screen up after logging in, so the welcome can play.
+  void _hold() {
+    if (!context.reduceMotion) authHold.value = true;
+  }
+
+  void _celebrate({required bool back}) {
+    if (!mounted || !authHold.value) return;
+    HapticFeedback.heavyImpact();
+    final box = _btnKey.currentContext?.findRenderObject() as RenderBox?;
+    final size = MediaQuery.sizeOf(context);
+    final from = box != null && box.hasSize ? box.localToGlobal(box.size.center(Offset.zero)) : Offset(size.width / 2, size.height * 0.8);
+    setState(() => _party = (back: back, from: from));
   }
 
   Future<void> _forgot() => showDialog<void>(
@@ -193,17 +221,20 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
         ),
       );
 
+  String _firstName() {
+    final n = (context.sync.me?.name ?? '').trim();
+    return n.isEmpty ? context.tr('auth_welcome_b') : '${n.split(RegExp(r'\s+')).first}!';
+  }
+
   // ------------------------------------------------------------ pickers
 
   Future<void> _pickCountry() async {
-    final c = await _searchSheet<Country>(
-      title: context.tr('auth_country_code'),
-      hint: context.tr('auth_search_country'),
-      items: countries,
-      label: (c) => '${c.flag}  ${c.name}',
-      trailing: (c) => c.code,
-      selected: _country,
-      matches: (c, q) => c.name.toLowerCase().contains(q) || c.code.contains(q),
+    final c = await showModalBottomSheet<Country>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF0E1626),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(26))),
+      builder: (ctx) => _CountrySheet(selected: _country),
     );
     if (c != null) setState(() => _country = c);
   }
@@ -384,6 +415,16 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                   const SliverFillRemaining(hasScrollBody: false, child: ColoredBox(color: Color(0xFF080C18))),
                 ]),
               ),
+              if (_party != null)
+                Positioned.fill(
+                  child: _Welcome(
+                    from: _party!.from,
+                    title: context.tr(_party!.back ? 'auth_party_back' : 'auth_party_new'),
+                    name: _firstName(),
+                    sub: context.tr(_party!.back ? 'auth_party_back_sub' : 'auth_party_new_sub'),
+                    onDone: () => authHold.value = false,
+                  ),
+                ),
             ]),
           );
         },
@@ -432,7 +473,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
       ),
       _errorLine(),
       const SizedBox(height: 10),
-      _PrimaryButton(label: _busy ? context.tr('auth_please_wait') : context.tr('auth_login_btn'), onTap: _busy ? null : _logIn),
+      _PrimaryButton(key: _signUp ? null : _btnKey, busy: _busy, label: _busy ? context.tr('auth_please_wait') : context.tr('auth_login_btn'), onTap: _busy ? null : _logIn),
       _Or(text: context.tr('auth_or')),
       _GoogleButton(label: context.tr('auth_google_login'), onTap: _busy ? null : _googleLogIn, warn: _noGoogleAccount),
       const SizedBox(height: 14),
@@ -464,14 +505,14 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
       IntrinsicHeight(
         child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Padding(
-          padding: const EdgeInsets.only(top: 10),
+          padding: const EdgeInsets.only(top: 8),
           child: Semantics(
             button: true,
             label: '${context.tr('auth_country_code')} ${_country.name} ${_country.code}',
             child: GestureDetector(
               onTap: _pickCountry,
               child: Container(
-                constraints: const BoxConstraints(minHeight: 56),
+                constraints: const BoxConstraints(minHeight: 46),
                 alignment: Alignment.center,
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 decoration: _box(null),
@@ -557,7 +598,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
         ),
       _errorLine(),
       const SizedBox(height: 12),
-      _PrimaryButton(label: _busy ? context.tr('auth_please_wait') : context.tr('auth_create_btn'), onTap: _busy ? null : () => _signUpNow(), dim: !ready),
+      _PrimaryButton(key: _signUp ? _btnKey : null, busy: _busy, label: _busy ? context.tr('auth_please_wait') : context.tr('auth_create_btn'), onTap: _busy ? null : () => _signUpNow(), dim: !ready && !_busy),
       _Or(text: context.tr('auth_or')),
       _GoogleButton(label: context.tr('auth_google_signup'), onTap: _busy ? null : () => _signUpNow(google: true)),
       Padding(
@@ -580,7 +621,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
 TextStyle _display(double size) => TextStyle(fontFamily: 'Saira', fontFamilyFallback: const ['NotoDeva'], fontWeight: FontWeight.w800, fontSize: size, height: 1.08, color: Colors.white);
 
 BoxDecoration _box(Color? border, {bool focus = false}) => BoxDecoration(
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(14),
       color: Colors.white.withValues(alpha: focus ? 0.07 : 0.05),
       border: Border.all(color: border ?? Colors.white.withValues(alpha: 0.12), width: 1.5),
     );
@@ -642,7 +683,7 @@ class _FieldState extends State<_Field> {
     final border = widget.error ? _red : (focus ? _goldA : (widget.ok ? _green.withValues(alpha: 0.6) : null));
     return AnimatedContainer(
       duration: const Duration(milliseconds: 180),
-      margin: const EdgeInsets.only(top: 10),
+      margin: const EdgeInsets.only(top: 8),
       decoration: _box(border, focus: focus).copyWith(boxShadow: focus ? [BoxShadow(color: _goldA.withValues(alpha: 0.16), spreadRadius: 3)] : null),
       child: TextField(
         controller: widget.controller,
@@ -655,12 +696,13 @@ class _FieldState extends State<_Field> {
         onChanged: widget.onChanged,
         onSubmitted: widget.onSubmitted,
         cursorColor: _goldA,
-        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15),
+        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14.5),
         decoration: InputDecoration(
           labelText: widget.label,
           labelStyle: const TextStyle(color: Colors.white54, fontWeight: FontWeight.w600),
           floatingLabelStyle: TextStyle(color: widget.error ? const Color(0xFFFF8080) : _goldB, fontWeight: FontWeight.w800),
-          prefixIcon: widget.icon == null ? null : Icon(widget.icon, color: Colors.white60, size: 20),
+          prefixIcon: widget.icon == null ? null : Icon(widget.icon, color: Colors.white60, size: 18),
+          prefixIconConstraints: const BoxConstraints(minWidth: 42, minHeight: 44),
           suffixIcon: widget.suffix ??
               (widget.trailingText != null
                   ? Padding(
@@ -672,7 +714,8 @@ class _FieldState extends State<_Field> {
           enabledBorder: InputBorder.none,
           focusedBorder: InputBorder.none,
           filled: false,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+          isDense: true,
         ),
       ),
     );
@@ -693,9 +736,9 @@ class _PickBox extends StatelessWidget {
         child: GestureDetector(
           onTap: onTap,
           child: Container(
-            margin: const EdgeInsets.only(top: 10),
-            constraints: const BoxConstraints(minHeight: 56),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            margin: const EdgeInsets.only(top: 8),
+            constraints: const BoxConstraints(minHeight: 46),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
             decoration: _box(color == null ? null : (color == _green ? _green.withValues(alpha: 0.6) : color)),
             child: ExcludeSemantics(
               child: Row(children: [
@@ -703,8 +746,8 @@ class _PickBox extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-                    Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white54, fontWeight: FontWeight.w800, fontSize: 10.5)),
-                    Text(value.isEmpty ? '—' : value, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14.5)),
+                    Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white54, fontWeight: FontWeight.w800, fontSize: 10)),
+                    Text(value.isEmpty ? '—' : value, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
                   ]),
                 ),
                 const Icon(Icons.arrow_drop_down_rounded, color: Colors.white60),
@@ -805,7 +848,7 @@ class _Tabs extends StatelessWidget {
               behavior: HitTestBehavior.opaque,
               onTap: () => onChanged(v),
               child: SizedBox(
-                height: 44,
+                height: 38,
                 child: Center(
                   child: AnimatedDefaultTextStyle(
                     duration: const Duration(milliseconds: 200),
@@ -828,7 +871,7 @@ class _Tabs extends StatelessWidget {
           child: FractionallySizedBox(
             widthFactor: 0.5,
             child: Container(
-              height: 44,
+              height: 38,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
                 gradient: const LinearGradient(colors: [_goldA, _goldB, _goldA]),
@@ -844,36 +887,91 @@ class _Tabs extends StatelessWidget {
 }
 
 class _PrimaryButton extends StatelessWidget {
-  const _PrimaryButton({required this.label, required this.onTap, this.dim = false});
+  const _PrimaryButton({super.key, required this.label, required this.onTap, this.dim = false, this.busy = false});
   final String label;
   final VoidCallback? onTap;
   final bool dim;
+  final bool busy; // shrinks into a circle with a spinning ball
   @override
-  Widget build(BuildContext context) => Semantics(
-        button: true,
-        enabled: onTap != null,
-        label: label,
-        child: GestureDetector(
-          onTap: onTap,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 250),
-            height: 56,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(17),
-              gradient: dim ? null : const LinearGradient(colors: [_goldA, _goldB, _goldA]),
-              color: dim ? Colors.white.withValues(alpha: 0.08) : null,
-              boxShadow: dim ? null : const [BoxShadow(color: Color(0x4DF4C247), blurRadius: 24, offset: Offset(0, 10))],
-            ),
-            child: ExcludeSemantics(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: dim ? Colors.white38 : _ink, fontWeight: FontWeight.w800, fontSize: 16)),
+  Widget build(BuildContext context) {
+    final calm = context.reduceMotion;
+    final round = busy && !calm;
+    return Semantics(
+      button: true,
+      enabled: onTap != null,
+      label: label,
+      child: GestureDetector(
+        onTap: onTap,
+        child: LayoutBuilder(
+          builder: (context, box) => Center(
+            child: AnimatedContainer(
+              duration: calm ? Duration.zero : const Duration(milliseconds: 380),
+              curve: Curves.easeOutCubic,
+              height: 48,
+              width: round ? 48 : box.maxWidth,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(round ? 24 : 15),
+                gradient: dim ? null : const LinearGradient(colors: [_goldA, _goldB, _goldA]),
+                color: dim ? Colors.white.withValues(alpha: 0.08) : null,
+                boxShadow: dim ? null : const [BoxShadow(color: Color(0x4DF4C247), blurRadius: 22, offset: Offset(0, 8))],
+              ),
+              child: ExcludeSemantics(
+                child: round
+                    ? const _SpinBall(size: 26)
+                    : Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Text(label, maxLines: 1, overflow: TextOverflow.clip, softWrap: false, style: TextStyle(color: dim ? Colors.white38 : _ink, fontWeight: FontWeight.w800, fontSize: 15)),
+                      ),
               ),
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// A red cricket ball that keeps turning.
+class _SpinBall extends StatefulWidget {
+  const _SpinBall({required this.size});
+  final double size;
+  @override
+  State<_SpinBall> createState() => _SpinBallState();
+}
+
+class _SpinBallState extends State<_SpinBall> with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 700))..repeat();
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => RotationTransition(
+        turns: _c,
+        child: SizedBox(width: widget.size, height: widget.size, child: const CustomPaint(painter: _BallPainter())),
       );
+}
+
+class _BallPainter extends CustomPainter {
+  const _BallPainter();
+  @override
+  void paint(Canvas canvas, Size s) => paintBall(canvas, Offset(s.width / 2, s.height / 2), s.width / 2);
+  @override
+  bool shouldRepaint(_BallPainter old) => false;
+}
+
+void paintBall(Canvas canvas, Offset c, double r) {
+  final rect = Rect.fromCircle(center: c, radius: r);
+  canvas.drawCircle(c + Offset(0, r * 0.25), r, Paint()..color = const Color(0x66000000)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4));
+  canvas.drawCircle(c, r, Paint()..shader = const RadialGradient(center: Alignment(-0.35, -0.4), colors: [Color(0xFFFF8A8A), Color(0xFFD32020), Color(0xFF7A0C0C)], stops: [0, 0.45, 1]).createShader(rect));
+  final seam = Paint()
+    ..color = Colors.white.withValues(alpha: 0.85)
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = r * 0.09;
+  canvas.drawArc(Rect.fromCenter(center: c, width: r * 0.9, height: r * 2), -math.pi / 2, math.pi, false, seam);
 }
 
 class _GoogleButton extends StatelessWidget {
@@ -889,10 +987,10 @@ class _GoogleButton extends StatelessWidget {
           onTap: onTap,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            height: 54,
+            height: 46,
             padding: const EdgeInsets.symmetric(horizontal: 12),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(17),
+              borderRadius: BorderRadius.circular(15),
               color: Colors.white,
               border: Border.all(color: warn ? _red : Colors.white, width: 2.5),
             ),
@@ -1096,6 +1194,358 @@ class _SearchListState<T> extends State<_SearchList<T>> {
                 );
               },
             ),
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
+/// After logging in: the ball flies from the button, hits the stumps, the
+/// bails fly, a gold tick pops with confetti, then "Welcome, Name!".
+class _Welcome extends StatefulWidget {
+  const _Welcome({required this.from, required this.title, required this.name, required this.sub, required this.onDone});
+  final Offset from;
+  final String title, name, sub;
+  final VoidCallback onDone;
+  @override
+  State<_Welcome> createState() => _WelcomeState();
+}
+
+class _WelcomeState extends State<_Welcome> with SingleTickerProviderStateMixin {
+  static const _secs = 3.6;
+  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 3600))
+    ..addStatusListener((s) {
+      if (s == AnimationStatus.completed) widget.onDone();
+    })
+    ..forward();
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: AnimatedBuilder(
+        animation: _c,
+        builder: (context, _) {
+          final t = _c.value * _secs;
+          double iv(double a, double b, [Curve c = Curves.easeOutCubic]) => c.transform(((t - a) / (b - a)).clamp(0.0, 1.0));
+          Widget line(Widget child, double at) {
+            final k = iv(at, at + 0.45);
+            return Opacity(
+              opacity: k * (1 - iv(3.25, 3.55)),
+              child: Transform.translate(offset: Offset(0, (1 - k) * 18), child: child),
+            );
+          }
+
+          return LayoutBuilder(builder: (context, box) {
+            final w = box.maxWidth, h = box.maxHeight;
+            final centre = Offset(w / 2, h * 0.4);
+            return Stack(children: [
+              Positioned.fill(child: CustomPaint(painter: _WelcomePainter(t: t, from: widget.from, centre: centre))),
+              Positioned(
+                left: 20,
+                right: 20,
+                top: centre.dy + 78,
+                child: MediaQuery.withClampedTextScaling(
+                  maxScaleFactor: 1.2,
+                  child: Column(children: [
+                    line(
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text.rich(
+                          TextSpan(children: [
+                            TextSpan(text: '${widget.title.toUpperCase()} '),
+                            TextSpan(text: widget.name.toUpperCase(), style: const TextStyle(color: _goldA)),
+                          ]),
+                          maxLines: 1,
+                          style: _display(38),
+                        ),
+                      ),
+                      1.45,
+                    ),
+                    const SizedBox(height: 8),
+                    line(Text(widget.sub, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w700, fontSize: 14)), 1.7),
+                  ]),
+                ),
+              ),
+            ]);
+          });
+        },
+      ),
+    );
+  }
+}
+
+class _WelcomePainter extends CustomPainter {
+  _WelcomePainter({required this.t, required this.from, required this.centre});
+  final double t; // seconds
+  final Offset from, centre;
+
+  double iv(double a, double b, [Curve c = Curves.easeOutCubic]) => c.transform(((t - a) / (b - a)).clamp(0.0, 1.0));
+
+  static final _bits = () {
+    final r = math.Random(7);
+    const colors = [Color(0xFFF4C247), Color(0xFFFFE7A3), Color(0xFF2BD38A), Color(0xFFFF5C8A), Color(0xFF5B9BFF), Colors.white];
+    return List.generate(64, (i) => (a: r.nextDouble() * math.pi * 2, v: 160 + r.nextDouble() * 260, spin: (r.nextDouble() - 0.5) * 24, c: colors[i % colors.length], w: 5 + r.nextDouble() * 4));
+  }();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final fade = 1 - iv(3.25, 3.6);
+    // dark veil over the form
+    canvas.saveLayer(Offset.zero & size, Paint()..color = Colors.black.withValues(alpha: iv(0, 0.4)));
+    canvas.drawRect(
+      Offset.zero & size,
+      Paint()..shader = RadialGradient(center: Alignment(0, centre.dy / size.height * 2 - 1), radius: 1.1, colors: const [Color(0xFF2A0D3D), Color(0xFF0B0718), Color(0xFF03060D)]).createShader(Offset.zero & size),
+    );
+    canvas.restore();
+    const hitAt = 0.5;
+    // flash
+    if (t > hitAt) {
+      final k = 1 - iv(hitAt, hitAt + 0.7);
+      canvas.drawCircle(centre, size.width * 0.9, Paint()..shader = RadialGradient(colors: [const Color(0xFFFFE7A3).withValues(alpha: 0.85 * k), const Color(0xFFF4C247).withValues(alpha: 0.3 * k), Colors.transparent]).createShader(Rect.fromCircle(center: centre, radius: size.width * 0.9)));
+    }
+    // rings
+    for (final start in [hitAt + 0.05, hitAt + 0.2, hitAt + 0.35]) {
+      final k = iv(start, start + 0.9, Curves.easeOut);
+      if (k <= 0 || k >= 1) continue;
+      canvas.drawCircle(centre, 10 + k * size.width * 0.6, Paint()..style = PaintingStyle.stroke..strokeWidth = 3 - 2 * k..color = const Color(0xFFF4C247).withValues(alpha: 1 - k));
+    }
+    // stumps and bails
+    final st = iv(0.0, 0.25) * (1 - iv(1.0, 1.3));
+    if (st > 0) {
+      final hit = iv(hitAt, hitAt + 0.65, Curves.linear);
+      final base = centre + Offset(0, 50 + (1 - iv(0.0, 0.3)) * 24);
+      final stump = Paint()..color = const Color(0xFFF4E3B5).withValues(alpha: st);
+      for (final (dx, tilt) in [(-20.0, -0.14), (0.0, 0.3), (20.0, 0.17)]) {
+        canvas.save();
+        canvas.translate(base.dx + dx, base.dy);
+        canvas.rotate(tilt * Curves.easeOut.transform(hit));
+        canvas.drawRRect(RRect.fromRectAndRadius(const Rect.fromLTWH(-4.5, -96, 9, 96), const Radius.circular(3)), stump);
+        canvas.restore();
+      }
+      final bail = Paint()..color = _goldA.withValues(alpha: st);
+      for (final (dx, dir) in [(-12.0, -1.0), (12.0, 1.0)]) {
+        canvas.save();
+        canvas.translate(base.dx + dx + dir * hit * 60, base.dy - 100 - hit * 100 + hit * hit * 80);
+        canvas.rotate(dir * hit * 5);
+        canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromCenter(center: Offset.zero, width: 24, height: 6), const Radius.circular(3)), bail);
+        canvas.restore();
+      }
+    }
+    // the ball: arc from the button to the stumps
+    if (t < hitAt + 0.35) {
+      final k = iv(0.0, hitAt, Curves.easeIn);
+      final target = centre + Offset(0, -10);
+      final p = Offset.lerp(from, target, k)! - Offset(0, math.sin(k * math.pi) * 110);
+      final after = iv(hitAt, hitAt + 0.35);
+      canvas.save();
+      canvas.translate(p.dx + after * 30, p.dy + after * 40);
+      canvas.rotate(t * 12);
+      paintBall(canvas, Offset.zero, 13 + 4 * k);
+      canvas.restore();
+    }
+    // confetti
+    final ck = t - hitAt - 0.05;
+    if (ck > 0) {
+      final a = 1 - iv(2.4, 3.1);
+      for (final b in _bits) {
+        final p = centre + Offset(math.cos(b.a) * b.v * ck * 0.9, math.sin(b.a) * b.v * ck * 0.9 - 200 * ck + 260 * ck * ck);
+        canvas.save();
+        canvas.translate(p.dx, p.dy);
+        canvas.rotate(b.spin * ck);
+        canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromCenter(center: Offset.zero, width: b.w, height: b.w * 1.6), const Radius.circular(1.5)), Paint()..color = b.c.withValues(alpha: a));
+        canvas.restore();
+      }
+    }
+    // gold tick badge
+    final cp = iv(0.95, 1.35, Curves.easeOutBack);
+    if (cp > 0) {
+      final r = 50 * cp;
+      final c = centre + Offset(0, -iv(1.5, 1.9) * 8);
+      final rect = Rect.fromCircle(center: c, radius: r);
+      canvas.drawCircle(c, r + 10, Paint()..color = _goldA.withValues(alpha: 0.18 * fade)..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12));
+      canvas.drawCircle(c, r, Paint()..shader = LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [_goldB.withValues(alpha: fade), _goldA.withValues(alpha: fade), const Color(0xFFC9952F).withValues(alpha: fade)]).createShader(rect));
+      final tick = iv(1.3, 1.65);
+      if (tick > 0) {
+        final path = Path()
+          ..moveTo(c.dx - 22, c.dy + 2)
+          ..lineTo(c.dx - 6, c.dy + 17)
+          ..lineTo(c.dx + 24, c.dy - 15);
+        final m = path.computeMetrics().first;
+        canvas.drawPath(
+            m.extractPath(0, m.length * tick),
+            Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 9
+              ..strokeCap = StrokeCap.round
+              ..strokeJoin = StrokeJoin.round
+              ..color = _ink.withValues(alpha: fade));
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_WelcomePainter old) => old.t != t;
+}
+
+/// All 195 countries: popular ones first, then A to Z with a letter bar.
+class _CountrySheet extends StatefulWidget {
+  const _CountrySheet({required this.selected});
+  final Country selected;
+  @override
+  State<_CountrySheet> createState() => _CountrySheetState();
+}
+
+class _CountrySheetState extends State<_CountrySheet> {
+  static const _rowH = 52.0, _headH = 32.0;
+  final _scroll = ScrollController();
+  String _q = '';
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  // Each item is either a heading (String) or a country.
+  List<Object> _items() {
+    if (_q.isNotEmpty) {
+      final q = _q.replaceAll('+', '');
+      return countries.where((c) => c.name.toLowerCase().contains(_q) || (q.isNotEmpty && RegExp(r'^\d+$').hasMatch(q) && c.code.substring(1).startsWith(q))).toList();
+    }
+    final out = <Object>['★ ${context.tr('auth_popular')}', for (final iso in popularCountryIsos) countries.firstWhere((c) => c.iso == iso), context.tr('auth_all_countries')];
+    var last = '';
+    for (final c in countries) {
+      final l = c.name[0];
+      if (l != last) {
+        out.add(l);
+        last = l;
+      }
+      out.add(c);
+    }
+    return out;
+  }
+
+  void _jump(String letter, List<Object> items) {
+    var y = 0.0;
+    for (final it in items) {
+      if (it == letter) break;
+      y += it is String ? _headH : _rowH;
+    }
+    _scroll.jumpTo(y.clamp(0.0, _scroll.position.maxScrollExtent));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final items = _items();
+    final letters = [for (final it in items) if (it is String && it.length == 1) it];
+    final searching = _q.isNotEmpty;
+    return SizedBox(
+      height: MediaQuery.sizeOf(context).height * 0.86,
+      child: Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          const SizedBox(height: 10),
+          Center(child: Container(width: 40, height: 5, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(9)))),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 12, 18, 8),
+            child: Row(children: [
+              Expanded(child: Text(context.tr('auth_country_code'), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 17))),
+              Text(context.tr('auth_n_countries', {'n': '${countries.length}'}), style: const TextStyle(color: Colors.white54, fontWeight: FontWeight.w700, fontSize: 12)),
+            ]),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: TextField(
+              onChanged: (v) => setState(() => _q = v.trim().toLowerCase()),
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+              cursorColor: _goldA,
+              decoration: InputDecoration(
+                isDense: true,
+                hintText: context.tr('auth_search_country'),
+                hintStyle: const TextStyle(color: Colors.white38),
+                prefixIcon: const Icon(Icons.search_rounded, color: Colors.white60),
+                filled: true,
+                fillColor: Colors.white.withValues(alpha: 0.06),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+              ),
+            ),
+          ),
+          if (searching)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 12, 18, 4),
+              child: Text(items.isEmpty ? context.tr('auth_no_country') : context.tr('auth_n_results', {'n': '${items.length}'}),
+                  style: const TextStyle(color: _goldA, fontWeight: FontWeight.w800, fontSize: 11, letterSpacing: 1.2)),
+            ),
+          const SizedBox(height: 6),
+          Expanded(
+            child: Stack(children: [
+              ListView.builder(
+                controller: _scroll,
+                padding: EdgeInsets.only(right: searching ? 0 : 22, bottom: 20),
+                itemCount: items.length,
+                itemBuilder: (c, i) {
+                  final it = items[i];
+                  if (it is String) {
+                    final big = it.length > 1;
+                    return SizedBox(
+                      height: _headH,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(18, 10, 18, 0),
+                        child: Text(it.toUpperCase(), maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: big ? _goldA : Colors.white38, fontWeight: FontWeight.w800, fontSize: 11, letterSpacing: 1.3)),
+                      ),
+                    );
+                  }
+                  final ct = it as Country;
+                  final on = ct.iso == widget.selected.iso;
+                  return SizedBox(
+                    height: _rowH,
+                    child: Material(
+                      color: on ? _goldA.withValues(alpha: 0.12) : Colors.transparent,
+                      child: InkWell(
+                        onTap: () => Navigator.pop(context, ct),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 18),
+                          child: Row(children: [
+                            Text(ct.flag, style: const TextStyle(fontSize: 22)),
+                            const SizedBox(width: 12),
+                            Expanded(child: Text(ct.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: on ? _goldB : Colors.white, fontWeight: FontWeight.w700, fontSize: 14.5))),
+                            const SizedBox(width: 8),
+                            Text(ct.code, style: TextStyle(color: on ? _goldB : Colors.white70, fontWeight: FontWeight.w800, fontSize: 13.5)),
+                            if (on) const Padding(padding: EdgeInsets.only(left: 6), child: Icon(Icons.check_rounded, color: _goldB, size: 18)),
+                          ]),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+              if (!searching)
+                Positioned(
+                  right: 2,
+                  top: 4,
+                  bottom: 8,
+                  width: 20,
+                  child: MediaQuery.withNoTextScaling(
+                    child: Column(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
+                      for (final l in letters)
+                        Flexible(
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: () => _jump(l, items),
+                            child: SizedBox(width: 20, child: Center(child: FittedBox(child: Text(l, style: const TextStyle(color: Colors.white60, fontWeight: FontWeight.w800, fontSize: 10))))),
+                          ),
+                        ),
+                    ]),
+                  ),
+                ),
+            ]),
           ),
         ]),
       ),

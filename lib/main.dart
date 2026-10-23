@@ -86,15 +86,17 @@ class _AuthGateState extends State<_AuthGate> {
   void initState() {
     super.initState();
     widget.sync.addListener(_changed);
+    authHold.addListener(_changed);
   }
 
   @override
   void dispose() {
     widget.sync.removeListener(_changed);
+    authHold.removeListener(_changed);
     super.dispose();
   }
 
-  bool get _in => !widget.sync.enabled || widget.sync.loggedIn;
+  bool get _in => !widget.sync.enabled || (widget.sync.loggedIn && !authHold.value);
 
   void _changed() {
     final now = _in;
