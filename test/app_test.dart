@@ -298,12 +298,15 @@ void main() {
     FlutterError.onError = _errors.add;
     await tester.pumpWidget(wrap(s, r, LiveStreamScreen(matchId: id)));
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('Open camera'), 200, scrollable: find.byType(Scrollable).first);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Open camera'));
     await tester.pumpAndSettle();
     expect(find.text('Paste your YouTube stream key first.'), findsOneWidget);
+    await tester.scrollUntilVisible(find.widgetWithText(TextField, 'Stream key'), -200, scrollable: find.byType(Scrollable).first);
     await tester.enterText(find.widgetWithText(TextField, 'Stream key'), 'abcd-efgh-ijkl-mnop');
     await tester.enterText(find.widgetWithText(TextField, 'YouTube link for fans (optional)'), 'https://www.youtube.com/channel/UCabcdefghijklmnopqrstuv');
-    await tester.ensureVisible(find.text('Open camera'));
+    await tester.scrollUntilVisible(find.text('Open camera'), 200, scrollable: find.byType(Scrollable).first);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Open camera'));
     await tester.pumpAndSettle();
@@ -316,7 +319,7 @@ void main() {
     ));
     await tester.pumpAndSettle();
     await tester.enterText(find.widgetWithText(TextField, 'Stream key'), 'abcd-efgh-ijkl-mnop');
-    await tester.ensureVisible(find.text('Open camera'));
+    await tester.scrollUntilVisible(find.text('Open camera'), 200, scrollable: find.byType(Scrollable).first);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Open camera'));
     await tester.pump(const Duration(seconds: 7)); // intro graphic goes away
