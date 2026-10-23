@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../app/scope.dart';
 import '../../app/theme.dart';
+import '../widgets/app_tour.dart';
 import 'app_drawer.dart';
 import 'community_screen.dart';
 import 'home_screen.dart';
@@ -20,8 +21,43 @@ class Shell extends StatefulWidget {
 
 class _ShellState extends State<Shell> {
   int _index = 0;
+  OverlayEntry? _tour;
 
   void go(int i) => setState(() => _index = i);
+
+  @override
+  void initState() {
+    super.initState();
+    tourRequest.addListener(_replayTour);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && !context.settings.tourDone) _startTour();
+    });
+  }
+
+  @override
+  void dispose() {
+    tourRequest.removeListener(_replayTour);
+    _tour?.remove();
+    _tour = null;
+    super.dispose();
+  }
+
+  void _replayTour() {
+    if (!mounted) return;
+    go(0);
+    // wait for Home to be on screen
+    Future.delayed(context.reduceMotion ? Duration.zero : const Duration(milliseconds: 450), () {
+      if (mounted) _startTour();
+    });
+  }
+
+  void _startTour() {
+    if (_tour != null) return;
+    _tour = showAppTour(context, onDone: () {
+      _tour = null;
+      if (mounted) context.settings.setTourDone();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -64,6 +100,7 @@ class _ShellState extends State<Shell> {
           child: DecoratedBox(
             decoration: BoxDecoration(border: Border(top: BorderSide(color: p.line))),
             child: NavigationBar(
+              key: TourKeys.navBar,
               selectedIndex: _index,
               onDestinationSelected: go,
               animationDuration: Motion.fade,

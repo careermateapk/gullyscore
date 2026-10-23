@@ -6,6 +6,7 @@ import '../../app/theme.dart';
 import '../../data/models.dart';
 import '../../scoring/engine.dart';
 import '../../scoring/predictor.dart';
+import '../widgets/app_tour.dart';
 import '../widgets/common.dart';
 import 'backup_ui.dart';
 import 'match_centre_screen.dart';
@@ -151,10 +152,13 @@ class _HomeScreenState extends State<HomeScreen> {
           Positioned(
             right: Space.edge,
             bottom: Space.l,
-            child: GoldButton(
-              label: context.tr('score_a_match'),
-              icon: Icons.add_rounded,
-              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NewMatchScreen())),
+            child: KeyedSubtree(
+              key: TourKeys.score,
+              child: GoldButton(
+                label: context.tr('score_a_match'),
+                icon: Icons.add_rounded,
+                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NewMatchScreen())),
+              ),
             ),
           ),
         ]);
@@ -173,7 +177,7 @@ class _TopBar extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(Space.edge, Space.m, Space.edge, Space.s),
       child: Row(children: [
-        IconBtn(icon: Icons.menu_rounded, tooltip: context.tr('menu'), onPressed: () => Scaffold.of(context).openDrawer()),
+        KeyedSubtree(key: TourKeys.menu, child: IconBtn(icon: Icons.menu_rounded, tooltip: context.tr('menu'), onPressed: () => Scaffold.of(context).openDrawer())),
         const SizedBox(width: Space.m),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -182,10 +186,10 @@ class _TopBar extends StatelessWidget {
           ]),
         ),
         if (context.sync.enabled) ...[
-          IconBtn(icon: Icons.link_rounded, tooltip: context.tr('follow_a_match'), onPressed: () => followMatchByLink(context)),
+          KeyedSubtree(key: TourKeys.link, child: IconBtn(icon: Icons.link_rounded, tooltip: context.tr('follow_a_match'), onPressed: () => followMatchByLink(context))),
           const SizedBox(width: Space.s),
         ],
-        IconBtn(icon: Icons.search_rounded, tooltip: context.tr('search'), onPressed: onSearch),
+        KeyedSubtree(key: TourKeys.search, child: IconBtn(icon: Icons.search_rounded, tooltip: context.tr('search'), onPressed: onSearch)),
       ]),
     );
   }

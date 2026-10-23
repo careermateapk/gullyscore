@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../app/scope.dart';
 import '../../app/theme.dart';
 import '../../data/models.dart';
+import '../widgets/app_tour.dart';
 import '../widgets/common.dart';
 import 'booking_screens.dart';
 import 'grounds_screen.dart';
@@ -93,6 +94,7 @@ class AppDrawer extends StatelessWidget {
           item(Icons.article_outlined, const Color(0xFF5B9BFF), context.tr('nav_news'), () => _push(context, const NewsScreen(pushed: true))),
           Padding(padding: const EdgeInsets.symmetric(horizontal: 18, vertical: Space.s), child: Divider(color: p.line, height: 1)),
           item(Icons.help_outline_rounded, const Color(0xFF5B9BFF), context.tr('help_and_faq'), () => _push(context, const FaqScreen())),
+          item(Icons.tour_outlined, p.goldText, context.tr('app_tour'), () => _run(context, (_) => tourRequest.value++)),
           item(Icons.lock_outline_rounded, p.win, context.tr('privacy_policy'), () => _push(context, const InfoScreen(kind: 'privacy'))),
           item(Icons.description_outlined, p.text2, context.tr('terms'), () => _push(context, const InfoScreen(kind: 'terms'))),
           item(Icons.info_outline_rounded, const Color(0xFFFF8A3D), context.tr('about_us'), () => _push(context, const InfoScreen(kind: 'about'))),

@@ -51,7 +51,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'online_fakes.dart';
 
 Future<(Settings, Repository)> setUpApp({bool onboarded = true, bool reduceMotion = true}) async {
-  SharedPreferences.setMockInitialValues({'onboarded': onboarded, 'reduceMotion': reduceMotion, 'askShot': false});
+  SharedPreferences.setMockInitialValues({'onboarded': onboarded, 'reduceMotion': reduceMotion, 'askShot': false, 'tourDone': true});
   final s = Settings();
   await s.load();
   final r = Repository(store: MemoryStore());
@@ -122,7 +122,7 @@ void main() {
   });
 
   testWidgets('no dashboard without login; Google needs sign up first; sign up works', (tester) async {
-    SharedPreferences.setMockInitialValues({'onboarded': true, 'reduceMotion': true, 'askShot': false});
+    SharedPreferences.setMockInitialValues({'onboarded': true, 'reduceMotion': true, 'askShot': false, 'tourDone': true});
     final s = Settings();
     await s.load();
     final r = Repository(store: MemoryStore());
@@ -213,7 +213,7 @@ void main() {
   });
 
   testWidgets('logging in plays the welcome, then opens home', (tester) async {
-    SharedPreferences.setMockInitialValues({'onboarded': true, 'reduceMotion': false, 'askShot': false});
+    SharedPreferences.setMockInitialValues({'onboarded': true, 'reduceMotion': false, 'askShot': false, 'tourDone': true});
     final s = Settings();
     await s.load();
     final r = Repository(store: MemoryStore());
@@ -247,6 +247,38 @@ void main() {
     expect(find.text('Community'), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 1));
+  });
+
+  testWidgets('first time on home: the app tour runs once, also on a small phone', (tester) async {
+    SharedPreferences.setMockInitialValues({'onboarded': true, 'reduceMotion': true, 'askShot': false});
+    final s = Settings();
+    await s.load();
+    final r = Repository(store: MemoryStore());
+    await r.load();
+    _savedOnError = FlutterError.onError;
+    FlutterError.onError = _errors.add;
+    await tester.pumpWidget(MediaQuery(
+      data: const MediaQueryData(size: Size(320, 640), textScaler: TextScaler.linear(1.3)),
+      child: GullyScoreApp(settings: s, repo: r),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Quick tour?'), findsOneWidget);
+    await tester.tap(find.text('Show me →'));
+    await tester.pumpAndSettle();
+    check(tester, 'tour step 1');
+    expect(find.text('STEP 1 OF 6'), findsOneWidget);
+    for (var i = 2; i <= 6; i++) {
+      await tester.tap(find.text('Next →'));
+      await tester.pumpAndSettle();
+      check(tester, 'tour step $i');
+      expect(find.text('STEP $i OF 6'), findsOneWidget);
+    }
+    await tester.tap(find.text("Let's play 🏏"));
+    await tester.pumpAndSettle();
+    expect(find.text('Quick tour?'), findsNothing);
+    expect(s.tourDone, true);
+    FlutterError.onError = _savedOnError;
+    check(tester, 'tour end');
   });
 
   testWidgets('switching to Hindi changes the navigation', (tester) async {
@@ -566,6 +598,7 @@ void main() {
       _savedOnError = FlutterError.onError;
       FlutterError.onError = _errors.add;
       SharedPreferences.setMockInitialValues({
+        'tourDone': true,
         'onboarded': true,
         'reduceMotion': true,
         'askShot': false,

@@ -9,6 +9,7 @@ class Settings extends ChangeNotifier {
   bool askShotDirection = true;
   bool haptics = true;
   bool onboarded = false;
+  bool tourDone = false; // the first-time app tour was shown
   DateTime? lastBackup;
   final Set<String> favouriteTeams = {};
 
@@ -33,6 +34,7 @@ class Settings extends ChangeNotifier {
       askShotDirection = p.getBool('askShot') ?? true;
       haptics = p.getBool('haptics') ?? true;
       onboarded = p.getBool('onboarded') ?? false;
+      tourDone = p.getBool('tourDone') ?? false;
       lastBackup = DateTime.tryParse(p.getString('lastBackup') ?? '');
       favouriteTeams
         ..clear()
@@ -77,6 +79,11 @@ class Settings extends ChangeNotifier {
   void setLastBackup(DateTime t) {
     lastBackup = t;
     _save((p) => p.setString('lastBackup', t.toIso8601String()));
+  }
+
+  void setTourDone() {
+    tourDone = true;
+    _save((p) => p.setBool('tourDone', true));
   }
 
   void setOnboarded() {
