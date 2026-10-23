@@ -101,7 +101,10 @@ class _AppTourState extends State<AppTour> with TickerProviderStateMixin {
       ];
 
   void _go(int i) {
-    if (i >= _steps.length) return _finish();
+    if (i >= _steps.length) {
+      _finish();
+      return;
+    }
     final r = _steps[i].rect();
     if (r == null) return _go(i + 1); // that button is not on screen: skip it
     setState(() {
@@ -118,7 +121,10 @@ class _AppTourState extends State<AppTour> with TickerProviderStateMixin {
 
   void _start() {
     _steps = _allSteps().where((s) => s.rect() != null).toList();
-    if (_steps.isEmpty) return _finish();
+    if (_steps.isEmpty) {
+      _finish();
+      return;
+    }
     _go(0);
   }
 
