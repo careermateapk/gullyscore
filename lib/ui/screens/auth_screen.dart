@@ -460,7 +460,9 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       const SizedBox(height: 12),
       _Field(controller: _name, label: context.tr('auth_full_name'), icon: Icons.person_outline_rounded, caps: TextCapitalization.words, ok: _name.text.trim().length >= 2, error: _tried && _name.text.trim().length < 2, onChanged: (_) => setState(() {}), autofill: const [AutofillHints.name]),
-      Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      // Same height for the country code and the number boxes.
+      IntrinsicHeight(
+        child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Padding(
           padding: const EdgeInsets.only(top: 10),
           child: Semantics(
@@ -469,8 +471,9 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
             child: GestureDetector(
               onTap: _pickCountry,
               child: Container(
-                height: 56,
-                padding: const EdgeInsets.symmetric(horizontal: 10),
+                constraints: const BoxConstraints(minHeight: 56),
+                alignment: Alignment.center,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
                 decoration: _box(null),
                 child: ExcludeSemantics(
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -497,7 +500,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
             autofill: const [AutofillHints.telephoneNumberNational],
           ),
         ),
-      ]),
+      ])),
       _Field(controller: _sEmail, label: context.tr('auth_email'), icon: Icons.mail_outline_rounded, keyboard: TextInputType.emailAddress, ok: emailOk, error: _tried && !emailOk, onChanged: (_) => setState(() {}), autofill: const [AutofillHints.email]),
       _Field(
         controller: _sPass,
