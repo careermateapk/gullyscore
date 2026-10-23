@@ -13,10 +13,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: '3.11' }
-      - run: sudo apt-get update -q && sudo apt-get install -y -q ffmpeg
+      - run: sudo apt-get update -q && sudo apt-get install -y -q ffmpeg espeak-ng
       - run: |
           pip install -q torch==2.5.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cpu
-          pip install -q git+https://github.com/huggingface/parler-tts.git openai-whisper soundfile librosa torch==2.5.1 torchaudio==2.5.1 --extra-index-url https://download.pytorch.org/whl/cpu
+          pip install -q 'kokoro>=0.9.4' 'misaki[hi]' openai-whisper soundfile librosa torch==2.5.1 torchaudio==2.5.1 --extra-index-url https://download.pytorch.org/whl/cpu
           python -c "import torch, torchaudio; print(torch.__version__, torchaudio.__version__)"
       - run: set -o pipefail; cd promo && python tts.py 2>&1 | tee out_log.txt
       - if: always()
