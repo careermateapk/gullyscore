@@ -123,7 +123,8 @@ class Repository extends ChangeNotifier {
     _changed();
   }
 
-  void updatePlayer(Player p, {String? name, bool? leftHanded, String? role, String? phone}) {
+  void updatePlayer(Player p, {String? name, bool? leftHanded, String? role, String? phone, String? bowling}) {
+    if (bowling != null) p.bowling = bowling;
     if (name != null && name.trim().isNotEmpty) p.name = name.trim();
     if (phone != null) p.phone = cleanPhone(phone);
     if (leftHanded != null) p.leftHanded = leftHanded;
@@ -145,6 +146,18 @@ class Repository extends ChangeNotifier {
     t.logo = fileName;
     _changed();
     if (old != null && old != fileName) await PhotoStore.delete(old);
+  }
+
+  void setTeamColor(Team t, int index) {
+    t.colorIndex = index % 8;
+    _changed();
+  }
+
+  /// Captain and vice-captain (player ids, or null).
+  void setLeaders(Team t, {String? captain, String? viceCaptain}) {
+    t.captain = captain;
+    t.viceCaptain = viceCaptain;
+    _changed();
   }
 
   void renameTeam(Team t, String name) {

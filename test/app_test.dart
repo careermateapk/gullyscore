@@ -45,6 +45,7 @@ import 'package:gullyscore/ui/screens/insights_screens.dart';
 import 'package:gullyscore/ui/screens/booking_screens.dart';
 import 'package:gullyscore/ui/screens/auth_screen.dart';
 import 'package:gullyscore/ui/screens/live_stream_screen.dart';
+import 'package:gullyscore/ui/screens/live_info_screen.dart';
 import 'package:gullyscore/live/live_engine.dart';
 import 'package:gullyscore/live/highlights.dart';
 import 'dart:io';
@@ -488,6 +489,7 @@ void main() {
         const AuthScreen(startOnSignUp: true),
         LiveStreamScreen(matchId: id),
         HighlightsScreen(matchId: id),
+        const LiveInfoScreen(),
         const CreateTournamentScreen(),
         TournamentScreen(tournamentId: tour.id),
         TournamentScreen(tournamentId: ko.id),
@@ -661,8 +663,50 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Add team logo'));
     await tester.pumpAndSettle();
-    expect(find.text('Choose from gallery'), findsOneWidget);
+    expect(find.text('From gallery'), findsOneWidget);
+    expect(find.text('Royals'), findsOneWidget);
     expect(find.text('Remove logo'), findsNothing);
+    await tester.pump(const Duration(seconds: 1));
+  });
+
+  testWidgets('new team: save, then add a player's details and captain', (tester) async {
+    final (s, r) = await setUpApp();
+    _savedOnError = FlutterError.onError;
+    FlutterError.onError = _errors.add;
+    await tester.pumpWidget(MediaQuery(
+      data: const MediaQueryData(size: Size(320, 640), textScaler: TextScaler.linear(1.3)),
+      child: wrap(s, r, const TeamScreen()),
+    ));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).first, 'Madhubani XI');
+    await tester.enterText(find.byType(TextField).last, 'Suraj Thakur\nAmit Jha\nRohit');
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('Save team & add details'), 200, scrollable: find.byType(Scrollable).first);
+    await tester.tap(find.text('Save team & add details'));
+    await tester.pumpAndSettle();
+    check(tester, 'team saved');
+    final team = r.teams.values.single;
+    expect(team.playerIds.length, 3);
+    expect(find.text('Add details'), findsWidgets);
+    await tester.tap(find.byTooltip('Edit details of Suraj Thakur'));
+    await tester.pumpAndSettle();
+    check(tester, 'details sheet');
+    await tester.tap(find.text('Batter'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('© Captain'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('© Captain'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Save'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+    final suraj = r.players[team.playerIds.first]!;
+    expect(suraj.role, 'Batter');
+    expect(team.captain, suraj.id);
+    expect(find.text('C'), findsOneWidget);
+    FlutterError.onError = _savedOnError;
+    check(tester, 'team details');
     await tester.pump(const Duration(seconds: 1));
   });
 

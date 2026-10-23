@@ -6,6 +6,7 @@ import '../../app/theme.dart';
 import '../../data/models.dart';
 import '../../scoring/engine.dart';
 import '../../scoring/predictor.dart';
+import '../../live/video_cards.dart';
 import '../widgets/app_tour.dart';
 import '../widgets/common.dart';
 import 'backup_ui.dart';
@@ -79,6 +80,7 @@ class _HomeScreenState extends State<HomeScreen> {
               onRefresh: repo.load,
               child: ListView(padding: const EdgeInsets.only(bottom: 120), children: [
                 _TopBar(onSearch: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen()))),
+                LiveVideosStrip(onOpen: (id) => openFollowed(context, id)),
                 if (all.isNotEmpty)
                   SizedBox(
                     height: 48,

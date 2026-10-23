@@ -66,6 +66,12 @@ class MatchListItem {
   bool get live => status == 'live' || (status.isEmpty && !finished);
   bool get upcoming => status == 'upcoming';
   String get headline => '${summary['status'] ?? ''}';
+
+  /// YouTube live video ('v:…' or 'c:…'), empty when the match has no video.
+  String get stream => '${summary['stream'] ?? ''}';
+
+  /// People watching the video in GullyScore right now.
+  int get viewers => (summary['viewers'] as num?)?.toInt() ?? 0;
 }
 
 MatchListItem _item(dynamic m) {

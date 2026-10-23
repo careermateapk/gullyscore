@@ -22,6 +22,7 @@ import '../../live/youtube.dart';
 import '../../scoring/engine.dart';
 import '../../scoring/tournament.dart';
 import '../widgets/common.dart';
+import 'new_match_screen.dart';
 import 'scoring_sheets.dart';
 
 const _ink = Color(0xFF0B1220);
@@ -1055,33 +1056,53 @@ class _LiveStreamScreenState extends State<LiveStreamScreen> {
   }
 }
 
-/// Menu → Live streaming: pick which of your matches to stream.
+/// "Go live now": pick one of your matches, or make a new one and go live.
 Future<void> pickMatchToStream(BuildContext context) async {
   final repo = context.repo;
   final mine = [for (final m in repo.matchList) if (!m.remote && !m.state.finished) m];
-  if (mine.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('live_no_match'))));
-    return;
-  }
-  if (mine.length == 1) {
-    await Navigator.push(context, MaterialPageRoute(builder: (_) => LiveStreamScreen(matchId: mine.first.id)));
-    return;
-  }
   final id = await showModalBottomSheet<String>(
     context: context,
     showDragHandle: true,
-    builder: (ctx) => SafeArea(
-      child: ListView(shrinkWrap: true, children: [
-        Padding(padding: const EdgeInsets.fromLTRB(20, 0, 20, 8), child: Text(ctx.tr('live_pick_match'), style: Tx.section(Palette.of(ctx).text))),
-        for (final m in mine)
-          ListTile(
-            leading: const Icon(Icons.sports_cricket_rounded),
-            title: Text('${repo.teamName(m.teamA)} vs ${repo.teamName(m.teamB)}', maxLines: 1, overflow: TextOverflow.ellipsis),
-            subtitle: m.title.isEmpty ? null : Text(m.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-            onTap: () => Navigator.pop(ctx, m.id),
-          ),
-      ]),
-    ),
+    isScrollControlled: true,
+    builder: (ctx) {
+      final p = Palette.of(ctx);
+      return SafeArea(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(ctx).height * 0.8),
+          child: ListView(shrinkWrap: true, padding: const EdgeInsets.fromLTRB(Space.edge, 0, Space.edge, Space.l), children: [
+            Text(ctx.tr('live_pick_match'), style: Tx.section(p.text)),
+            const SizedBox(height: 4),
+            Text(ctx.tr(mine.isEmpty ? 'live_no_match_yet' : 'live_pick_match_sub'), style: Tx.small(p.text2)),
+            const SizedBox(height: Space.s),
+            for (final m in mine)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: AppCard(
+                  onTap: () => Navigator.pop(ctx, m.id),
+                  child: Row(children: [
+                    Icon(Icons.sports_cricket_rounded, color: p.goldText),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text('${repo.teamName(m.teamA)} vs ${repo.teamName(m.teamB)}', maxLines: 2, overflow: TextOverflow.ellipsis, style: Tx.body(p.text, w: FontWeight.w800)),
+                        if (m.title.isNotEmpty) Text(m.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: Tx.small(p.text2)),
+                      ]),
+                    ),
+                    Icon(Icons.chevron_right_rounded, color: p.goldText),
+                  ]),
+                ),
+              ),
+            if (mine.isNotEmpty) Padding(padding: const EdgeInsets.symmetric(vertical: 6), child: Center(child: Text('— ${ctx.tr('or')} —', style: Tx.label(p.text2)))),
+            GoldButton(label: ctx.tr('live_new_match'), icon: Icons.add_rounded, onPressed: () => Navigator.pop(ctx, '__new__')),
+          ]),
+        ),
+      );
+    },
   );
-  if (id != null && context.mounted) await Navigator.push(context, MaterialPageRoute(builder: (_) => LiveStreamScreen(matchId: id)));
+  if (id == null || !context.mounted) return;
+  if (id == '__new__') {
+    await Navigator.push(context, MaterialPageRoute(builder: (_) => const NewMatchScreen(goLive: true)));
+    return;
+  }
+  await Navigator.push(context, MaterialPageRoute(builder: (_) => LiveStreamScreen(matchId: id)));
 }

@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 
 import '../../app/scope.dart';
+import 'live_stream_screen.dart';
 import '../../app/theme.dart';
 import '../../data/models.dart';
 import '../widgets/common.dart';
@@ -14,7 +15,7 @@ import 'scoring_sheets.dart';
 import 'team_screen.dart';
 
 class NewMatchScreen extends StatefulWidget {
-  const NewMatchScreen({super.key, this.tournamentId, this.fixtureId, this.teamA, this.teamB, this.overs, this.title, this.venue});
+  const NewMatchScreen({super.key, this.tournamentId, this.fixtureId, this.teamA, this.teamB, this.overs, this.title, this.venue, this.goLive = false});
 
   /// Set when starting a tournament fixture: teams and overs are then fixed.
   final String? tournamentId;
@@ -24,6 +25,7 @@ class NewMatchScreen extends StatefulWidget {
   final int? overs;
   final String? title;
   final String? venue;
+  final bool goLive; // opened from "Go live": open the live camera page after
 
   bool get fromFixture => fixtureId != null;
 
@@ -192,6 +194,10 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
     if (_later) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('match_scheduled', {'t': whenText(context, _when!)}))));
       Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => MatchCentreScreen(matchId: m.id)));
+      return;
+    }
+    if (widget.goLive) {
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => LiveStreamScreen(matchId: m.id)));
       return;
     }
     Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => ScoringScreen(matchId: m.id)));

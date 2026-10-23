@@ -1,7 +1,7 @@
 name: gullyscore
 description: GullyScore — ball-by-ball cricket scoring for local matches.
 publish_to: "none"
-version: 1.2.0+12
+version: 1.3.0+13
 
 environment:
   sdk: ^3.8.0
@@ -49,6 +49,8 @@ flutter:
   uses-material-design: true
   assets:
     - assets/content/
+    - assets/live/
+    - assets/logos/
   fonts:
     - family: Hanken
       fonts:

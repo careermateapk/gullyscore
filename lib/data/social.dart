@@ -380,6 +380,9 @@ class SocialApi {
       MeInfo.fromJson(await _send('POST', '/v1/auth/login', body: {'email': email.trim(), 'password': password}));
   Future<MeInfo> googleAuth(String idToken, {SignUpForm? signUp}) async => MeInfo.fromJson(await _send('POST', '/v1/auth/google',
       body: {'idToken': idToken, 'mode': signUp == null ? 'login' : 'signup', if (signUp != null) ...signUp.toJson()..remove('password')}));
+  /// Tells the server this phone is watching the match video; returns how many are.
+  Future<int> watch(String matchId, String device) async =>
+      ((await _send('POST', '/v1/matches/${Uri.encodeComponent(matchId)}/watch', body: {'device': device}))['viewers'] as num?)?.toInt() ?? 0;
   Future<void> setPassword(String password) async => _send('PUT', '/v1/auth/password', body: {'password': password}, auth: _need());
 }
 

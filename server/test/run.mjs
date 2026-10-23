@@ -723,4 +723,22 @@ assert.equal(big.status, 413);
   assert.equal((await call('GET', '/embed/yt?v=<script>')).status, 400);
 }
 
+// ================= v1.3: live video in the feed, people watching =================
+{
+  const s1 = await call('POST', '/v1/register');
+  const sc = s1.body.scorerId + '.' + s1.body.token;
+  await call('PUT', '/v1/matches/vid1', {
+    data: {}, summary: { title: 'AA vs BB', status: 'live', innings: [], thisOver: [], stream: 'c:UCabcdefghijklmnopqrstuv' }, finished: false, status: 'live',
+    teamA: { id: 'tAA', name: 'AA' }, teamB: { id: 'tBB', name: 'BB' },
+  }, sc);
+  assert.equal((await call('POST', '/v1/matches/vid1/watch', { device: 'phone12345' })).body.viewers, 1);
+  assert.equal((await call('POST', '/v1/matches/vid1/watch', { device: 'phone12345' })).body.viewers, 1, 'same phone counts once');
+  assert.equal((await call('POST', '/v1/matches/vid1/watch', { device: 'phone67890' })).body.viewers, 2);
+  assert.equal((await call('POST', '/v1/matches/vid1/watch', { device: 'x' })).status, 400);
+  const feed = await call('GET', '/v1/feed?kind=live');
+  const it = feed.body.matches.find((x) => x.id === 'vid1');
+  assert.equal(it.summary.stream, 'c:UCabcdefghijklmnopqrstuv');
+  assert.equal(it.summary.viewers, 2);
+}
+
 console.log('server tests passed');

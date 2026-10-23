@@ -113,7 +113,7 @@ class MatchCentreScreen extends StatelessWidget {
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(Space.edge, 0, Space.edge, Space.m),
-                        child: YoutubeLive(key: ValueKey(m.stream), streamRef: m.stream),
+                        child: YoutubeLive(key: ValueKey(m.stream), streamRef: m.stream, matchId: m.id, autoplay: m.remote),
                       ),
                     ),
                   SliverToBoxAdapter(

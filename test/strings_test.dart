@@ -63,6 +63,16 @@ void main() {
     }
     used.addAll(['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'].map((k) => 'day_$k'));
     used.addAll(['requested', 'accepted', 'declined', 'cancelled'].map((k) => 'booking_$k'));
+    for (var i = 1; i <= 6; i++) {
+      used.addAll(['li_f${i}_t', 'li_f${i}_b']);
+    }
+    for (var i = 1; i <= 4; i++) {
+      used.addAll(['li_s${i}_t', 'li_s${i}_b', 'li_n${i}_t', 'li_n${i}_b']);
+    }
+    for (var i = 1; i <= 8; i++) {
+      used.addAll(['li_q$i', 'li_a$i']);
+    }
+    used.addAll(['batter', 'bowler', 'all_rounder', 'wicket_keeper', 'fast', 'medium', 'off_spin', 'leg_spin', 'left_arm_spin', 'none'].map((k) => 'role_$k'));
     for (final k in ['score', 'live', 'grounds', 'card']) {
       used.addAll(['kicker', 'a', 'b', 'body'].map((x) => 'intro_${k}_$x'));
     }

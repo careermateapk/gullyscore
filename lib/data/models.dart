@@ -7,7 +7,7 @@ String newId() {
 }
 
 class Player {
-  Player({required this.id, required this.name, this.leftHanded = false, this.role = '', this.photo, this.remote = false, this.phone = ''});
+  Player({required this.id, required this.name, this.leftHanded = false, this.role = '', this.photo, this.remote = false, this.phone = '', this.bowling = ''});
   final String id;
   String name;
   bool leftHanded;
@@ -15,12 +15,13 @@ class Player {
   String? photo; // file name inside the app's photo folder on this phone
   bool remote; // came from someone else's match that this phone follows
   String phone; // mobile number typed by the scorer, so the player can log in and see their matches
+  String bowling; // e.g. "Fast", "Off spin", "None" (empty = not set)
 
   Map<String, dynamic> toJson() =>
-      {'id': id, 'name': name, 'lh': leftHanded, 'role': role, if (photo != null) 'photo': photo, if (remote) 'remote': true, if (phone.isNotEmpty) 'phone': phone};
+      {'id': id, 'name': name, 'lh': leftHanded, 'role': role, if (photo != null) 'photo': photo, if (remote) 'remote': true, if (phone.isNotEmpty) 'phone': phone, if (bowling.isNotEmpty) 'bowl': bowling};
 
   /// What goes inside online match data: never the photo or the mobile number.
-  Map<String, dynamic> toCloud() => {'id': id, 'name': name, 'lh': leftHanded, 'role': role};
+  Map<String, dynamic> toCloud() => {'id': id, 'name': name, 'lh': leftHanded, 'role': role, if (bowling.isNotEmpty) 'bowl': bowling};
 
   factory Player.fromJson(Map<String, dynamic> j) => Player(
         id: j['id'] as String,
@@ -30,6 +31,7 @@ class Player {
         photo: j['photo'] as String?,
         remote: (j['remote'] as bool?) ?? false,
         phone: (j['phone'] as String?) ?? '',
+        bowling: (j['bowl'] as String?) ?? '',
       );
 }
 
@@ -41,7 +43,7 @@ String cleanPhone(String raw) {
 }
 
 class Team {
-  Team({required this.id, required this.name, required this.colorIndex, List<String>? playerIds, this.logo, this.remote = false})
+  Team({required this.id, required this.name, required this.colorIndex, List<String>? playerIds, this.logo, this.remote = false, this.captain, this.viceCaptain})
       : playerIds = playerIds ?? [];
   final String id;
   String name;
@@ -49,11 +51,13 @@ class Team {
   final List<String> playerIds;
   String? logo; // file name of the logo saved on this phone
   bool remote; // came from a followed match
+  String? captain; // player ids
+  String? viceCaptain;
 
   /// Two-letter short name, e.g. "Madhubani Strikers" → "MS".
   String get short => initials(name);
 
-  Map<String, dynamic> toJson() => {'id': id, 'name': name, 'color': colorIndex, 'players': playerIds, if (logo != null) 'logo': logo, if (remote) 'remote': true};
+  Map<String, dynamic> toJson() => {'id': id, 'name': name, 'color': colorIndex, 'players': playerIds, if (logo != null) 'logo': logo, if (remote) 'remote': true, if (captain != null) 'cap': captain, if (viceCaptain != null) 'vc': viceCaptain};
 
   /// What goes online: never the logo picture.
   Map<String, dynamic> toCloud() => {'id': id, 'name': name, 'color': colorIndex, 'players': playerIds};
@@ -65,6 +69,8 @@ class Team {
         playerIds: [for (final p in (j['players'] as List? ?? const [])) p as String],
         logo: j['logo'] as String?,
         remote: (j['remote'] as bool?) ?? false,
+        captain: j['cap'] as String?,
+        viceCaptain: j['vc'] as String?,
       );
 }
 

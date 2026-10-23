@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 
 import '../../app/scope.dart';
+import '../../live/video_cards.dart';
 import '../../app/theme.dart';
 import '../../data/cloud.dart';
 import '../../data/models.dart';
@@ -152,6 +153,7 @@ class FeedView extends StatefulWidget {
 
 class _FeedViewState extends State<FeedView> {
   String _kind = 'live';
+  String _video = 'all'; // all, video, score (live tab)
   final Map<String, List<MatchListItem>> _lists = {};
   int _live = 0, _upcoming = 0;
   Object? _error;
@@ -191,7 +193,12 @@ class _FeedViewState extends State<FeedView> {
   @override
   Widget build(BuildContext context) {
     final p = Palette.of(context);
-    final list = _lists[_kind];
+    final all = _lists[_kind];
+    final withVideo = all == null ? 0 : all.where((m) => m.stream.isNotEmpty).length;
+    final showFilter = _kind == 'live' && withVideo > 0;
+    final list = all == null || !showFilter || _video == 'all'
+        ? all
+        : all.where((m) => (m.stream.isNotEmpty) == (_video == 'video')).toList();
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: Space.edge),
@@ -215,6 +222,15 @@ class _FeedViewState extends State<FeedView> {
           backgroundColor: p.surface,
           onRefresh: () => _load(),
           child: ListView(padding: const EdgeInsets.only(top: Space.m, bottom: Space.xl), children: [
+            if (showFilter)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(Space.edge, 0, Space.edge, Space.m),
+                child: Wrap(spacing: 8, runSpacing: 8, children: [
+                  ChoiceChipX(label: '${context.tr('all_live')} · ${all!.length}', selected: _video == 'all', onTap: () => setState(() => _video = 'all')),
+                  ChoiceChipX(label: '📺 ${context.tr('with_video')} · $withVideo', selected: _video == 'video', onTap: () => setState(() => _video = 'video')),
+                  ChoiceChipX(label: '${context.tr('score_only')} · ${all.length - withVideo}', selected: _video == 'score', onTap: () => setState(() => _video = 'score')),
+                ]),
+              ),
             if (list == null && _error == null)
               const LoadingList()
             else if (_error != null && (list == null || list.isEmpty))
@@ -237,7 +253,9 @@ class _FeedViewState extends State<FeedView> {
               for (final m in list)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(Space.edge, 0, Space.edge, Space.s),
-                  child: OnlineMatchCard(m: m, onTap: () => openFollowed(context, m.id)),
+                  child: m.stream.isNotEmpty && m.live
+                      ? VideoMatchCard(m: m, onTap: () => openFollowed(context, m.id))
+                      : OnlineMatchCard(m: m, onTap: () => openFollowed(context, m.id)),
                 ),
               if (_more)
                 Padding(

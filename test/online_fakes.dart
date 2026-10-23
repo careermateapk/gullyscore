@@ -105,7 +105,9 @@ Future<Map<String, dynamic>> fakeSend(String method, String path, {Object? body,
   if (path.startsWith('/v1/feed')) {
     final kind = Uri.parse(path).queryParameters['kind'];
     final st = kind == 'results' ? 'result' : kind!;
-    return {'matches': [match('a', st), match('b', st, a: 'DD', b: 'GB')], 'counts': {'live': 6, 'upcoming': 4}};
+    final first = match('a', st);
+    if (st == 'live') (first['summary'] as Map)..['stream'] = 'c:UCabcdefghijklmnopqrstuv'..['viewers'] = 1284;
+    return {'matches': [first, match('b', st, a: 'DD', b: 'GB')], 'counts': {'live': 6, 'upcoming': 4}};
   }
   if (path.startsWith('/v1/posts')) {
     return {'posts': [for (final k in ['players', 'opponent', 'poll', 'tournament', 'general']) _post('p$k', k)]};

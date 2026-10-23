@@ -247,6 +247,7 @@ class SyncService extends ChangeNotifier {
     if (m.title.isNotEmpty) summary['title'] = '${summary['title']} · ${m.title}';
     final sponsors = repo.sponsorsOf(m);
     if (sponsors.isNotEmpty) summary['sponsors'] = [for (final x in sponsors) x.toJson()];
+    if (m.stream.isNotEmpty && !st.finished) summary['stream'] = m.stream;
     final r = st.finished ? st.result : null;
     return {
       'data': repo.cloudData(m),

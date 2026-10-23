@@ -43,6 +43,18 @@ class _CropScreenState extends State<CropScreen> {
   double? _side;
   bool _saving = false;
   bool _failed = false;
+  late bool _round = widget.circle; // logos can be round or square
+  int _turns = 0; // quarter turns
+
+  Size get _rotated {
+    final s = _imageSize!;
+    return _turns.isOdd ? Size(s.height, s.width) : s;
+  }
+
+  void _rotate() => setState(() {
+        _turns = (_turns + 1) % 4;
+        _side = null;
+      });
 
   @override
   void initState() {
@@ -64,7 +76,7 @@ class _CropScreenState extends State<CropScreen> {
 
   /// Size of the picture so its shorter side fills the frame.
   Size _fitted(double side) {
-    final s = _imageSize!;
+    final s = _rotated;
     final k = side / (s.width < s.height ? s.width : s.height);
     return Size(s.width * k, s.height * k);
   }
@@ -83,6 +95,14 @@ class _CropScreenState extends State<CropScreen> {
       final obj = _boundary.currentContext?.findRenderObject();
       if (obj is! RenderRepaintBoundary || obj.size.width <= 0) throw StateError('not ready');
       final image = await obj.toImage(pixelRatio: 512 / obj.size.width);
+      if (_round && !widget.circle) {
+        // round logo: PNG keeps the corners see-through
+        final png = await image.toByteData(format: ui.ImageByteFormat.png);
+        image.dispose();
+        if (png == null) throw StateError('no data');
+        if (mounted) Navigator.pop(context, png.buffer.asUint8List());
+        return;
+      }
       final data = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
       final w = image.width;
       final h = image.height;
@@ -152,23 +172,40 @@ class _CropScreenState extends State<CropScreen> {
                   child: Stack(children: [
                     RepaintBoundary(
                       key: _boundary,
-                      child: ClipRect(
+                      child: ClipPath(
+                        clipper: _ShapeClip(_round && !widget.circle),
                         child: InteractiveViewer(
+                          key: ValueKey(_turns),
                           transformationController: _ctrl,
                           constrained: false,
                           minScale: 1,
                           maxScale: 6,
                           boundaryMargin: EdgeInsets.zero,
-                          child: Image.file(File(widget.path), width: f.width, height: f.height, fit: BoxFit.fill),
+                          child: RotatedBox(
+                            quarterTurns: _turns,
+                            child: Image.file(File(widget.path),
+                                width: _turns.isOdd ? f.height : f.width, height: _turns.isOdd ? f.width : f.height, fit: BoxFit.fill),
+                          ),
                         ),
                       ),
                     ),
-                    IgnorePointer(child: CustomPaint(size: Size(side, side), painter: _FramePainter(widget.circle))),
+                    IgnorePointer(child: CustomPaint(size: Size(side, side), painter: _FramePainter(_round))),
                   ]),
                 ),
               );
             }),
           ),
+          if (_imageSize != null && !_failed)
+            Padding(
+              padding: const EdgeInsets.only(bottom: Space.s),
+              child: Wrap(alignment: WrapAlignment.center, spacing: 8, runSpacing: 8, children: [
+                if (!widget.circle) ...[
+                  ChoiceChip(label: Text(context.tr('shape_round')), selected: _round, onSelected: (_) => setState(() => _round = true)),
+                  ChoiceChip(label: Text(context.tr('shape_square')), selected: !_round, onSelected: (_) => setState(() => _round = false)),
+                ],
+                ActionChip(avatar: const Icon(Icons.rotate_right_rounded, size: 18), label: Text(context.tr('rotate')), onPressed: _rotate),
+              ]),
+            ),
           Padding(
             padding: const EdgeInsets.fromLTRB(Space.edge, 0, Space.edge, Space.s),
             child: Text(context.tr('crop_help'), textAlign: TextAlign.center, style: Tx.small(const Color(0xFFA9B6C9))),
@@ -217,4 +254,13 @@ class _FramePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_FramePainter old) => old.circle != circle;
+}
+
+class _ShapeClip extends CustomClipper<Path> {
+  _ShapeClip(this.round);
+  final bool round;
+  @override
+  Path getClip(Size size) => round ? (Path()..addOval(Offset.zero & size)) : (Path()..addRect(Offset.zero & size));
+  @override
+  bool shouldReclip(_ShapeClip old) => old.round != round;
 }

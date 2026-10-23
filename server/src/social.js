@@ -35,6 +35,7 @@ export function matchItem(r) {
   };
 }
 
+const WATCH_FOR = 90 * 1000;
 const MATCH_COLS = 'm.id, m.updated, m.finished, m.title, m.summary, m.status, m.scheduled, m.ground, m.team_a, m.team_b, m.team_a_name, m.team_b_name, m.winner, m.scorer_id';
 
 /** My matches (with my numbers in each), my teams (form, next match) and my totals. */
@@ -212,6 +213,19 @@ export async function socialRoutes(p, method, url, request, env) {
   let m;
 
   // ----- Feed: every match on GullyScore -----
+  // ----- Someone is watching a match's live video in the app (counted for 90 seconds) -----
+  if ((m = /^\/v1\/matches\/([^/]+)\/watch$/.exec(p)) && method === 'POST') {
+    const body = await readJson(request);
+    const device = String(body.device || '');
+    if (!ID_RE.test(m[1]) || !/^[A-Za-z0-9_-]{8,64}$/.test(device)) throw new HttpError(400, 'bad id');
+    const now = Date.now();
+    await env.DB.prepare('INSERT INTO watchers (match_id, device, at) VALUES (?, ?, ?) ON CONFLICT(match_id, device) DO UPDATE SET at = excluded.at')
+      .bind(m[1], device, now).run();
+    if (Math.random() < 0.05) await env.DB.prepare('DELETE FROM watchers WHERE at < ?').bind(now - 10 * 60 * 1000).run();
+    const n = await env.DB.prepare('SELECT COUNT(*) AS n FROM watchers WHERE match_id = ? AND at > ?').bind(m[1], now - WATCH_FOR).first();
+    return json({ viewers: n?.n || 0 });
+  }
+
   if (p === '/v1/feed' && method === 'GET') {
     const kind = url.searchParams.get('kind') || 'live';
     const before = Number(url.searchParams.get('before') || '0');
@@ -233,7 +247,13 @@ export async function socialRoutes(p, method, url, request, env) {
     }
     const live = await env.DB.prepare("SELECT COUNT(*) AS n FROM matches WHERE status = 'live' AND updated > ?").bind(now - LIVE_FOR).first();
     const up = await env.DB.prepare("SELECT COUNT(*) AS n FROM matches WHERE status = 'upcoming' AND scheduled >= ?").bind(now - 3 * HOUR).first();
-    return json({ matches: (rows.results || []).map(matchItem), counts: { live: live?.n || 0, upcoming: up?.n || 0 } });
+    const items = (rows.results || []).map(matchItem);
+    if (kind === 'live' && items.some((x) => x.summary && x.summary.stream)) {
+      const w = await env.DB.prepare('SELECT match_id, COUNT(*) AS n FROM watchers WHERE at > ? GROUP BY match_id').bind(now - WATCH_FOR).all();
+      const count = new Map((w.results || []).map((r) => [r.match_id, r.n]));
+      for (const x of items) if (x.summary && x.summary.stream) x.summary.viewers = count.get(x.id) || 0;
+    }
+    return json({ matches: items, counts: { live: live?.n || 0, upcoming: up?.n || 0 } });
   }
 
   // ----- One team: its matches, form and rating -----
