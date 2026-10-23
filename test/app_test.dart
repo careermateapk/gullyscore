@@ -325,7 +325,10 @@ void main() {
     await tester.pump(const Duration(seconds: 7)); // intro graphic goes away
     await tester.pumpAndSettle();
     check(tester, 'camera page');
-    expect(find.text('Ready'), findsOneWidget);
+    if (find.text('Ready').evaluate().isEmpty) {
+      FlutterError.onError = _savedOnError;
+      fail('no Ready: ${tester.widgetList<Text>(find.byType(Text)).map((t) => t.data ?? t.textSpan?.toPlainText()).join(' | ')}');
+    }
     await tester.tap(find.byTooltip('Go LIVE'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
