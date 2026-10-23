@@ -327,6 +327,7 @@ void main() {
     check(tester, 'camera page');
     if (find.text('Ready').evaluate().isEmpty) {
       FlutterError.onError = _savedOnError;
+      await tester.scrollUntilVisible(find.text('Open camera'), 200, scrollable: find.byType(Scrollable).first);
       fail('no Ready: ${tester.widgetList<Text>(find.byType(Text)).map((t) => t.data ?? t.textSpan?.toPlainText()).join(' | ')}');
     }
     await tester.tap(find.byTooltip('Go LIVE'));
