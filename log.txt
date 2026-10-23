@@ -1,0 +1,126 @@
+Analyzing gullyscore...                                         
+
+   info • Use the null-aware marker '?' rather than a null check via an 'if'. Try using '?' • lib/data/cloud.dart:348:81 • use_null_aware_elements
+   info • Angle brackets will be interpreted as HTML. Try using backticks around the content with angle brackets, or try replacing `<` with `&lt;` and `>` with `&gt;` • lib/data/sync.dart:282:55 • unintended_html_in_doc_comment
+   info • Angle brackets will be interpreted as HTML. Try using backticks around the content with angle brackets, or try replacing `<` with `&lt;` and `>` with `&gt;` • lib/live/youtube.dart:3:8 • unintended_html_in_doc_comment
+   info • Angle brackets will be interpreted as HTML. Try using backticks around the content with angle brackets, or try replacing `<` with `&lt;` and `>` with `&gt;` • lib/live/youtube.dart:3:35 • unintended_html_in_doc_comment
+   info • Angle brackets will be interpreted as HTML. Try using backticks around the content with angle brackets, or try replacing `<` with `&lt;` and `>` with `&gt;` • lib/scoring/tournament.dart:23:52 • unintended_html_in_doc_comment
+   info • Unnecessary braces in a string interpolation. Try removing the braces • lib/ui/screens/grounds_screen.dart:317:54 • unnecessary_brace_in_string_interps
+   info • Angle brackets will be interpreted as HTML. Try using backticks around the content with angle brackets, or try replacing `<` with `&lt;` and `>` with `&gt;` • lib/ui/screens/ratings_screens.dart:48:32 • unintended_html_in_doc_comment
+   info • The import of 'dart:typed_data' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/foundation.dart'. Try removing the import directive • lib/ui/screens/register_ground_screen.dart:5:8 • unnecessary_import
+   info • Use the null-aware marker '?' rather than a null check via an 'if'. Try using '?' • lib/ui/screens/scoring_sheets.dart:42:9 • use_null_aware_elements
+   info • Constructors for public widgets should have a named 'key' parameter. Try adding a named parameter to the constructor • lib/ui/screens/series_screen.dart:147:9 • use_key_in_widget_constructors
+   info • Use the null-aware marker '?' rather than a null check via an 'if'. Try using '?' • lib/ui/screens/team_tools.dart:26:7 • use_null_aware_elements
+   info • 'localeId' is deprecated and shouldn't be used. Use SpeechListenOptions.localeId instead. Try replacing the use of the deprecated member with the replacement • lib/ui/screens/voice_sheet.dart:110:9 • deprecated_member_use
+   info • 'listenFor' is deprecated and shouldn't be used. Use SpeechListenOptions.listenFor instead. Try replacing the use of the deprecated member with the replacement • lib/ui/screens/voice_sheet.dart:111:9 • deprecated_member_use
+   info • 'pauseFor' is deprecated and shouldn't be used. Use SpeechListenOptions.pauseFor instead. Try replacing the use of the deprecated member with the replacement • lib/ui/screens/voice_sheet.dart:112:9 • deprecated_member_use
+   info • 'announce' is deprecated and shouldn't be used. Use sendAnnouncement instead. This API is incompatible with multiple windows. This feature was deprecated after v3.35.0-0.1.pre. Try replacing the use of the deprecated member with the replacement • lib/ui/widgets/celebration.dart:36:22 • deprecated_member_use
+   info • Use the null-aware marker '?' rather than a null check via an 'if'. Try using '?' • lib/ui/widgets/common.dart:707:112 • use_null_aware_elements
+  error • Expected to find ',' • test/app_test.dart:672:50 • expected_token
+  error • Local variable 's' can't be referenced before it is declared. Try moving the declaration to before the first use, or renaming the local variable so that it doesn't hide a name from an enclosing scope • test/app_test.dart:672:50 • referenced_before_declaration
+  error • The final variable 's' can't be read because it's potentially unassigned at this point. Ensure that it is assigned on necessary execution paths • test/app_test.dart:672:50 • read_potentially_unassigned_final
+  error • Expected to find ',' • test/app_test.dart:672:52 • expected_token
+  error • Too many positional arguments: 2 expected, but 6 found. Try removing the extra arguments • test/app_test.dart:672:52 • extra_positional_arguments
+  error • Undefined name 'details'. Try correcting the name to one that is defined, or defining the name • test/app_test.dart:672:52 • undefined_identifier
+  error • Expected to find ',' • test/app_test.dart:672:60 • expected_token
+  error • Undefined name 'and'. Try correcting the name to one that is defined, or defining the name • test/app_test.dart:672:60 • undefined_identifier
+  error • Expected to find ',' • test/app_test.dart:672:64 • expected_token
+  error • Undefined name 'captain'. Try correcting the name to one that is defined, or defining the name • test/app_test.dart:672:64 • undefined_identifier
+  error • Expected to find ',' • test/app_test.dart:672:71 • expected_token
+  error • Expected to find ';' • test/app_test.dart:672:71 • expected_token
+  error • Unterminated string literal • test/app_test.dart:672:89 • unterminated_string_literal
+  error • Expected to find ')' • test/app_test.dart:673:5 • expected_token
+  error • The await expression can only be used in an async function. Try marking the function body with either 'async' or 'async*' • test/app_test.dart:673:20 • await_in_wrong_context
+  error • The await expression can only be used in an async function. Try marking the function body with either 'async' or 'async*' • test/app_test.dart:676:5 • await_in_wrong_context
+  error • Undefined name 'tester'. Try correcting the name to one that is defined, or defining the name • test/app_test.dart:676:11 • undefined_identifier
+  error • The await expression can only be used in an async function. Try marking the function body with either 'async' or 'async*' • test/app_test.dart:680:5 • await_in_wrong_context
+  error • Undefined name 'tester'. Try correcting the name to one that is defined, or defining the name • test/app_test.dart:680:11 • undefined_identifier
+  error • The await expression can only be used in an async function. Try marking the function body with either 'async' or 'async*' • test/app_test.dart:681:5 • await_in_wrong_context
+  error • Undefined name 'tester'. Try correcting the name to one that is defined, or defining the name • test/app_test.dart:681:11 • undefined_identifier
+  error • The await expression can only be used in an async function. Try marking the function body with either 'async' or 'async*' • test/app_test.dart:682:5 • await_in_wrong_context
+  error • Undefined name 'tester'. Try correcting the name to one that is defined, or defining the name • test/app_test.dart:682:11 • undefined_identifier
+  error • The await expression can only be used in an async function. Try marking the function body with either 'async' or 'async*' • test/app_test.dart:683:5 • await_in_wrong_context
+  error • Undefined name 'tester'. Try correcting the name to one that is defined, or defining the name • test/app_test.dart:683:11 • undefined_identifier
+  error • The await expression can only be used in an async function. Try marking the function body with either 'async' or 'async*' • test/app_test.dart:684:5 • await_in_wrong_context
+  error • Undefined name 'tester'. Try correcting the name to one that is defined, or defining the name • test/app_test.dart:684:11 • undefined_identifier
+  error • The await expression can only be used in an async function. Try marking the function body with either 'async' or 'async*' • test/app_test.dart:685:5 • await_in_wrong_context
+  error • Undefined name 'tester'. Try correcting the name to one that is defined, or defining the name • test/app_test.dart:685:11 • undefined_identifier
+  error • The await expression can only be used in an async function. Try marking the function body with either 'async' or 'async*' • test/app_test.dart:686:5 • await_in_wrong_context
+  error • Undefined name 'tester'. Try correcting the name to one that is defined, or defining the name • test/app_test.dart:686:11 • undefined_identifier
+  error • Undefined name 'tester'. Try correcting the name to one that is defined, or defining the name • test/app_test.dart:687:11 • undefined_identifier
+  error • The await expression can only be used in an async function. Try marking the function body with either 'async' or 'async*' • test/app_test.dart:691:5 • await_in_wrong_context
+  error • Undefined name 'tester'. Try correcting the name to one that is defined, or defining the name • test/app_test.dart:691:11 • undefined_identifier
+  error • The await expression can only be used in an async function. Try marking the function body with either 'async' or 'async*' • test/app_test.dart:692:5 • await_in_wrong_context
+  error • Undefined name 'tester'. Try correcting the name to one that is defined, or defining the name • test/app_test.dart:692:11 • undefined_identifier
+  error • Undefined name 'tester'. Try correcting the name to one that is defined, or defining the name • test/app_test.dart:693:11 • undefined_identifier
+  error • The await expression can only be used in an async function. Try marking the function body with either 'async' or 'async*' • test/app_test.dart:694:5 • await_in_wrong_context
+  error • Undefined name 'tester'. Try correcting the name to one that is defined, or defining the name • test/app_test.dart:694:11 • undefined_identifier
+  error • The await expression can only be used in an async function. Try marking the function body with either 'async' or 'async*' • test/app_test.dart:695:5 • await_in_wrong_context
+  error • Undefined name 'tester'. Try correcting the name to one that is defined, or defining the name • test/app_test.dart:695:11 • undefined_identifier
+  error • The await expression can only be used in an async function. Try marking the function body with either 'async' or 'async*' • test/app_test.dart:696:5 • await_in_wrong_context
+  error • Undefined name 'tester'. Try correcting the name to one that is defined, or defining the name • test/app_test.dart:696:11 • undefined_identifier
+  error • The await expression can only be used in an async function. Try marking the function body with either 'async' or 'async*' • test/app_test.dart:697:5 • await_in_wrong_context
+  error • Undefined name 'tester'. Try correcting the name to one that is defined, or defining the name • test/app_test.dart:697:11 • undefined_identifier
+  error • The await expression can only be used in an async function. Try marking the function body with either 'async' or 'async*' • test/app_test.dart:698:5 • await_in_wrong_context
+  error • Undefined name 'tester'. Try correcting the name to one that is defined, or defining the name • test/app_test.dart:698:11 • undefined_identifier
+  error • The await expression can only be used in an async function. Try marking the function body with either 'async' or 'async*' • test/app_test.dart:699:5 • await_in_wrong_context
+  error • Undefined name 'tester'. Try correcting the name to one that is defined, or defining the name • test/app_test.dart:699:11 • undefined_identifier
+  error • The await expression can only be used in an async function. Try marking the function body with either 'async' or 'async*' • test/app_test.dart:700:5 • await_in_wrong_context
+  error • Undefined name 'tester'. Try correcting the name to one that is defined, or defining the name • test/app_test.dart:700:11 • undefined_identifier
+  error • The await expression can only be used in an async function. Try marking the function body with either 'async' or 'async*' • test/app_test.dart:701:5 • await_in_wrong_context
+  error • Undefined name 'tester'. Try correcting the name to one that is defined, or defining the name • test/app_test.dart:701:11 • undefined_identifier
+  error • The await expression can only be used in an async function. Try marking the function body with either 'async' or 'async*' • test/app_test.dart:702:5 • await_in_wrong_context
+  error • Undefined name 'tester'. Try correcting the name to one that is defined, or defining the name • test/app_test.dart:702:11 • undefined_identifier
+  error • The await expression can only be used in an async function. Try marking the function body with either 'async' or 'async*' • test/app_test.dart:703:5 • await_in_wrong_context
+  error • Undefined name 'tester'. Try correcting the name to one that is defined, or defining the name • test/app_test.dart:703:11 • undefined_identifier
+  error • Undefined name 'tester'. Try correcting the name to one that is defined, or defining the name • test/app_test.dart:709:11 • undefined_identifier
+  error • The await expression can only be used in an async function. Try marking the function body with either 'async' or 'async*' • test/app_test.dart:710:5 • await_in_wrong_context
+  error • Undefined name 'tester'. Try correcting the name to one that is defined, or defining the name • test/app_test.dart:710:11 • undefined_identifier
+  error • Expected a method, getter, setter or operator declaration. This appears to be incomplete code. Try removing it or completing it • test/app_test.dart:711:4 • expected_executable
+  error • Unexpected text ';'. Try removing the text • test/app_test.dart:711:5 • unexpected_token
+   info • Missing type annotation. Try adding a type annotation • test/app_test.dart:713:3 • strict_top_level_inference
+  error • 'for' can't be used as an identifier because it's a keyword. Try renaming this to be an identifier that isn't a keyword • test/app_test.dart:713:3 • expected_identifier_but_got_keyword
+   info • Missing type annotation. Try adding a type annotation • test/app_test.dart:713:14 • strict_top_level_inference
+  error • Expected to find ')' • test/app_test.dart:713:19 • expected_token
+   info • Missing type annotation. Try adding a type annotation • test/app_test.dart:906:3 • strict_top_level_inference
+  error • Expected an identifier • test/app_test.dart:906:15 • missing_identifier
+   info • Use the generic function type syntax to declare the parameter ''. Try using the generic function type syntax • test/app_test.dart:906:70 • use_function_type_syntax_for_parameters
+  error • Expected an identifier • test/app_test.dart:906:70 • missing_identifier
+  error • Expected to find ')' • test/app_test.dart:906:79 • expected_token
+  error • A function body must be provided. Try adding a function body • test/app_test.dart:925:5 • missing_function_body
+   info • Missing type annotation. Try adding a type annotation • test/app_test.dart:927:3 • strict_top_level_inference
+  error • Expected an identifier • test/app_test.dart:927:8 • missing_identifier
+   info • Use the generic function type syntax to declare the parameter ''. Try using the generic function type syntax • test/app_test.dart:927:61 • use_function_type_syntax_for_parameters
+  error • Expected an identifier • test/app_test.dart:927:61 • missing_identifier
+  error • Expected to find ')' • test/app_test.dart:927:64 • expected_token
+  error • A function body must be provided. Try adding a function body • test/app_test.dart:940:5 • missing_function_body
+   info • Missing type annotation. Try adding a type annotation • test/app_test.dart:942:3 • strict_top_level_inference
+  error • The name 'test' is already defined. Try renaming one of the declarations • test/app_test.dart:942:3 • duplicate_definition
+  error • Expected an identifier • test/app_test.dart:942:8 • missing_identifier
+   info • Use the generic function type syntax to declare the parameter ''. Try using the generic function type syntax • test/app_test.dart:942:42 • use_function_type_syntax_for_parameters
+  error • Expected an identifier • test/app_test.dart:942:42 • missing_identifier
+  error • Expected to find ')' • test/app_test.dart:942:45 • expected_token
+  error • A function body must be provided. Try adding a function body • test/app_test.dart:948:5 • missing_function_body
+   info • Missing type annotation. Try adding a type annotation • test/app_test.dart:950:3 • strict_top_level_inference
+  error • The name 'test' is already defined. Try renaming one of the declarations • test/app_test.dart:950:3 • duplicate_definition
+  error • Expected an identifier • test/app_test.dart:950:8 • missing_identifier
+   info • Use the generic function type syntax to declare the parameter ''. Try using the generic function type syntax • test/app_test.dart:950:81 • use_function_type_syntax_for_parameters
+  error • Expected an identifier • test/app_test.dart:950:81 • missing_identifier
+  error • Expected to find ')' • test/app_test.dart:950:84 • expected_token
+  error • A function body must be provided. Try adding a function body • test/app_test.dart:964:5 • missing_function_body
+   info • Missing type annotation. Try adding a type annotation • test/app_test.dart:966:3 • strict_top_level_inference
+  error • The name 'test' is already defined. Try renaming one of the declarations • test/app_test.dart:966:3 • duplicate_definition
+  error • Expected an identifier • test/app_test.dart:966:8 • missing_identifier
+   info • Use the generic function type syntax to declare the parameter ''. Try using the generic function type syntax • test/app_test.dart:966:51 • use_function_type_syntax_for_parameters
+  error • Expected an identifier • test/app_test.dart:966:51 • missing_identifier
+  error • Expected to find ')' • test/app_test.dart:966:54 • expected_token
+  error • A function body must be provided. Try adding a function body • test/app_test.dart:973:5 • missing_function_body
+  error • Expected a method, getter, setter or operator declaration. This appears to be incomplete code. Try removing it or completing it • test/app_test.dart:974:1 • expected_executable
+   info • Use the null-aware marker '?' rather than a null check via an 'if'. Try using '?' • test/commentary_test.dart:10:7 • use_null_aware_elements
+   info • Use the null-aware marker '?' rather than a null check via an 'if'. Try using '?' • test/commentary_test.dart:11:7 • use_null_aware_elements
+   info • Use the null-aware marker '?' rather than a null check via an 'if'. Try using '?' • test/commentary_test.dart:12:7 • use_null_aware_elements
+   info • Use the null-aware marker '?' rather than a null check via an 'if'. Try using '?' • test/engine_test.dart:6:48 • use_null_aware_elements
+   info • Use the null-aware marker '?' rather than a null check via an 'if'. Try using '?' • test/insights_test.dart:7:48 • use_null_aware_elements
+   info • Use the null-aware marker '?' rather than a null check via an 'if'. Try using '?' • test/online_fakes.dart:30:7 • use_null_aware_elements
+
+122 issues found. (ran in 15.3s)
