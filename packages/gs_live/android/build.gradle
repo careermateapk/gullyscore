@@ -1,0 +1,33 @@
+group 'app.gullyscore.live'
+version '1.0'
+
+rootProject.allprojects {
+    repositories {
+        google()
+        mavenCentral()
+        maven { url 'https://jitpack.io' }
+    }
+}
+
+apply plugin: 'com.android.library'
+
+android {
+    namespace 'app.gullyscore.live'
+    compileSdk = flutter.compileSdkVersion
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    defaultConfig {
+        minSdkVersion 24
+        consumerProguardFiles 'proguard-rules.pro'
+    }
+}
+
+dependencies {
+    // Camera + RTMP streaming + recording (Apache 2.0). 2.6.1 is built with Kotlin 2.1 / AGP 8.6.
+    implementation 'com.github.pedroSG94.RootEncoder:library:2.6.1'
+    implementation 'org.jetbrains.kotlin:kotlin-stdlib:2.1.20'
+}

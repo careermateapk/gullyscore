@@ -1,7 +1,7 @@
 .dart_tool/
 .packages
 build/
-android/
+/android/
 ios/
 .flutter-plugins
 .flutter-plugins-dependencies
