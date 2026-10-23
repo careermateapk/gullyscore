@@ -15,10 +15,13 @@ jobs:
         with: { python-version: '3.11' }
       - run: sudo apt-get update -q && sudo apt-get install -y -q ffmpeg espeak-ng
       - run: |
-          pip install -q torch --index-url https://download.pytorch.org/whl/cpu
-          pip install -q 'kokoro>=0.9.4' 'misaki[hi]' openai-whisper soundfile librosa --extra-index-url https://download.pytorch.org/whl/cpu
-          python -c "import torch, transformers; print(torch.__version__, transformers.__version__)"
-      - run: set -o pipefail; cd promo && python tts.py 2>&1 | tee out_log.txt
+          pip install -q torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+          pip install -q git+https://github.com/huggingface/parler-tts.git openai-whisper soundfile librosa --extra-index-url https://download.pytorch.org/whl/cpu
+          python -c "import torch, torchaudio, transformers; print(torch.__version__, torchaudio.__version__, transformers.__version__)"
+      - env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          SPK: Rohit
+        run: set -o pipefail; cd promo && python tts_parler.py 2>&1 | tee out_log.txt
       - if: always()
         run: |
           cd promo && mkdir -p out && cp out_log.txt out/ || true
